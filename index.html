@@ -328,20 +328,21 @@ main { padding: 40px 0 64px; }
 }
 
 /* Results background video */
-#result-wrapper {
-  position: relative; overflow: hidden;
-}
 .results-bg-video {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  object-fit: cover; z-index: 0; pointer-events: none;
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  object-fit: cover; pointer-events: none;
 }
 .results-bg-overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;
-  background: rgba(10,10,15,0.78);
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; background: rgba(10,10,15,0.78);
 }
-#result-wrapper .card {
-  position: relative; z-index: 1;
-}
+.results-bg-active .results-bg-video,
+.results-bg-active .results-bg-overlay { display: block; }
+.results-bg-active .results-bg-video { z-index: 0; }
+.results-bg-active .results-bg-overlay { z-index: 1; }
+.results-bg-active main.container { position: relative; z-index: 2; }
+.results-bg-active footer { position: relative; z-index: 2; }
+.results-bg-active header { position: relative; z-index: 2; }
 
 /* Star ratings */
 .star-rating { display: inline-flex; gap: 2px; margin-left: auto; }
@@ -443,6 +444,101 @@ footer a { color: var(--accent); text-decoration: none; }
 }
 .pillar.day-master { animation: glowPulse 4s ease-in-out infinite; }
 
+/* Premium upsell card */
+.card-premium {
+  border: 2px solid transparent;
+  border-image: linear-gradient(135deg, #c9a44a, #8a6d2f, #f5e6c8, #c9a44a) 1;
+  box-shadow: 0 0 40px rgba(201,164,74,0.12), 0 4px 32px rgba(0,0,0,0.4);
+  animation: premiumGlow 6s ease-in-out infinite;
+}
+.card-premium::before {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(201,164,74,0.4), transparent);
+  background-size: 200% 100%;
+  animation: premiumShimmer 3s ease-in-out infinite;
+}
+@keyframes premiumShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes premiumGlow {
+  0%, 100% { box-shadow: 0 0 30px rgba(201,164,74,0.1), 0 4px 32px rgba(0,0,0,0.4); }
+  50% { box-shadow: 0 0 50px rgba(201,164,74,0.2), 0 4px 32px rgba(0,0,0,0.4); }
+}
+.premium-header { text-align: center; margin-bottom: 24px; }
+.premium-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: linear-gradient(135deg, #c9a44a 0%, #8a6d2f 100%);
+  color: #0a0a0f; font-size: 0.65rem; font-weight: 700;
+  padding: 4px 14px; border-radius: 12px;
+  letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-ui);
+  box-shadow: 0 2px 12px rgba(201,164,74,0.4);
+  margin-bottom: 16px;
+}
+.premium-title {
+  font-family: var(--font-en); font-size: 1.5rem; font-weight: 600;
+  color: var(--accent); letter-spacing: 0.06em; margin-top: 8px;
+}
+.premium-title-zh {
+  font-family: var(--font-zh); font-size: 0.9rem; color: var(--text-sec);
+  display: block; margin-top: 4px;
+}
+.premium-subtitle {
+  font-family: var(--font-en); font-size: 0.85rem; color: var(--text-sec);
+  margin-top: 8px; font-style: italic;
+}
+.premium-divider {
+  width: 120px; height: 1px; margin: 20px auto;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+.premium-preview-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin: 24px 0;
+}
+.premium-preview-item {
+  padding: 18px; border-radius: 12px;
+  border: 1px solid rgba(201,164,74,0.15);
+  background: rgba(201,164,74,0.04);
+  position: relative; overflow: hidden;
+  transition: border-color 0.3s;
+}
+.premium-preview-item:hover { border-color: rgba(201,164,74,0.3); }
+.preview-lock {
+  position: absolute; top: 14px; right: 14px; font-size: 0.85rem; opacity: 0.4;
+}
+.preview-icon { font-size: 1.2rem; margin-bottom: 8px; display: block; }
+.preview-label {
+  font-family: var(--font-ui); font-size: 0.75rem; font-weight: 600;
+  color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+.preview-text {
+  font-family: var(--font-en); font-size: 0.82rem; color: var(--text-sec);
+  line-height: 1.6; filter: blur(4px); user-select: none; pointer-events: none;
+}
+.btn-premium {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 16px 48px; border: none; border-radius: 10px;
+  font-size: 1rem; font-weight: 700; font-family: var(--font-ui);
+  letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none;
+  background: linear-gradient(135deg, #c9a44a 0%, #a07d30 50%, #c9a44a 100%);
+  background-size: 200% 200%; color: #0a0a0f; cursor: pointer;
+  box-shadow: 0 4px 20px rgba(201,164,74,0.4), 0 0 40px rgba(201,164,74,0.15);
+  transition: all 0.3s;
+  animation: btnGoldShift 3s ease-in-out infinite;
+}
+.btn-premium:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 30px rgba(201,164,74,0.5), 0 0 60px rgba(201,164,74,0.2);
+}
+@keyframes btnGoldShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.premium-footer-note {
+  text-align: center; margin-top: 16px; font-size: 0.75rem;
+  color: var(--text-muted); font-family: var(--font-en); font-style: italic;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .hero { min-height: 320px; }
@@ -457,10 +553,17 @@ footer a { color: var(--accent); text-decoration: none; }
   .card { padding: 20px; }
   .stem-char { font-size: 2rem; }
   .branch-char { font-size: 1.8rem; }
+  .premium-preview-grid { grid-template-columns: 1fr; }
+  .premium-title { font-size: 1.2rem; }
+  .btn-premium { width: 100%; padding: 14px 32px; font-size: 0.9rem; }
 }
 </style>
 </head>
 <body>
+<video class="results-bg-video" autoplay muted loop playsinline>
+  <source src="Background2.mp4" type="video/mp4">
+</video>
+<div class="results-bg-overlay"></div>
 <header class="hero">
   <video class="hero-video" autoplay muted loop playsinline>
     <source src="hero.mp4" type="video/mp4">
@@ -504,13 +607,7 @@ footer a { color: var(--accent); text-decoration: none; }
     <button class="btn btn-full mt-16" id="calc-btn" onclick="BZ.calculate()">Calculate 排盘</button>
   </div>
 
-  <div id="result-wrapper" class="hidden">
-    <video class="results-bg-video" autoplay muted loop playsinline>
-      <source src="Background2.mp4" type="video/mp4">
-    </video>
-    <div class="results-bg-overlay"></div>
-    <div id="result-section"></div>
-  </div>
+  <div id="result-section" class="hidden"></div>
 </main>
 
 <footer>
@@ -2222,6 +2319,55 @@ BZ.render = function(chart) {
     <div class="interp-text">${interp.period}</div>
   </div>`;
 
+  // ---- Purpose-Star Premium Upsell ----
+  html += `<div class="card card-premium fade-in">
+    <div class="premium-header">
+      <span class="premium-badge">★ Premium</span>
+      <div class="premium-title">Purpose-Star Astrology<span class="premium-title-zh">命星指引</span></div>
+      <div class="premium-subtitle">Unlock your personalized timing blueprint</div>
+      <div class="premium-divider"></div>
+    </div>
+    <div class="premium-preview-grid">
+      <div class="premium-preview-item">
+        <span class="preview-lock">🔒</span>
+        <span class="preview-icon">📅</span>
+        <div class="preview-label">Daily &amp; Monthly Luck 每日运势</div>
+        <div class="preview-text">Your Wood energy peaks mid-month with strong Wealth star activation. The 14th–18th window shows particular promise for financial negotiations and partnership discussions...</div>
+      </div>
+      <div class="premium-preview-item">
+        <span class="preview-lock">🔒</span>
+        <span class="preview-icon">💰</span>
+        <div class="preview-label">Wealth Timing 财运时机</div>
+        <div class="preview-text">Direct Wealth star enters your month pillar in the coming quarter. Combined with your current luck pillar, investment windows open during the Metal-dominant weeks...</div>
+      </div>
+      <div class="premium-preview-item">
+        <span class="preview-lock">🔒</span>
+        <span class="preview-icon">🏢</span>
+        <div class="preview-label">Career Move Windows 事业良机</div>
+        <div class="preview-text">Your Officer star alignment suggests Q2 as optimal for career transitions. The clash resolution in your annual pillar indicates that authority figures become receptive...</div>
+      </div>
+      <div class="premium-preview-item">
+        <span class="preview-lock">🔒</span>
+        <span class="preview-icon">👨‍👩‍👧</span>
+        <div class="preview-label">Family &amp; Relationship Timing 家庭姻缘</div>
+        <div class="preview-text">Peach Blossom activation in your chart suggests an emotionally significant period. The combination of your Day Branch with the annual flow creates harmony in domestic...</div>
+      </div>
+    </div>
+    <div class="premium-preview-grid" style="grid-template-columns:1fr">
+      <div class="premium-preview-item">
+        <span class="preview-lock">🔒</span>
+        <span class="preview-icon">🗓️</span>
+        <div class="preview-label">Auspicious Date Selection 择日吉凶</div>
+        <div class="preview-text">Based on your Day Master and current energy cycle, the most auspicious dates this month for major decisions fall on the 8th, 12th, and 23rd. Avoid commitments on the 5th and 17th when clashing energy peaks...</div>
+      </div>
+    </div>
+    <div class="premium-divider"></div>
+    <div style="text-align:center">
+      <a href="#register" class="btn-premium" onclick="event.preventDefault(); alert('Registration coming soon!')">Unlock Full Reading</a>
+      <div class="premium-footer-note">Create a free account to access personalized Purpose-Star readings</div>
+    </div>
+  </div>`;
+
   // ---- Disclaimer ----
   html += `<div class="card fade-in">
     <div class="card-title">Important Notice 声明</div>
@@ -2243,9 +2389,9 @@ BZ.render = function(chart) {
   </div>`;
 
   rs.innerHTML = html;
-  const wrapper = document.getElementById('result-wrapper');
-  wrapper.classList.remove('hidden');
-  wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  rs.classList.remove('hidden');
+  document.body.classList.add('results-bg-active');
+  rs.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 // ============================================================
