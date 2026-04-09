@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: bazi-calculator
+    runtime: node
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: cd server && node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        value: onboarding@resend.dev
+      - key: VERIFICATION_BASE_URL
+        sync: false
+      - key: DB_PATH
+        value: /data/bazi.db
+    disk:
+      name: bazi-data
+      mountPath: /data
+      sizeGB: 1
