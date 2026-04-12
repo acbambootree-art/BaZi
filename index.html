@@ -109,7 +109,27 @@ main { padding: 40px 0 64px; }
 .card-title {
   font-family: var(--font-en); font-size: 1.35rem; font-weight: 600;
   margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
-  color: var(--accent); letter-spacing: 0.04em;
+  letter-spacing: 0.04em;
+  background: linear-gradient(
+    105deg,
+    var(--accent) 0%,
+    #f0d888 20%,
+    #fffbe6 35%,
+    #f0d888 50%,
+    var(--accent) 65%,
+    #e8c050 80%,
+    var(--accent) 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 100% 50%; }
+  50% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
 }
 .card-title .icon { font-size: 1.35rem; }
 
