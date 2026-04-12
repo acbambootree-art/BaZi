@@ -173,7 +173,7 @@ main { padding: 40px 0 64px; }
 .btn-outline:hover { background: var(--bg-input); box-shadow: none; transform: none; color: var(--accent); border-color: var(--accent); }
 
 /* Pillars */
-.pillars-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.pillars-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; min-width: 0; }
 .pillars-grid.no-hour { grid-template-columns: repeat(3, 1fr); }
 .pillar {
   text-align: center; padding: 20px 10px; border-radius: var(--radius);
@@ -267,6 +267,15 @@ main { padding: 40px 0 64px; }
 .int-harm { color: var(--earth); border-color: var(--earth-border); background: var(--earth-bg); }
 .int-destroy { color: #b07cd8; border-color: rgba(176,124,216,0.3); background: rgba(176,124,216,0.1); }
 .no-interactions { color: var(--text-muted); font-size: 1rem; font-style: italic; }
+
+/* Void branch badge */
+.void-badge { display: inline-block; font-size: 0.65rem; font-family: var(--font-zh); color: var(--text-muted); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 1px 5px; margin-left: 4px; vertical-align: middle; opacity: 0.8; }
+
+/* Stem combination items */
+.int-stem-combo { color: var(--accent); border-color: var(--accent-glow); background: var(--accent-light); }
+.int-stem-combo .interaction-type { color: var(--accent); }
+.stem-combo-transform { font-size: 0.75rem; color: var(--wood); font-weight: 600; margin-left: 4px; }
+.stem-combo-bound { font-size: 0.75rem; color: var(--text-muted); font-style: italic; margin-left: 4px; }
 
 /* Shen Sha */
 .shensha-grid { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -544,15 +553,26 @@ footer a { color: var(--accent); text-decoration: none; }
   .hero { min-height: 320px; }
   .hero-content { padding: 60px 0 48px; }
   header h1 { font-size: 2rem; }
-  .pillars-grid { grid-template-columns: repeat(2, 1fr); }
+  .pillars-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; overflow-x: auto; }
+  .pillars-grid.no-hour { grid-template-columns: repeat(3, 1fr); }
+  .pillar { min-width: 0; padding: 14px 6px; }
   .dm-summary { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: repeat(2, 1fr); }
   .balance-grid { grid-template-columns: repeat(5, 1fr); }
   .current-year-grid { grid-template-columns: 1fr; }
   .year-pillar-display { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px; }
   .card { padding: 20px; }
-  .stem-char { font-size: 2rem; }
-  .branch-char { font-size: 1.8rem; }
+  .stem-char { font-size: 1.6rem; }
+  .branch-char { font-size: 1.4rem; }
+  .pillar-label { font-size: 0.7rem; }
+  .pillar-label .zh { font-size: 0.8rem; }
+  .ten-god-label { font-size: 0.65rem; padding: 3px 8px; }
+  .dm-badge { font-size: 0.65rem; padding: 3px 8px; }
+  .hidden-stem-char { font-size: 0.95rem; }
+  .hidden-god { font-size: 0.65rem; }
+  .nayin { font-size: 0.7rem; }
+  .stem-label { font-size: 0.7rem; }
+  .branch-label { font-size: 0.7rem; }
   .premium-preview-grid { grid-template-columns: 1fr; }
   .premium-title { font-size: 1.2rem; }
   .btn-premium { width: 100%; padding: 14px 32px; font-size: 0.9rem; }
@@ -704,7 +724,7 @@ footer a { color: var(--accent); text-decoration: none; }
 </head>
 <body>
 <video class="results-bg-video" autoplay muted loop playsinline>
-  <source src="Background2.mp4" type="video/mp4">
+  <source src="Background3.mp4" type="video/mp4">
 </video>
 <div class="results-bg-overlay"></div>
 <header class="hero">
@@ -748,10 +768,7 @@ footer a { color: var(--accent); text-decoration: none; }
       </div>
     </div>
     <button class="btn btn-full mt-16" id="calc-btn" onclick="BZ.calculate()">Calculate 排盘</button>
-    <div class="reg-prompt" id="main-reg-prompt">
-      <p>Want personalized day-to-day destiny insights? Log in or create a free account to unlock Purpose-Star readings.</p>
-      <a href="#" class="btn-reg-prompt" onclick="event.preventDefault(); BZ.showLoginModal()">Sign In / Register</a>
-    </div>
+    <div class="reg-prompt" id="main-reg-prompt"></div>
   </div>
 
   <div id="result-section" class="hidden"></div>
@@ -832,6 +849,39 @@ BZ.NAYIN = [
   {zh:'石榴木',en:'Pomegranate Wood',el:'wood'},   {zh:'大海水',en:'Great Sea Water',el:'water'},
 ];
 
+BZ.NAYIN_MEANINGS = {
+  '海中金': 'Gold hidden deep in the sea — latent wealth and talent that emerges slowly. Quiet strength beneath a calm exterior.',
+  '炉中火': 'Fire in the furnace — controlled intensity and transformative power. Thrives in structured environments with clear purpose.',
+  '大林木': 'Great forest wood — expansive growth, community-minded, and deeply rooted. A natural leader who shelters others.',
+  '路旁土': 'Roadside earth — practical, accessible, and service-oriented. Reliable but risks being overlooked or taken for granted.',
+  '剑锋金': 'Sword-edge metal — sharp, decisive, and formidable. Exceptional talent for cutting through problems, but must guard against harshness.',
+  '山头火': 'Mountaintop fire — highly visible, ambitious, and inspiring. Commands attention but vulnerable to exposure and burnout.',
+  '涧下水': 'Brook under the mountain — pure, persistent, and quietly nourishing. Finds its way through obstacles with patience.',
+  '城头土': 'City wall earth — protective, strategic, and enduring. Built for defense and stability, thrives in structured roles.',
+  '白蜡金': 'White wax metal — refined, elegant, and detail-oriented. Values aesthetics and precision, suitable for artistic or luxury fields.',
+  '杨柳木': 'Willow wood — graceful, flexible, and emotionally expressive. Bends without breaking, thrives through adaptability.',
+  '泉中水': 'Spring water — pure source energy, regenerative, and life-giving. A natural healer or advisor with deep reserves.',
+  '屋上土': 'Rooftop earth — elevated perspective, protective of family. Provides shelter and security but needs a strong foundation.',
+  '霹雳火': 'Lightning fire — sudden brilliance, disruptive innovation, and dramatic impact. Explosive talent that transforms landscapes.',
+  '松柏木': 'Pine and cypress wood — evergreen resilience, principled, and steadfast. Endures hardship without losing core nature.',
+  '长流水': 'Flowing river water — continuous momentum, ambitious, and far-reaching. A restless seeker who covers great distances.',
+  '沙中金': 'Gold in sand — hidden value requiring effort to extract. Patient refinement reveals remarkable worth.',
+  '山下火': 'Foothill fire — gentle warmth, approachable, and nurturing. Steady energy that sustains without overwhelming.',
+  '平地木': 'Flatland wood — open, collaborative, and broadly connected. Grows wide rather than tall, building extensive networks.',
+  '壁上土': 'Wall earth — structured, decorative, and culturally refined. Creates beauty within boundaries, excels in design and architecture.',
+  '金箔金': 'Gold foil — outwardly brilliant but thin. Impressive presentation skills, suited for media, art, and public-facing roles.',
+  '覆灯火': 'Lantern fire — intimate illumination, guiding light in darkness. Wisdom that helps others find their way.',
+  '天河水': 'Celestial river water — vast vision, spiritual depth, and universal perspective. Thinks in cosmic terms, drawn to philosophy.',
+  '大驿土': 'Post road earth — connecting, facilitating, and bridging distances. A natural networker and logistics mind.',
+  '钗钏金': 'Ornamental metal — social grace, diplomacy, and refined taste. Values relationships and harmony above raw ambition.',
+  '桑拓木': 'Mulberry wood — practical productivity, nourishing others, and patient cultivation. Rewards come through steady effort.',
+  '大溪水': 'Great stream water — powerful current with direction. Combines depth with momentum, excels in focused pursuits.',
+  '沙中土': 'Sand earth — shifting, adaptable, and surprisingly resilient. Absorbs impact and reshapes easily, thrives in change.',
+  '天上火': 'Heavenly fire — the sun itself, radiating authority and universal warmth. Born for leadership and public influence.',
+  '石榴木': 'Pomegranate wood — abundant fruit from tough bark. Tough exterior protecting rich creativity and fertility.',
+  '大海水': 'Great ocean water — boundless depth, all-encompassing wisdom, and tidal power. The most expansive of all Na Yin.',
+};
+
 BZ.PRODUCES = { wood:'fire', fire:'earth', earth:'metal', metal:'water', water:'wood' };
 BZ.CONTROLS = { wood:'earth', earth:'water', water:'fire', fire:'metal', metal:'wood' };
 BZ.PRODUCED_BY = { fire:'wood', earth:'fire', metal:'earth', water:'metal', wood:'water' };
@@ -858,6 +908,15 @@ BZ.RUDE_PUNISH = [[0,3]]; // 子卯
 BZ.SELF_PUNISH = [4,6,9,11]; // 辰午酉亥
 BZ.SIX_HARMS = [[0,7],[1,6],[2,5],[3,4],[8,11],[9,10]];
 BZ.DESTRUCTIONS = [[0,9],[1,4],[2,11],[3,6],[5,8],[7,10]];
+
+// Heavenly Stem Combinations (天干合化)
+BZ.STEM_COMBOS = [
+  { a: 0, b: 5, result: 'earth', zh: '甲己合化土' },
+  { a: 1, b: 6, result: 'metal', zh: '乙庚合化金' },
+  { a: 2, b: 7, result: 'water', zh: '丙辛合化水' },
+  { a: 3, b: 8, result: 'wood', zh: '丁壬合化木' },
+  { a: 4, b: 9, result: 'fire', zh: '戊癸合化火' },
+];
 
 // Shen Sha lookups
 BZ.NOBLEMAN = { 0:[1,7], 1:[0,8], 2:[11,9], 3:[11,9], 4:[1,7], 5:[0,8], 6:[1,7], 7:[6,2], 8:[3,5], 9:[3,5] };
@@ -1075,7 +1134,7 @@ BZ.analyzeStrength = function(chart) {
   const dm = BZ.STEMS[chart.day.stemIdx];
   const monthBrEl = BZ.BRANCHES[chart.month.branchIdx].el;
 
-  // Seasonal strength
+  // Seasonal strength (month commander 月令 — most important factor)
   let seasonal = 0;
   if (monthBrEl === dm.el) seasonal = 3;
   else if (BZ.PRODUCED_BY[dm.el] === monthBrEl) seasonal = 2;
@@ -1083,40 +1142,73 @@ BZ.analyzeStrength = function(chart) {
   else if (BZ.CONTROLS[dm.el] === monthBrEl) seasonal = -0.5;
   else if (BZ.CONTROLLED_BY[dm.el] === monthBrEl) seasonal = -2;
 
-  let support = 0, drain = 0;
-
-  // Check stems (year, month, hour)
-  const stemIndices = [chart.year.stemIdx, chart.month.stemIdx];
-  if (chart.hour) stemIndices.push(chart.hour.stemIdx);
-  for (const si of stemIndices) {
-    const el = BZ.STEMS[si].el;
-    if (el === dm.el) support += 1;
-    else if (BZ.PRODUCED_BY[dm.el] === el) support += 1;
-    else drain += 1;
-  }
-
-  // Check branch hidden stems
-  const branches = [chart.year.branchIdx, chart.month.branchIdx, chart.day.branchIdx];
-  if (chart.hour) branches.push(chart.hour.branchIdx);
-  for (const bi of branches) {
-    const hs = BZ.HIDDEN[bi];
-    const mainEl = BZ.STEMS[hs[0]].el;
-    if (mainEl === dm.el) support += 1.5;
-    else if (BZ.PRODUCED_BY[dm.el] === mainEl) support += 1;
-    else drain += 0.5;
-    for (let i = 1; i < hs.length; i++) {
-      const el = BZ.STEMS[hs[i]].el;
-      if (el === dm.el) support += 0.5;
-      else if (BZ.PRODUCED_BY[dm.el] === el) support += 0.3;
+  // Build set of stems "bound" by non-transforming combinations (reduced influence)
+  const boundStems = new Set();
+  if (chart.stemCombinations) {
+    for (const sc of chart.stemCombinations) {
+      if (!sc.transforms && sc.adjacent) {
+        // Bound stems have reduced influence (they attract each other)
+        if (sc.stemA !== chart.day.stemIdx) boundStems.add(sc.pillarA);
+        if (sc.stemB !== chart.day.stemIdx) boundStems.add(sc.pillarB);
+      }
     }
   }
 
-  const score = seasonal * 1.5 + support - drain;
+  let support = 0, drain = 0;
+
+  // Check stems (year, month, hour)
+  const stemPillars = [
+    { idx: chart.year.stemIdx, pillar: 'Year' },
+    { idx: chart.month.stemIdx, pillar: 'Month' },
+  ];
+  if (chart.hour) stemPillars.push({ idx: chart.hour.stemIdx, pillar: 'Hour' });
+  for (const sp of stemPillars) {
+    const el = BZ.STEMS[sp.idx].el;
+    const weight = boundStems.has(sp.pillar) ? 0.5 : 1; // Bound stems have halved influence
+    if (el === dm.el) support += 1 * weight;
+    else if (BZ.PRODUCED_BY[dm.el] === el) support += 1 * weight;
+    else drain += 1 * weight;
+  }
+
+  // Check branch hidden stems (with void branch reduction)
+  const branchPillars = [
+    { idx: chart.year.branchIdx, isVoid: chart.year.isVoid },
+    { idx: chart.month.branchIdx, isVoid: chart.month.isVoid },
+    { idx: chart.day.branchIdx, isVoid: chart.day.isVoid },
+  ];
+  if (chart.hour) branchPillars.push({ idx: chart.hour.branchIdx, isVoid: chart.hour.isVoid });
+  for (const bp of branchPillars) {
+    const voidMult = bp.isVoid ? 0.5 : 1; // Void branches have halved influence
+    const hs = BZ.HIDDEN[bp.idx];
+    const mainEl = BZ.STEMS[hs[0]].el;
+    if (mainEl === dm.el) support += 1.5 * voidMult;
+    else if (BZ.PRODUCED_BY[dm.el] === mainEl) support += 1 * voidMult;
+    else drain += 0.5 * voidMult;
+    for (let i = 1; i < hs.length; i++) {
+      const el = BZ.STEMS[hs[i]].el;
+      if (el === dm.el) support += 0.5 * voidMult;
+      else if (BZ.PRODUCED_BY[dm.el] === el) support += 0.3 * voidMult;
+    }
+  }
+
+  // Root check: floating Day Master penalty
+  let hasRoot = false;
+  for (const bp of branchPillars) {
+    if (bp.isVoid) continue;
+    const hs = BZ.HIDDEN[bp.idx];
+    for (const h of hs) {
+      if (BZ.STEMS[h].el === dm.el) { hasRoot = true; break; }
+    }
+    if (hasRoot) break;
+  }
+  if (!hasRoot) drain += 1.5; // Floating stem penalty
+
+  const score = seasonal * 2 + support - drain;
   let strength, level;
-  if (score >= 5) { strength = 'Very Strong'; level = 5; }
-  else if (score >= 2.5) { strength = 'Strong'; level = 4; }
+  if (score >= 6) { strength = 'Very Strong'; level = 5; }
+  else if (score >= 3) { strength = 'Strong'; level = 4; }
   else if (score >= 0) { strength = 'Moderate'; level = 3; }
-  else if (score >= -2.5) { strength = 'Weak'; level = 2; }
+  else if (score >= -3) { strength = 'Weak'; level = 2; }
   else { strength = 'Very Weak'; level = 1; }
 
   // Favorable elements
@@ -1291,6 +1383,54 @@ BZ.findInteractions = function(branchIndices, pillarNames) {
 };
 
 // ============================================================
+// STEM COMBINATIONS (天干合化)
+// ============================================================
+BZ.findStemCombinations = function(chart) {
+  const stems = [
+    { stemIdx: chart.year.stemIdx, pillar: 'Year' },
+    { stemIdx: chart.month.stemIdx, pillar: 'Month' },
+    { stemIdx: chart.day.stemIdx, pillar: 'Day' },
+  ];
+  if (chart.hour) stems.push({ stemIdx: chart.hour.stemIdx, pillar: 'Hour' });
+
+  const adjacentPairs = [['Year','Month'],['Month','Day'],['Day','Hour']];
+  const results = [];
+
+  for (let i = 0; i < stems.length; i++) {
+    for (let j = i + 1; j < stems.length; j++) {
+      const a = stems[i], b = stems[j];
+      for (const combo of BZ.STEM_COMBOS) {
+        if ((a.stemIdx === combo.a && b.stemIdx === combo.b) ||
+            (a.stemIdx === combo.b && b.stemIdx === combo.a)) {
+          const adjacent = adjacentPairs.some(p =>
+            (p[0] === a.pillar && p[1] === b.pillar) ||
+            (p[0] === b.pillar && p[1] === a.pillar));
+          // Transformation requires: adjacent pillars + month branch element supports result
+          const monthEl = BZ.BRANCHES[chart.month.branchIdx].el;
+          const transforms = adjacent && (monthEl === combo.result || BZ.PRODUCES[monthEl] === combo.result);
+          results.push({
+            stemA: a.stemIdx, stemB: b.stemIdx,
+            pillarA: a.pillar, pillarB: b.pillar,
+            resultElement: combo.result, zh: combo.zh,
+            transforms, adjacent,
+          });
+        }
+      }
+    }
+  }
+  return results;
+};
+
+// ============================================================
+// VOID BRANCHES (空亡)
+// ============================================================
+BZ.getVoidBranches = function(daySexIdx) {
+  const cycleStart = Math.floor(daySexIdx / 10) * 10;
+  const startBranch = cycleStart % 12;
+  return [(startBranch + 10) % 12, (startBranch + 11) % 12];
+};
+
+// ============================================================
 // SHEN SHA STARS
 // ============================================================
 BZ.findShenSha = function(chart) {
@@ -1360,6 +1500,87 @@ BZ.findShenSha = function(chart) {
   for (const br of allBranches) {
     if (br.idx === canopyTarget) {
       stars.push({ zh: '华盖', en: 'Canopy Star', pillar: br.name, auspicious: null });
+    }
+  }
+
+  const monthBranchIdx = chart.month.branchIdx;
+
+  // 天德贵人 (Tian De) - Heavenly Virtue, by month branch
+  const tianDeMap = { 0:3, 1:8, 2:7, 3:0, 4:9, 5:6, 6:1, 7:4, 8:5, 9:2, 10:5, 11:6 }; // branch→stem
+  const tianDeTarget = tianDeMap[monthBranchIdx];
+  if (tianDeTarget !== undefined) {
+    for (const br of allBranches) {
+      const brStem = chart[br.name.toLowerCase()] ? chart[br.name.toLowerCase()].stemIdx : -1;
+      if (brStem === tianDeTarget) {
+        stars.push({ zh: '天德贵人', en: 'Heavenly Virtue', pillar: br.name, auspicious: true });
+      }
+    }
+  }
+
+  // 月德贵人 (Yue De) - Monthly Virtue, by month branch
+  const yueDeMap = { 0:2, 1:0, 2:4, 3:2, 4:6, 5:4, 6:8, 7:6, 8:0, 9:8, 10:2, 11:0 }; // branch→stem
+  const yueDeTarget = yueDeMap[monthBranchIdx];
+  if (yueDeTarget !== undefined) {
+    for (const br of allBranches) {
+      const brStem = chart[br.name.toLowerCase()] ? chart[br.name.toLowerCase()].stemIdx : -1;
+      if (brStem === yueDeTarget) {
+        stars.push({ zh: '月德贵人', en: 'Monthly Virtue', pillar: br.name, auspicious: true });
+      }
+    }
+  }
+
+  // 红鸾 (Hong Luan) - Marriage Star, by year branch
+  const hongLuanTarget = (12 - yearBranchIdx) % 12;
+  for (const br of allBranches) {
+    if (br.idx === hongLuanTarget) {
+      stars.push({ zh: '红鸾', en: 'Marriage Star', pillar: br.name, auspicious: true });
+    }
+  }
+
+  // 天喜 (Tian Xi) - Joy Star, opposite of Hong Luan
+  const tianXiTarget = (hongLuanTarget + 6) % 12;
+  for (const br of allBranches) {
+    if (br.idx === tianXiTarget) {
+      stars.push({ zh: '天喜', en: 'Joy Star', pillar: br.name, auspicious: true });
+    }
+  }
+
+  // 孤辰 (Gu Chen) - Solitary Star, by year branch frame
+  const guChenMap = { 2:5, 5:8, 8:11, 11:2 }; // frame start → target branch
+  const guChenTarget = guChenMap[yearFrame];
+  if (guChenTarget !== undefined) {
+    for (const br of allBranches) {
+      if (br.idx === guChenTarget) {
+        stars.push({ zh: '孤辰', en: 'Solitary Star', pillar: br.name, auspicious: false });
+      }
+    }
+  }
+
+  // 寡宿 (Gua Su) - Widow Star, by year branch frame
+  const guaSuMap = { 2:11, 5:2, 8:5, 11:8 }; // frame start → target branch
+  const guaSuTarget = guaSuMap[yearFrame];
+  if (guaSuTarget !== undefined) {
+    for (const br of allBranches) {
+      if (br.idx === guaSuTarget) {
+        stars.push({ zh: '寡宿', en: 'Widow Star', pillar: br.name, auspicious: false });
+      }
+    }
+  }
+
+  // 金舆 (Jin Yu) - Golden Carriage, by day stem
+  const jinYuMap = [1, 0, 3, 2, 5, 4, 7, 6, 9, 8]; // stem→branch: 甲→丑,乙→子,丙→卯...
+  const jinYuTarget = jinYuMap[dayStemIdx];
+  for (const br of allBranches) {
+    if (br.idx === jinYuTarget) {
+      stars.push({ zh: '金舆', en: 'Golden Carriage', pillar: br.name, auspicious: true });
+    }
+  }
+
+  // 天医 (Tian Yi) - Heavenly Healer, by month branch
+  const tianYiTarget = (monthBranchIdx + 1) % 12;
+  for (const br of allBranches) {
+    if (br.idx === tianYiTarget) {
+      stars.push({ zh: '天医', en: 'Heavenly Healer', pillar: br.name, auspicious: true });
     }
   }
 
@@ -1466,14 +1687,32 @@ BZ.compute = function(year, month, day, hourBranch, gender) {
     birthYear: year, birthMonth: month, birthDay: day,
   };
 
-  // Strength
-  chart.strength = BZ.analyzeStrength(chart);
-
-  // Interactions
+  // Interactions (computed before strength so combos can affect strength)
   const branchIndices = [yearBranchIdx, monthBranchIdx, dayBranchIdx];
   const pillarNames = ['Year', 'Month', 'Day'];
   if (hourPillar) { branchIndices.push(hourPillar.branchIdx); pillarNames.push('Hour'); }
   chart.interactions = BZ.findInteractions(branchIndices, pillarNames);
+
+  // Stem Combinations (天干合化)
+  chart.stemCombinations = BZ.findStemCombinations(chart);
+
+  // Void Branches (空亡)
+  chart.voidBranches = BZ.getVoidBranches(dayIdx);
+  chart.year.isVoid = chart.voidBranches.includes(yearBranchIdx);
+  chart.month.isVoid = chart.voidBranches.includes(monthBranchIdx);
+  chart.day.isVoid = chart.voidBranches.includes(dayBranchIdx);
+  if (hourPillar) hourPillar.isVoid = chart.voidBranches.includes(hourPillar.branchIdx);
+
+  // Na Yin per pillar
+  chart.nayin = {
+    year: BZ.NAYIN[Math.floor(yearIdx / 2)],
+    month: BZ.NAYIN[Math.floor(chart.month.sexIdx / 2)],
+    day: BZ.NAYIN[Math.floor(dayIdx / 2)],
+    hour: hourPillar ? BZ.NAYIN[Math.floor(hourPillar.sexIdx / 2)] : null,
+  };
+
+  // Strength (after interactions so stem combos & void branches can affect scoring)
+  chart.strength = BZ.analyzeStrength(chart);
 
   // Shen Sha
   chart.shensha = BZ.findShenSha(chart);
@@ -1603,6 +1842,50 @@ BZ.interpret = function(chart) {
     overviewText += `<p>As a ${str.strength.toLowerCase()} Day Master, you have excess ${elTag(dm.el)} energy that needs channelling. Your chart benefits from elements that drain or control you: ${str.favorable.map(elTag).join(', ')}. Elements that further strengthen you (${str.unfavorable.map(elTag).join(', ')}) risk creating imbalance — stagnation, arrogance, or missed opportunities from surplus.</p>`;
   } else {
     overviewText += `<p>As a ${str.strength.toLowerCase()} Day Master, you need support and nourishment. Your chart benefits from elements that sustain you: ${str.favorable.map(elTag).join(', ')}. Elements that drain or control you (${str.unfavorable.map(elTag).join(', ')}) further deplete your vitality — leading to burnout, indecision, or being overwhelmed.</p>`;
+  }
+
+  // Na Yin interpretation
+  if (chart.nayin && chart.nayin.day) {
+    const dayNY = chart.nayin.day;
+    const nyMeaning = BZ.NAYIN_MEANINGS[dayNY.zh] || '';
+    overviewText += `<p><strong>Na Yin 纳音:</strong> Your Day pillar carries the ${elTag(dayNY.el)} signature of <strong>${dayNY.zh} (${dayNY.en})</strong>. ${nyMeaning}`;
+    if (chart.nayin.year && chart.nayin.year.zh !== dayNY.zh) {
+      overviewText += ` Your Year pillar Na Yin is <strong>${chart.nayin.year.zh} (${chart.nayin.year.en})</strong> — ${elTag(chart.nayin.year.el)}, coloring your inherited life context and public image.`;
+    }
+    overviewText += `</p>`;
+  }
+
+  // Void branches interpretation
+  const voidPillars = [];
+  const voidDomainMap = { year: 'ancestors and early life', month: 'career and parents', day: 'spouse and self', hour: 'children and legacy' };
+  for (const p of pillarList) {
+    if (chart[p].isVoid) voidPillars.push(p);
+  }
+  if (voidPillars.length > 0) {
+    overviewText += `<p><strong>空亡 Void Branches:</strong> `;
+    for (const vp of voidPillars) {
+      const br = BZ.BRANCHES[chart[vp].branchIdx];
+      overviewText += `The ${vp.charAt(0).toUpperCase() + vp.slice(1)} branch ${br.zh} (${br.en}) is void — its influence on <em>${voidDomainMap[vp]}</em> is weakened. `;
+    }
+    overviewText += `Void branches indicate areas where energy is diminished or unreliable in the natal chart. These domains may feel less stable or require more conscious effort. However, void branches can be "filled" when luck pillars or annual flows bring matching branches.</p>`;
+  }
+
+  // Stem combinations in overview
+  if (chart.stemCombinations && chart.stemCombinations.length > 0) {
+    overviewText += `<p><strong>天干合 Stem Combinations:</strong> `;
+    for (const sc of chart.stemCombinations) {
+      const sA = BZ.STEMS[sc.stemA];
+      const sB = BZ.STEMS[sc.stemB];
+      overviewText += `${sA.zh} (${sc.pillarA}) and ${sB.zh} (${sc.pillarB}) form a ${sc.zh} combination. `;
+      if (sc.transforms) {
+        overviewText += `This combination <strong>transforms</strong> — the two stems fuse into ${elTag(sc.resultElement)} energy, fundamentally altering their nature. `;
+      } else if (sc.adjacent) {
+        overviewText += `These stems are <strong>bound</strong> — attracted to each other but not fully transforming, reducing their individual influence by half. `;
+      } else {
+        overviewText += `As a distant combination (non-adjacent pillars), the attraction exists but is too weak to significantly alter either stem's function. `;
+      }
+    }
+    overviewText += `</p>`;
   }
 
   // ========== 2. CAREER & LIFE PATH ==========
@@ -1778,6 +2061,62 @@ BZ.interpret = function(chart) {
       }
       periodText += `</p>`;
     }
+
+    // LP stem combinations with natal stems
+    const lpStemCombos = [];
+    const natalStems = [
+      { idx: chart.year.stemIdx, label: 'Year' },
+      { idx: chart.month.stemIdx, label: 'Month' },
+      { idx: chart.day.stemIdx, label: 'Day' },
+    ];
+    if (chart.hour) natalStems.push({ idx: chart.hour.stemIdx, label: 'Hour' });
+    for (const ns of natalStems) {
+      for (const combo of BZ.STEM_COMBOS) {
+        if ((currentLP.stemIdx === combo.a && ns.idx === combo.b) ||
+            (currentLP.stemIdx === combo.b && ns.idx === combo.a)) {
+          lpStemCombos.push({ natal: ns, combo });
+        }
+      }
+    }
+    if (lpStemCombos.length > 0) {
+      periodText += `<p><strong>Stem combinations with luck pillar:</strong> `;
+      for (const lsc of lpStemCombos) {
+        const lpS = BZ.STEMS[currentLP.stemIdx];
+        const natS = BZ.STEMS[lsc.natal.idx];
+        periodText += `${lpS.zh} (LP) combines with ${natS.zh} (${lsc.natal.label}) — ${lsc.combo.zh}. This activates a ${elTag(lsc.combo.result)} transformation dynamic during this decade, reshaping the ${lsc.natal.label} pillar's domain. `;
+        if (lsc.natal.label === 'Day') {
+          periodText += `A combination with the Day Master is particularly significant — it directly engages your core identity and personal relationships. `;
+        }
+      }
+      periodText += `</p>`;
+    }
+
+    // LP branch hidden stems — what Ten Gods are activated
+    const lpHidden = BZ.HIDDEN[currentLP.branchIdx];
+    if (lpHidden.length > 0) {
+      periodText += `<p><strong>Hidden energies activated:</strong> The luck pillar branch ${lpBranch.zh} carries hidden stems: `;
+      const hiddenDescs = lpHidden.map(si => {
+        const s = BZ.STEMS[si];
+        const tg = BZ.tenGod(chart.day.stemIdx, si);
+        const tgEn = BZ.tenGodShort(tg);
+        return `${s.zh} (${elTag(s.el)} ${tg} ${tgEn})`;
+      });
+      periodText += hiddenDescs.join(', ') + `. `;
+      const lpHiddenTGs = lpHidden.map(si => BZ.tenGod(chart.day.stemIdx, si));
+      if (lpHiddenTGs.includes('正财') || lpHiddenTGs.includes('偏财')) {
+        periodText += `Wealth stars activated in the luck pillar — financial opportunities and income growth are highlighted during this period. `;
+      }
+      if (lpHiddenTGs.includes('正官') || lpHiddenTGs.includes('七杀')) {
+        periodText += `Authority stars activated — career advancement, recognition, or encounters with power structures are themes. `;
+      }
+      if (lpHiddenTGs.includes('正印') || lpHiddenTGs.includes('偏印')) {
+        periodText += `Seal stars activated — learning, certification, mentorship, and intellectual growth are favored. `;
+      }
+      if (lpHiddenTGs.includes('食神') || lpHiddenTGs.includes('伤官')) {
+        periodText += `Output stars activated — creative expression, new ideas, and personal projects gain momentum. `;
+      }
+      periodText += `</p>`;
+    }
   }
 
   // Current year analysis
@@ -1875,6 +2214,15 @@ BZ.interpret = function(chart) {
     metal: 'decluttering, precision hobbies (calligraphy, watchmaking), wearing white/gold, breathing exercises, and structured goal-setting',
     water: 'swimming, journaling, wearing black/navy, meditation, travel, learning new subjects, and flexible scheduling',
   };
+  // Na Yin element compensation check
+  if (chart.nayin && missing.length > 0) {
+    const nayinEls = [chart.nayin.year, chart.nayin.month, chart.nayin.day, chart.nayin.hour].filter(Boolean).map(n => n.el);
+    const nayinCompensates = missing.filter(m => nayinEls.includes(m));
+    if (nayinCompensates.length > 0) {
+      balanceText += `<p><strong>Na Yin 纳音 compensation:</strong> Although ${nayinCompensates.map(elTag).join(' and ')} ${nayinCompensates.length > 1 ? 'are' : 'is'} absent from the surface chart, the Na Yin layer carries ${nayinCompensates.map(elTag).join(' and ')} energy. Na Yin operates at a deeper, more subtle level — it won't fully replace the missing surface element, but provides an underlying resonance that partially compensates for the gap.</p>`;
+    }
+  }
+
   const topFavMissing = str.favorable.filter(el => elBal[el] === 0);
   const topFavWeak = str.favorable.filter(el => elBal[el] <= 1 && elBal[el] > 0);
   if (topFavMissing.length > 0 || topFavWeak.length > 0) {
@@ -1893,6 +2241,30 @@ BZ.interpret = function(chart) {
     'Day': 'self, spouse, marriage, core identity, and personal choices',
     'Hour': 'children, legacy, late life (46+), aspirations, and subconscious desires',
   };
+
+  // Stem combination details in interactions narrative
+  if (chart.stemCombinations && chart.stemCombinations.length > 0) {
+    interactionsText += `<p><strong>Heavenly Stem Combinations (天干合)</strong> operate at the surface level — the visible, conscious layer of chart dynamics. `;
+    for (const sc of chart.stemCombinations) {
+      const sA = BZ.STEMS[sc.stemA];
+      const sB = BZ.STEMS[sc.stemB];
+      const tgA = sc.pillarA !== 'Day' ? BZ.tenGod(chart.day.stemIdx, sc.stemA) : 'Day Master';
+      const tgB = sc.pillarB !== 'Day' ? BZ.tenGod(chart.day.stemIdx, sc.stemB) : 'Day Master';
+      interactionsText += `The ${sA.zh}–${sB.zh} combination binds ${tgA} (${sc.pillarA}) with ${tgB} (${sc.pillarB}). `;
+      if (sc.transforms) {
+        interactionsText += `This is a <strong>true transformation</strong> into ${elTag(sc.resultElement)} — the original stem identities dissolve. The life areas governed by these Ten Gods merge and redirect toward ${elTag(sc.resultElement)} qualities. `;
+        if (tgA === 'Day Master' || tgB === 'Day Master') {
+          interactionsText += `Since the Day Master itself is involved, this transformation deeply reshapes your core identity and how you interact with the world. `;
+        }
+      } else if (sc.adjacent) {
+        interactionsText += `This is a <strong>binding without transformation</strong> — the stems are attracted but don't fully merge. Both Ten Gods are weakened (their influence halved), creating a sense of "distraction" between these life domains. `;
+        if (tgA === 'Day Master' || tgB === 'Day Master') {
+          interactionsText += `The Day Master being bound reduces your independent agency — you may feel your identity is entangled with the other stem's domain. `;
+        }
+      }
+    }
+    interactionsText += `</p>`;
+  }
 
   if (chart.interactions.length === 0) {
     interactionsText += `<p>No major branch interactions detected among the natal pillars. This suggests a relatively stable, undisturbed chart — the four pillars coexist without pulling each other into transformation or conflict. While this means fewer dramatic shifts triggered by internal chart dynamics, it also means external triggers (luck pillars and annual flows) carry more weight when they do activate interactions.</p>`;
@@ -2066,6 +2438,86 @@ BZ.interpret = function(chart) {
           'Hour': 'Canopy in Hour pillar — later life turns inward. Retirement may involve spiritual practice, writing, or philosophical pursuit.',
         },
       },
+      '天德贵人': {
+        title: 'Heavenly Virtue (天德贵人)',
+        meaning: 'A powerful protective star that confers moral authority and karmic protection. People with Tian De tend to escape disasters narrowly, receive help at critical moments, and carry a natural sense of righteousness. It indicates good character recognized by others and a life that — despite challenges — lands on its feet.',
+        pillarMeaning: {
+          'Year': 'Heavenly Virtue in Year pillar — family carries protective karma. Ancestors\' good deeds shield you in early life.',
+          'Month': 'Heavenly Virtue in Month pillar — career blessed with ethical opportunities. Colleagues and superiors recognize your integrity.',
+          'Day': 'Heavenly Virtue in Day pillar — personal protection in marriage and partnerships. Spouse relationship carries a virtuous quality.',
+          'Hour': 'Heavenly Virtue in Hour pillar — protection extends to children and late life. Legacy is marked by righteousness.',
+        },
+      },
+      '月德贵人': {
+        title: 'Monthly Virtue (月德贵人)',
+        meaning: 'A benevolent protective star similar to Heavenly Virtue but operating through monthly cycles. Monthly Virtue enhances resilience against illness, legal troubles, and misfortune. It indicates a person who naturally attracts goodwill and whose timing tends to align with favorable conditions.',
+        pillarMeaning: {
+          'Year': 'Monthly Virtue in Year pillar — protected beginnings. Early life benefits from fortunate timing and benevolent circumstances.',
+          'Month': 'Monthly Virtue in Month pillar — career benefits from consistently good timing. Projects tend to launch at favorable moments.',
+          'Day': 'Monthly Virtue in Day pillar — personal resilience enhanced. Recovery from setbacks is notably swift.',
+          'Hour': 'Monthly Virtue in Hour pillar — later-life protection. Health and legacy benefit from virtue accumulated over time.',
+        },
+      },
+      '红鸾': {
+        title: 'Marriage Star (红鸾)',
+        meaning: 'The primary marriage and romance indicator in Shen Sha. Hong Luan signals the activation of romantic energy — when it appears in the natal chart, it indicates a natural affinity for forming committed partnerships. When activated by luck pillars or annual flows, it often correlates with engagements, weddings, or deepening of romantic bonds.',
+        pillarMeaning: {
+          'Year': 'Marriage Star in Year pillar — early romantic awakening or family emphasis on partnership. Social circles naturally facilitate introductions.',
+          'Month': 'Marriage Star in Month pillar — romance and career intertwine. Meeting partners through work or professional settings is likely.',
+          'Day': 'Marriage Star in Day pillar — strong marital destiny. The spouse bond is central to your life narrative.',
+          'Hour': 'Marriage Star in Hour pillar — romantic fulfillment comes later in life, or through connections related to children.',
+        },
+      },
+      '天喜': {
+        title: 'Joy Star (天喜)',
+        meaning: 'The celebration and happiness star. Tian Xi indicates joyous events — births, marriages, promotions, and celebrations. It is the complementary pair to Hong Luan, adding festivity and social recognition to romantic milestones. People with this star tend to be involved in others\' celebrations and carry an aura of good cheer.',
+        pillarMeaning: {
+          'Year': 'Joy Star in Year pillar — a celebratory early life. Family milestones and social gatherings shape your youth.',
+          'Month': 'Joy Star in Month pillar — career marked by recognition events. Awards, promotions, and public celebrations feature prominently.',
+          'Day': 'Joy Star in Day pillar — personal life filled with happy occasions. Marriage and home life carry festive energy.',
+          'Hour': 'Joy Star in Hour pillar — later life brings joyous milestones. Grandchildren, retirement celebrations, and community honors.',
+        },
+      },
+      '孤辰': {
+        title: 'Solitary Star (孤辰)',
+        meaning: 'Indicates a tendency toward independence that borders on isolation — particularly for males. Gu Chen people are self-reliant to a degree that can make deep partnership challenging. This is not a curse but a pattern: these individuals often achieve through solo effort and may find conventional relationship timelines don\'t apply to them. Awareness helps channel this energy toward productive independence rather than loneliness.',
+        pillarMeaning: {
+          'Year': 'Solitary Star in Year pillar — independent from family early. May leave home young or feel emotionally distant from parents.',
+          'Month': 'Solitary Star in Month pillar — career path is independent. Solo entrepreneurship or specialist roles where you work alone suit you.',
+          'Day': 'Solitary Star in Day pillar — marriage requires conscious effort. Natural tendency toward solitude can strain partnership if unmanaged.',
+          'Hour': 'Solitary Star in Hour pillar — later life may involve more solitude. Fewer social connections in old age, but also greater self-sufficiency.',
+        },
+      },
+      '寡宿': {
+        title: 'Widow Star (寡宿)',
+        meaning: 'The female counterpart to Gu Chen — indicating emotional independence that can manifest as difficulty sustaining intimate bonds. Gua Su people are deeply self-contained and may project an unapproachable aura. In modern context, this star is less about literal widowhood and more about a personality that prioritizes inner life over social bonds. Channeled well, it produces profound contemplative depth.',
+        pillarMeaning: {
+          'Year': 'Widow Star in Year pillar — early emotional self-reliance. May have experienced emotional distance from caregivers.',
+          'Month': 'Widow Star in Month pillar — professional life favors independent work. Emotional reserve in workplace relationships.',
+          'Day': 'Widow Star in Day pillar — partner compatibility requires someone who respects deep personal space. Intimacy needs careful cultivation.',
+          'Hour': 'Widow Star in Hour pillar — later-life emotional independence. May prefer solitary pursuits in retirement.',
+        },
+      },
+      '金舆': {
+        title: 'Golden Carriage (金舆)',
+        meaning: 'The luxury and status star. Jin Yu indicates a life touched by material comfort, elegant surroundings, and associations with wealth. Historically it marked nobility who rode in golden carriages; in modern context it indicates an affinity for quality, brand consciousness, and environments of privilege. It also suggests that the spouse or partner brings material elevation.',
+        pillarMeaning: {
+          'Year': 'Golden Carriage in Year pillar — born into comfortable circumstances or a family with social standing.',
+          'Month': 'Golden Carriage in Month pillar — career in luxury, finance, or high-end services. Professional environment is upscale.',
+          'Day': 'Golden Carriage in Day pillar — spouse brings material elevation. Marriage improves lifestyle and social status.',
+          'Hour': 'Golden Carriage in Hour pillar — later life is materially comfortable. Children may achieve financial success.',
+        },
+      },
+      '天医': {
+        title: 'Heavenly Healer (天医)',
+        meaning: 'The healing and medical star. Tian Yi indicates natural aptitude for healthcare, wellness, counseling, or any field that involves restoring balance and health. People with this star are drawn to helping others heal — whether through medicine, therapy, nutrition, or spiritual guidance. It also confers above-average recovery ability when the person themselves falls ill.',
+        pillarMeaning: {
+          'Year': 'Heavenly Healer in Year pillar — early exposure to health themes. Family may include medical professionals or health-conscious culture.',
+          'Month': 'Heavenly Healer in Month pillar — career in healthcare, wellness, or therapeutic fields is strongly indicated.',
+          'Day': 'Heavenly Healer in Day pillar — personal identity tied to healing. You naturally become the person others turn to when unwell.',
+          'Hour': 'Heavenly Healer in Hour pillar — healing focus in later life. May pursue wellness practices or care roles after primary career.',
+        },
+      },
     };
 
     // Deduplicate stars by name (can appear in multiple pillars)
@@ -2107,6 +2559,21 @@ BZ.interpret = function(chart) {
       }
       if (starGroups['桃花'] && starGroups['羊刃']) {
         shenshaText += `Peach Blossom + Blade demands caution in romance — passion runs high but so does the potential for jealousy and conflict. `;
+      }
+      if (starGroups['红鸾'] && starGroups['桃花']) {
+        shenshaText += `Marriage Star + Peach Blossom is a powerful romantic combination — strong attraction energy with genuine commitment potential. `;
+      }
+      if (starGroups['天德贵人'] && starGroups['月德贵人']) {
+        shenshaText += `Heavenly Virtue + Monthly Virtue together provides exceptional protective energy — this double-virtue pattern is classically considered very fortunate. `;
+      }
+      if (starGroups['孤辰'] && starGroups['寡宿']) {
+        shenshaText += `Solitary Star + Widow Star together intensifies the independence pattern — relationship building requires particularly conscious effort. `;
+      }
+      if (starGroups['天医'] && starGroups['天乙贵人']) {
+        shenshaText += `Heavenly Healer + Nobleman is ideal for medical or counseling careers — healing ability backed by influential connections. `;
+      }
+      if (starGroups['金舆'] && starGroups['天乙贵人']) {
+        shenshaText += `Golden Carriage + Nobleman combines material fortune with powerful patrons — a pattern for high-society success and social elevation. `;
       }
       shenshaText += `</p>`;
     }
@@ -2214,7 +2681,7 @@ BZ.renderPillar = function(pillar, label, labelZh, isDayMaster, dmStemIdx) {
       ${tenGodHtml}
       <div class="stem-char ${BZ.elClass(stem.el)}">${stem.zh}</div>
       <div class="stem-label">${stem.pol === 'yang' ? 'Yang' : 'Yin'} ${BZ.EL_EN[stem.el]}</div>
-      <div class="branch-char ${BZ.elClass(branch.el)}">${branch.zh}</div>
+      <div class="branch-char ${BZ.elClass(branch.el)}">${branch.zh}${pillar.isVoid ? '<span class="void-badge">空</span>' : ''}</div>
       <div class="branch-label">${branch.animal} ${branch.animalZh}</div>
       <div class="hidden-stems">${hiddenHtml}</div>
       <div class="nayin ${BZ.elClass(nayin.el)}">${nayin.zh}</div>
@@ -2329,10 +2796,43 @@ BZ.render = function(chart) {
 
   // ---- Interactions ----
   let intHtml = '';
-  if (chart.interactions.length === 0) {
-    intHtml = '<div class="no-interactions">No major interactions detected between natal branches.</div>';
-  } else {
-    intHtml = '<div class="interaction-list">';
+
+  // Stem combinations first
+  if (chart.stemCombinations && chart.stemCombinations.length > 0) {
+    intHtml += '<div class="interaction-list" style="margin-bottom:10px">';
+    for (const sc of chart.stemCombinations) {
+      const stemA = BZ.STEMS[sc.stemA];
+      const stemB = BZ.STEMS[sc.stemB];
+      const statusTag = sc.transforms
+        ? `<span class="stem-combo-transform">化 ${BZ.EL_ZH[sc.resultElement]} Transforms</span>`
+        : sc.adjacent
+          ? `<span class="stem-combo-bound">合 Bound</span>`
+          : `<span class="stem-combo-bound">遥合 Distant</span>`;
+      intHtml += `<div class="interaction-item int-stem-combo">
+        <span class="interaction-type">天干合 Stem Combo</span>
+        <span>${stemA.zh}${stemB.zh} (${sc.pillarA}-${sc.pillarB})${statusTag}</span>
+      </div>`;
+    }
+    intHtml += '</div>';
+  }
+
+  // Void branches summary
+  if (chart.voidBranches) {
+    const voidBrNames = chart.voidBranches.map(bi => BZ.BRANCHES[bi].zh + ' ' + BZ.BRANCHES[bi].en);
+    const voidPillars = [];
+    if (chart.year.isVoid) voidPillars.push('Year');
+    if (chart.month.isVoid) voidPillars.push('Month');
+    if (chart.day.isVoid) voidPillars.push('Day');
+    if (chart.hour && chart.hour.isVoid) voidPillars.push('Hour');
+    if (voidPillars.length > 0) {
+      intHtml += `<div style="font-size:0.85rem;color:var(--text-sec);margin-bottom:10px;font-family:var(--font-zh)">空亡 Void Branches: ${voidBrNames.join(', ')} — affects ${voidPillars.join(', ')} pillar${voidPillars.length > 1 ? 's' : ''}</div>`;
+    }
+  }
+
+  if (chart.interactions.length === 0 && (!chart.stemCombinations || chart.stemCombinations.length === 0)) {
+    intHtml += '<div class="no-interactions">No major interactions detected between natal pillars.</div>';
+  } else if (chart.interactions.length > 0) {
+    intHtml += '<div class="interaction-list">';
     for (const int of chart.interactions) {
       const resultStr = int.result ? ` &rarr; ${BZ.EL_ZH[int.result] || ''} ${BZ.EL_EN[int.result] || ''}` : '';
       intHtml += `<div class="interaction-item ${int.css}">
@@ -2343,7 +2843,7 @@ BZ.render = function(chart) {
     intHtml += '</div>';
   }
   html += `<div class="card fade-in">
-    <div class="card-title">Interactions 地支关系</div>
+    <div class="card-title">Interactions 干支关系</div>
     ${intHtml}
     <div class="interp-text" style="margin-top:20px">${interp.interactions}</div>
   </div>`;
@@ -2467,59 +2967,7 @@ BZ.render = function(chart) {
     <div class="interp-text">${interp.period}</div>
   </div>`;
 
-  // ---- Purpose-Star Premium Upsell ----
-  const isLoggedIn = !!BZ.session;
-  const premiumClass = isLoggedIn ? 'card card-premium premium-unlocked fade-in' : 'card card-premium fade-in';
-  html += `<div class="${premiumClass}" id="premium-card">
-    <div class="premium-header">
-      <span class="premium-badge">${isLoggedIn ? '★ Unlocked' : '★ Premium'}</span>
-      <div class="premium-title">Purpose-Star Astrology<span class="premium-title-zh">命星指引</span></div>
-      <div class="premium-subtitle">${isLoggedIn ? 'Your personalized timing blueprint' : 'Unlock your personalized timing blueprint'}</div>
-      <div class="premium-divider"></div>
-    </div>
-    ${isLoggedIn ? '<div class="user-bar"><span class="user-bar-name">☆ ' + BZ.session.name + '</span><span class="user-bar-email">' + BZ.session.email + '</span><button class="btn-logout" onclick="BZ.logout()">Log Out</button></div>' : ''}
-    <div class="premium-preview-grid">
-      <div class="premium-preview-item">
-        <span class="preview-lock">🔒</span>
-        <span class="preview-icon">📅</span>
-        <div class="preview-label">Daily &amp; Monthly Luck 每日运势</div>
-        <div class="preview-text">Your Wood energy peaks mid-month with strong Wealth star activation. The 14th–18th window shows particular promise for financial negotiations and partnership discussions...</div>
-      </div>
-      <div class="premium-preview-item">
-        <span class="preview-lock">🔒</span>
-        <span class="preview-icon">💰</span>
-        <div class="preview-label">Wealth Timing 财运时机</div>
-        <div class="preview-text">Direct Wealth star enters your month pillar in the coming quarter. Combined with your current luck pillar, investment windows open during the Metal-dominant weeks...</div>
-      </div>
-      <div class="premium-preview-item">
-        <span class="preview-lock">🔒</span>
-        <span class="preview-icon">🏢</span>
-        <div class="preview-label">Career Move Windows 事业良机</div>
-        <div class="preview-text">Your Officer star alignment suggests Q2 as optimal for career transitions. The clash resolution in your annual pillar indicates that authority figures become receptive...</div>
-      </div>
-      <div class="premium-preview-item">
-        <span class="preview-lock">🔒</span>
-        <span class="preview-icon">👨‍👩‍👧</span>
-        <div class="preview-label">Family &amp; Relationship Timing 家庭姻缘</div>
-        <div class="preview-text">Peach Blossom activation in your chart suggests an emotionally significant period. The combination of your Day Branch with the annual flow creates harmony in domestic...</div>
-      </div>
-    </div>
-    <div class="premium-preview-grid" style="grid-template-columns:1fr">
-      <div class="premium-preview-item">
-        <span class="preview-lock">🔒</span>
-        <span class="preview-icon">🗓️</span>
-        <div class="preview-label">Auspicious Date Selection 择日吉凶</div>
-        <div class="preview-text">Based on your Day Master and current energy cycle, the most auspicious dates this month for major decisions fall on the 8th, 12th, and 23rd. Avoid commitments on the 5th and 17th when clashing energy peaks...</div>
-      </div>
-    </div>
-    <div class="premium-divider"></div>
-    <div style="text-align:center">
-      ${isLoggedIn
-        ? '<div class="premium-footer-note" style="display:block;color:var(--accent);font-style:normal;font-size:0.85rem;">Full personalized readings coming soon — stay tuned!</div>'
-        : '<a href="#login" class="btn-premium" onclick="event.preventDefault(); BZ.showLoginModal()">Unlock Full Reading</a><div class="premium-footer-note">Log in or create a free account to access Purpose-Star readings</div>'
-      }
-    </div>
-  </div>`;
+  // Purpose-Star section removed
 
   // ---- Disclaimer ----
   html += `<div class="card fade-in">
