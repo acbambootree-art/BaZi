@@ -822,10 +822,18 @@ footer a { color: var(--accent); text-decoration: none; }
   transition: all 0.2s;
 }
 .btn-logout:hover { border-color: rgba(201,164,74,0.4); color: var(--accent); }
+
+/* Respect reduced-motion / low-power: drop the continuous repaints */
+@media (prefers-reduced-motion: reduce) {
+  .card-title, .pillar.day-master, .btn-register, .consult-btn, .premium-card, .preview-cta-btn {
+    animation: none !important;
+  }
+  .hero-video, .results-bg-video { display: none !important; }
+}
 </style>
 </head>
 <body>
-<video class="results-bg-video" autoplay muted loop playsinline>
+<video class="results-bg-video" muted loop playsinline preload="none">
   <source src="Background3.mp4" type="video/mp4">
 </video>
 <div class="results-bg-overlay"></div>
@@ -3259,6 +3267,7 @@ BZ.render = function(chart) {
   rs.innerHTML = html;
   rs.classList.remove('hidden');
   document.body.classList.add('results-bg-active');
+  if (BZ.activateResultsVideo) BZ.activateResultsVideo();
   BZ.initGloss();
   rs.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
@@ -3547,9 +3556,45 @@ BZ.verify = function() {
   console.log('=== End Verification ===');
 };
 
+// ============================================================
+// VIDEO PERFORMANCE — never decode two loops at once; pause when off-screen
+// ============================================================
+BZ.initVideoPerf = function() {
+  const hero = document.querySelector('.hero-video');
+  const bg = document.querySelector('.results-bg-video');
+  const safePlay = v => { if (v) { const p = v.play(); if (p && p.catch) p.catch(() => {}); } };
+
+  // Only the visible video should ever run. results-bg starts display:none (won't
+  // decode); pause it explicitly so it never competes with the hero.
+  if (bg) bg.pause();
+
+  // Pause the hero whenever it scrolls out of view (e.g. after results render).
+  if (hero && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting && !document.body.classList.contains('results-bg-active')) {
+          safePlay(hero);
+        } else {
+          hero.pause();
+        }
+      });
+    }, { threshold: 0.05 });
+    io.observe(hero);
+  }
+  BZ._video = { hero, bg, safePlay };
+};
+
+// Called by render(): show results background, and ensure exactly one video plays.
+BZ.activateResultsVideo = function() {
+  const v = BZ._video; if (!v) return;
+  if (v.hero) v.hero.pause();      // hero is now scrolled away — stop decoding it
+  if (v.bg) v.safePlay(v.bg);      // play the lighter results-bg loop
+};
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   BZ.init();
+  BZ.initVideoPerf();
   if (window.location.search.includes('debug')) BZ.verify();
 });
 // ============================================================
