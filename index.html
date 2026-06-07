@@ -133,6 +133,81 @@ main { padding: 40px 0 64px; }
 }
 .card-title .icon { font-size: 1.35rem; }
 
+/* Plain-language subtitle under a card title (the "explain" layer) */
+.card-subtitle {
+  font-family: var(--font-en); font-size: 0.92rem; font-weight: 400;
+  color: var(--text-sec); line-height: 1.55; margin: -10px 0 22px;
+  max-width: 64ch; letter-spacing: 0;
+}
+
+/* Tier-1 plain-language summary (leads the results) */
+.summary-card { padding-top: 30px; }
+.summary-lead {
+  font-family: var(--font-en); font-size: 1.18rem; line-height: 1.75;
+  color: var(--text); max-width: 60ch;
+}
+.summary-lead strong { color: var(--accent); font-weight: 700; }
+.summary-points {
+  display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 20px;
+  font-family: var(--font-en); font-size: 0.95rem;
+}
+.summary-point { display: flex; align-items: baseline; gap: 8px; color: var(--text-sec); }
+.summary-point .sp-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
+.summary-point .sp-val { color: var(--text); font-weight: 600; }
+.summary-hour-note {
+  margin-top: 18px; font-family: var(--font-en); font-size: 0.88rem; line-height: 1.6;
+  color: var(--text-sec); border: 1px solid rgba(201,164,74,0.18);
+  background: rgba(201,164,74,0.05); border-radius: 10px; padding: 12px 16px;
+}
+.summary-hour-note strong { color: var(--accent); }
+
+/* Jump nav — quiet, sticky scannability aid */
+.result-nav {
+  position: sticky; top: 0; z-index: 40; display: flex; flex-wrap: wrap; gap: 4px;
+  padding: 10px 6px; margin: 0 0 18px; border-radius: 12px;
+  background: rgba(10,10,15,0.82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+}
+.result-nav a {
+  font-family: var(--font-en); font-size: 0.82rem; font-weight: 500;
+  color: var(--text-sec); text-decoration: none; padding: 6px 12px; border-radius: 7px;
+  transition: color 0.2s, background 0.2s; white-space: nowrap;
+}
+.result-nav a:hover { color: var(--accent); background: rgba(201,164,74,0.08); }
+
+/* Group divider for the life-domain cards */
+.domain-group {
+  font-family: var(--font-en); font-size: 0.78rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.18em; color: var(--accent);
+  margin: 10px 0 14px; padding-left: 2px; opacity: 0.85;
+}
+
+/* Glossary: term marker + shared popover (fixed positioning escapes card clipping) */
+.gloss {
+  border-bottom: 1px dotted rgba(201,164,74,0.55);
+  cursor: help; -webkit-tap-highlight-color: transparent;
+}
+.gloss:hover { border-bottom-color: var(--accent); }
+#gloss-pop {
+  position: fixed; z-index: 200; max-width: 280px; pointer-events: none;
+  background: #15151f; color: var(--text); border: 1px solid rgba(201,164,74,0.3);
+  border-radius: 10px; padding: 12px 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.55);
+  font-family: var(--font-en); font-size: 0.86rem; line-height: 1.55;
+  opacity: 0; transform: translateY(4px); transition: opacity 0.14s ease-out, transform 0.14s ease-out;
+}
+#gloss-pop.show { opacity: 1; transform: translateY(0); }
+#gloss-pop .gp-term { display: block; color: var(--accent); font-weight: 700; margin-bottom: 4px; }
+
+/* Collapsible technical sections (progressive disclosure) */
+details.card > summary.card-title { cursor: pointer; list-style: none; margin-bottom: 0; }
+details.card > summary.card-title::-webkit-details-marker { display: none; }
+details.card > summary.card-title::after {
+  content: '+'; margin-left: auto; -webkit-text-fill-color: var(--text-sec);
+  color: var(--text-sec); font-weight: 400; font-size: 1.4rem; line-height: 1;
+}
+details.card[open] > summary.card-title::after { content: '\2212'; }
+details.card[open] > summary.card-title { margin-bottom: 20px; }
+
 /* Form */
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; align-items: end; }
 .field label {
@@ -413,6 +488,13 @@ main { padding: 40px 0 64px; }
   line-height: 1.7;
 }
 .interp-verdict strong { color: var(--accent); }
+.interp-headline {
+  font-family: var(--font-en); font-size: 1.14rem; line-height: 1.55;
+  color: var(--text); font-weight: 600; margin-bottom: 18px;
+  padding: 15px 18px; border-radius: 10px;
+  background: rgba(201,164,74,0.07); border-left: 3px solid var(--accent);
+}
+.interp-headline .el-tag { font-weight: 700; }
 .interp-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 16px; }
 .interp-block {
   padding: 20px; border-radius: 12px;
@@ -958,6 +1040,52 @@ BZ.TEN_GOD_NAMES = {
   '偏印':{en:'Indirect Resource',abbr:'PY'}, '正印':{en:'Direct Resource',abbr:'ZY'},
   '偏财':{en:'Indirect Wealth',abbr:'PC'},   '正财':{en:'Direct Wealth',abbr:'ZC'},
   '七杀':{en:'7 Killings',abbr:'QS'},    '正官':{en:'Direct Officer',abbr:'ZG'},
+};
+
+// ── Plain-language layer (tiered "explain" content) ──────────
+// Day Master archetype, keyed by stem character. One image, one line.
+BZ.DM_ARCHETYPE = {
+  '甲': 'a tall tree — upright, principled, a natural pioneer who grows toward the light',
+  '乙': 'a climbing vine — adaptable, resilient, quietly persistent and good at making connections',
+  '丙': 'the sun — radiant, expressive, generous with energy and born to be seen',
+  '丁': 'a candle flame — warm, attentive, illuminating the people and ideas around you',
+  '戊': 'a mountain — steady, dependable, a reassuring presence others lean on',
+  '己': 'fertile soil — nurturing, resourceful, quietly making things grow around you',
+  '庚': 'unrefined metal — decisive, tough, direct, with a strong sense of right and wrong',
+  '辛': 'a polished jewel — refined, precise, drawn to beauty and quality',
+  '壬': 'a great river — ambitious, far-reaching, always moving toward something larger',
+  '癸': 'gentle rain — intuitive, soft-spoken, deeply perceptive and quietly influential',
+};
+
+// Glossary, keyed by the term shown on screen. Plain English, one or two lines.
+BZ.GLOSS = {
+  'Day Master': 'The Day stem — this character represents YOU. Everything else in the chart is read in relation to it.',
+  'Strength': "Whether your Day Master element is well-supported by the rest of the chart. A weak chart is helped by its 'favorable' elements; a strong chart prefers elements that release pressure.",
+  'Favorable Elements': 'The elements that bring your chart into balance and help you thrive. Lean into these in colours, careers, and timing.',
+  'Unfavorable Elements': 'The elements that tip your chart off balance. Not "bad" — just energies to handle with more care.',
+  'Hidden Stems': 'Extra elements concealed inside each branch — the subtler influences working beneath the surface of each pillar.',
+  'Nayin': 'An old poetic "sound element" label that gives each pillar an evocative character, like a one-line portrait.',
+  'Shen Sha': 'Symbolic "stars" layered onto the chart — auspicious or cautionary flavour notes, not hard rules.',
+  'Void': 'A "voided" branch whose energy is muted or delayed in that pillar — its themes arrive later, or more quietly.',
+  'Luck Pillars': 'Life divided into 10-year chapters. Each one colours the years it covers; the highlighted pillar is where you are now.',
+  'Interactions': 'How your pillars relate — combining, clashing, or reacting with one another to shape the overall picture.',
+  'Element Balance': 'How the five elements are spread across your chart. A missing or flooded element shows where energy is thin or heavy.',
+  // Ten Gods — what each relationship means for you
+  '比肩': 'Companion: an element just like you. Brings independence, self-reliance, and friendly rivalry with peers and siblings.',
+  '劫财': 'Rob Wealth: your element in its bolder form. Daring allies and drive, but can scatter money and resources if unchecked.',
+  '食神': 'Eating God: what you naturally produce. Creativity, easygoing self-expression, enjoyment, and a gentle output of talent.',
+  '伤官': 'Hurting Officer: your output in its intense form. Brilliance and originality that loves to break rules and stand out.',
+  '偏印': 'Indirect Resource: unconventional support. Intuition, niche knowledge, and learning that comes from unusual sources.',
+  '正印': 'Direct Resource: nurturing support. Education, protection, and steady guidance — the mentor or mother-figure energy.',
+  '偏财': 'Indirect Wealth: flexible, opportunistic money. Business flair, windfalls, and a generous, sociable way with resources.',
+  '正财': 'Direct Wealth: steady, earned money. Salary, savings, and the reward of reliable, consistent effort.',
+  '七杀': 'Seven Killings: pressure that pushes you. Challenge, discipline, and raw power — demanding, but forges real capability.',
+  '正官': 'Direct Officer: healthy authority. Status, responsibility, and structures you respect — leadership done by the rules.',
+};
+
+// Wrap a label so it shows a plain-language definition on hover/tap.
+BZ.g = function(label, key) {
+  return '<span class="gloss" data-g="' + (key || label) + '">' + label + '</span>';
 };
 
 // Solar term names
@@ -1776,6 +1904,8 @@ BZ.interpret = function(chart) {
     const s = BZ.STEMS[idx];
     return `<span class="el-tag el-${s.el}">${s.zh} ${s.en}</span>`;
   };
+  // Punchy, data-driven lead line for each section — the "repeat to a friend" takeaway.
+  const headline = (txt) => `<div class="interp-headline">${txt}</div>`;
 
   // Gather Ten Gods across all pillars
   const allTenGods = {};
@@ -1846,22 +1976,28 @@ BZ.interpret = function(chart) {
 
   // ========== 1. CHART OVERVIEW ==========
   const trait = dmTraits[chart.day.stemIdx];
-  let overviewText = `<p>Your Day Master is ${stemTag(chart.day.stemIdx)}, ${dm.pol === 'yang' ? 'Yang' : 'Yin'} ${elTag(dm.el)} — <strong>${trait.nature}</strong>. ${trait.style}</p>`;
+  let overviewText = '';
 
-  // Strength reasoning
-  overviewText += `<p>Born in the ${monthBr.zh} (${monthBr.en}) month — a ${season} month where ${elTag(dm.el)} is <strong>${seasonalDesc}</strong>. `;
-  if (rootCount > 0) {
-    overviewText += `The Day Master finds ${rootCount} root${rootCount > 1 ? 's' : ''} in the branch hidden stems, providing ${rootCount >= 3 ? 'substantial' : rootCount >= 2 ? 'moderate' : 'minimal'} grounding. `;
-  } else {
-    overviewText += `The Day Master has no roots in the branch hidden stems — floating without anchor. `;
-  }
-  overviewText += `Overall assessment: <strong>${str.strength}</strong> (score: ${str.score}).</p>`;
-
-  // Favorable/unfavorable reasoning
+  // Headline: who you are + how strong + what to do about it
   if (str.level >= 3) {
-    overviewText += `<p>As a ${str.strength.toLowerCase()} Day Master, you have excess ${elTag(dm.el)} energy that needs channelling. Your chart benefits from elements that drain or control you: ${str.favorable.map(elTag).join(', ')}. Elements that further strengthen you (${str.unfavorable.map(elTag).join(', ')}) risk creating imbalance — stagnation, arrogance, or missed opportunities from surplus.</p>`;
+    overviewText += headline(`You're ${dm.pol === 'yang' ? 'Yang' : 'Yin'} ${elTag(dm.el)}, <strong>${trait.nature}</strong>. Your chart runs <strong>${str.strength.toLowerCase()}</strong> — you've got energy to burn, so you grow fastest channelling it outward into ${str.favorable.map(elTag).join(' and ')}, not piling on more of the same.`);
   } else {
-    overviewText += `<p>As a ${str.strength.toLowerCase()} Day Master, you need support and nourishment. Your chart benefits from elements that sustain you: ${str.favorable.map(elTag).join(', ')}. Elements that drain or control you (${str.unfavorable.map(elTag).join(', ')}) further deplete your vitality — leading to burnout, indecision, or being overwhelmed.</p>`;
+    overviewText += headline(`You're ${dm.pol === 'yang' ? 'Yang' : 'Yin'} ${elTag(dm.el)}, <strong>${trait.nature}</strong>. Your chart runs <strong>${str.strength.toLowerCase()}</strong> — you're light on fuel, so protect your energy and lean on ${str.favorable.map(elTag).join(' and ')} for support.`);
+  }
+
+  overviewText += `<p>${trait.style}</p>`;
+
+  // Strength reasoning — one tight paragraph
+  const rootClause = rootCount > 0
+    ? `, with ${rootCount} root${rootCount > 1 ? 's' : ''} grounding it in the branches`
+    : `, with no roots in the branches to anchor it`;
+  overviewText += `<p>Born in the ${monthBr.zh} (${monthBr.en}) month, where ${elTag(dm.el)} is <strong>${seasonalDesc}</strong>${rootClause}. Strength score: <strong>${str.score}</strong>.</p>`;
+
+  // Favorable/unfavorable — one line
+  if (str.level >= 3) {
+    overviewText += `<p>Lean into ${str.favorable.map(elTag).join(', ')}; go easy on ${str.unfavorable.map(elTag).join(', ')} — more of those just tips you into stagnation or stubbornness.</p>`;
+  } else {
+    overviewText += `<p>Lean into ${str.favorable.map(elTag).join(', ')} for support; ${str.unfavorable.map(elTag).join(', ')} drain you — watch for burnout and second-guessing.</p>`;
   }
 
   // Na Yin interpretation
@@ -1887,7 +2023,7 @@ BZ.interpret = function(chart) {
       const br = BZ.BRANCHES[chart[vp].branchIdx];
       overviewText += `The ${vp.charAt(0).toUpperCase() + vp.slice(1)} branch ${br.zh} (${br.en}) is void — its influence on <em>${voidDomainMap[vp]}</em> is weakened. `;
     }
-    overviewText += `Void branches indicate areas where energy is diminished or unreliable in the natal chart. These domains may feel less stable or require more conscious effort. However, void branches can be "filled" when luck pillars or annual flows bring matching branches.</p>`;
+    overviewText += `These domains can feel less stable until a luck pillar or annual branch "fills" the void.</p>`;
   }
 
   // Stem combinations in overview
@@ -1923,43 +2059,46 @@ BZ.interpret = function(chart) {
   const hasZhengCai = hasTG('正财');
   const hasPianCai = hasTG('偏财');
 
+  // Headline: name the single dominant career driver in plain English
   if (hasZhengGuan) {
-    careerText += `<p><strong>正官 (Direct Officer)</strong> is present in your chart — this points to structured authority, recognition through proper channels, and potential for institutional success. You are inclined toward roles with clear hierarchies: government, corporate management, law, or regulated professions. In Singapore's context, this favors civil service, statutory board positions, or senior roles in MNCs and GLCs.</p>`;
-  }
-  if (hasQiSha) {
-    careerText += `<p><strong>七杀 (Seven Killings)</strong> appears — this is aggressive, competitive power. Unlike the orderly Direct Officer, Seven Killings favors those who thrive under pressure: entrepreneurs, military/police, surgeons, traders, or crisis managers. ${hasZhengYin ? 'The presence of 正印 (Direct Seal) helps channel this fierce energy constructively — the classic "Killing + Seal" pattern (杀印相生) that produces both power and wisdom.' : 'Without a Seal star to temper it, this energy can manifest as recklessness or conflicts with authority.'}</p>`;
-  }
-  if (!hasZhengGuan && !hasQiSha) {
-    careerText += `<p>No Officer or Killing stars appear prominently — authority does not define your path. Your career axis runs through other gods. `;
-    if (hasShiShen || hasShangGuan) {
-      careerText += `The output stars (食神/伤官) dominate instead, pointing to creative expression, technical skill, or entrepreneurship as your primary career drivers.</p>`;
-    } else if (hasZhengCai || hasPianCai) {
-      careerText += `Wealth stars drive your path — you are motivated by tangible returns and may excel in business, trade, finance, or property.</p>`;
-    } else if (hasZhengYin || hasPianYin) {
-      careerText += `Seal stars dominate — your career favours knowledge, teaching, research, advisory, or institutional support roles.</p>`;
-    } else {
-      careerText += `Companion stars (比肩/劫财) suggest partnership-oriented work or fields requiring competitive drive.</p>`;
-    }
+    careerText += headline(`You're built for <strong>structured authority</strong> — clear hierarchies and proper channels reward you. Think government, corporate management, law, or regulated professions.`);
+  } else if (hasQiSha) {
+    careerText += headline(`You <strong>thrive under pressure</strong> — high-stakes, competitive arenas bring out your best${hasZhengYin ? ', and your Seal star turns that intensity into real power and judgement' : ''}. Think entrepreneurship, surgery, trading, or crisis roles.`);
+  } else if (hasShangGuan) {
+    careerText += headline(`Your edge is <strong>unconventional talent</strong> — you shine where creativity beats conformity, and chafe under rigid rules. Think tech, media, design, or startups.`);
+  } else if (hasShiShen) {
+    careerText += headline(`Your edge is <strong>steady creative output</strong> — you build things people enjoy, without the drama. Think F&B, content, teaching, or wellness.`);
+  } else if (hasZhengCai || hasPianCai) {
+    careerText += headline(`<strong>Tangible results</strong> motivate you — you do best where the scoreboard is money. Think business, trade, finance, or property.`);
+  } else if (hasZhengYin || hasPianYin) {
+    careerText += headline(`<strong>Knowledge</strong> is your career engine — teaching, research, advisory, and deep-expertise roles fit you best.`);
+  } else {
+    careerText += headline(`You work best <strong>alongside others</strong> — partnership-driven and competitive fields suit your drive.`);
   }
 
-  // Output stars and industry
+  if (hasZhengGuan) {
+    careerText += `<p><strong>正官 (Direct Officer)</strong> gives you authority through proper channels — civil service, statutory boards, or senior roles in MNCs and GLCs all fit.</p>`;
+  }
+  if (hasQiSha) {
+    careerText += `<p><strong>七杀 (Seven Killings)</strong> is raw competitive power. ${hasZhengYin ? 'With a Seal star to channel it, this is the classic "Killing + Seal" pattern (杀印相生) — power plus wisdom.' : 'Without a Seal star to temper it, it can spill into recklessness or clashes with authority.'}</p>`;
+  }
   if (hasShangGuan) {
-    careerText += `<p><strong>伤官 (Hurting Officer)</strong> signals unconventional talent — innovation, disruption, artistic brilliance. You may clash with rigid structures but excel where creativity is valued: tech, media, design, consulting, or startups. In Singapore, consider fintech, creative agencies, or roles in the growing tech ecosystem.</p>`;
+    careerText += `<p><strong>伤官 (Hurting Officer)</strong> signals disruptive, original talent — fintech, creative agencies, and the tech ecosystem are natural homes for it.</p>`;
   }
   if (hasShiShen && !hasShangGuan) {
-    careerText += `<p><strong>食神 (Eating God)</strong> brings a gentler creative energy — culinary arts, content creation, teaching, or wellness industries. This star favours steady production over disruption. In Singapore, F&B entrepreneurship, education, or lifestyle businesses align well.</p>`;
+    careerText += `<p><strong>食神 (Eating God)</strong> is gentler creative energy that favours steady production — F&B, education, and lifestyle businesses align well.</p>`;
   }
 
   // Element-based industry guidance
   const favEl = str.favorable[0];
   const industryMap = {
-    wood: 'education, publishing, agriculture, healthcare, sustainability, fashion, or plant-based industries',
-    fire: 'technology, media, energy, entertainment, marketing, restaurants, or F&B',
-    earth: 'real estate, construction, property development, mining, agriculture, insurance, or HR',
-    metal: 'finance, banking, engineering, automotive, hardware, legal, or precision manufacturing',
-    water: 'logistics, shipping, trade, tourism, aquaculture, import-export, or tech (especially data/AI)',
+    wood: 'education, publishing, healthcare, sustainability, or fashion',
+    fire: 'technology, media, energy, entertainment, marketing, or F&B',
+    earth: 'real estate, construction, property, insurance, or HR',
+    metal: 'finance, banking, engineering, legal, or precision manufacturing',
+    water: 'logistics, shipping, trade, tourism, or data/AI tech',
   };
-  careerText += `<p>Your most favorable element is ${elTag(favEl)} — industries aligned with this include <strong>${industryMap[favEl] || 'various sectors'}</strong>. In Singapore's economy, ${favEl === 'water' ? 'the maritime, trade, and emerging tech sectors offer strong alignment' : favEl === 'metal' ? 'the financial hub and engineering sectors are well-suited' : favEl === 'fire' ? 'the growing tech and media landscape provides opportunity' : favEl === 'earth' ? 'the property market and infrastructure development are natural fits' : 'the education and healthcare sectors merit attention'}.</p>`;
+  careerText += `<p>Your most favorable element is ${elTag(favEl)} — aligned industries include <strong>${industryMap[favEl] || 'various sectors'}</strong>.</p>`;
 
   // ========== 3. WEALTH PATH ==========
   let wealthText = '';
@@ -1968,26 +2107,32 @@ BZ.interpret = function(chart) {
   const pianCaiCount = tgCount('偏财');
   const totalWealth = zhengCaiCount + pianCaiCount;
 
+  // Headline: the single sharpest money observation
+  if (str.level <= 2 && totalWealth > 2) {
+    wealthText += headline(`Classic "wealth too heavy to carry" (身弱财旺) — money will come, but a light Day Master makes it hard to <strong>hold</strong>. Strengthen yourself first; chase big sums later.`);
+  } else if (str.level >= 4 && totalWealth > 0) {
+    wealthText += headline(`Strong chart, live wealth stars — you can <strong>chase, hold, and grow</strong> money. Bigger bets (property, equity, business expansion) are well within your reach.`);
+  } else if (totalWealth === 0) {
+    wealthText += headline(`No wealth stars in your chart — money follows <strong>reputation, not windfalls</strong>. Build skills and standing first, and the income trails behind.`);
+  } else if (pianCaiCount > zhengCaiCount) {
+    wealthText += headline(`You've got an <strong>eye for opportunity</strong> — windfalls, side businesses, and multiple income streams are your lane${str.level < 3 ? ', but grow gradually so you don\'t overextend' : ''}.`);
+  } else {
+    wealthText += headline(`You're a <strong>steady earner, not a gambler</strong> — wealth builds through discipline (salary, property, long-term holds), not lucky breaks.`);
+  }
+
   if (totalWealth === 0) {
-    wealthText += `<p>No prominent wealth stars appear in your natal chart. This does not mean poverty — it suggests wealth comes through indirect means: career achievements (Officer stars), creative output, or steady accumulation rather than windfall. Focus on building skills and reputation first; wealth follows.</p>`;
+    wealthText += `<p>Wealth reaches you indirectly — through career wins, creative output, or patient accumulation rather than a single windfall.</p>`;
   } else {
     if (zhengCaiCount > 0) {
-      wealthText += `<p><strong>正财 (Direct Wealth)</strong> appears ${zhengCaiCount > 1 ? 'multiple times' : ''} — this is earned, stable income. Salary, long-term investments, property rental, and predictable returns are your wealth channels. You build wealth through discipline and consistency rather than speculation.</p>`;
+      wealthText += `<p><strong>正财 (Direct Wealth)</strong>${zhengCaiCount > 1 ? ' (multiple)' : ''} — earned, stable income: salary, long-term investments, and predictable returns.</p>`;
     }
     if (pianCaiCount > 0) {
-      wealthText += `<p><strong>偏财 (Indirect Wealth)</strong> is present — this signals windfall potential, business profits, speculative gains, or multiple income streams. You have an eye for opportunity. ${str.level >= 3 ? 'Your strong Day Master can handle this wealth energy — go after bigger opportunities.' : 'However, your weaker Day Master means managing large sums may be stressful. Grow gradually rather than overextending.'}</p>`;
+      wealthText += `<p><strong>偏财 (Indirect Wealth)</strong> — windfall potential, business profits, and side income. ${str.level >= 3 ? 'Your strong chart can handle it — go after bigger opportunities.' : 'Manage large sums carefully; grow step by step.'}</p>`;
     }
   }
 
-  // Wealth and strength relationship
-  if (str.level >= 4 && totalWealth > 0) {
-    wealthText += `<p>A strong Day Master pursuing visible wealth stars is a favourable combination — you have the energy to chase, hold, and grow wealth. Aggressive financial strategies (property investment, business expansion, equity) are supportable.</p>`;
-  } else if (str.level <= 2 && totalWealth > 2) {
-    wealthText += `<p>Caution: a weak Day Master with heavy wealth pressure creates the "wealth too heavy to carry" pattern (身弱财旺). In practice, money may come but slip away through obligations, poor timing, or others taking advantage. Focus on strengthening yourself first — health, skills, partnerships — before pursuing aggressive wealth.</p>`;
-  }
-
-  // Singapore property context
-  wealthText += `<p>In Singapore's context, ${str.favorable.includes('earth') ? 'property is aligned with your favorable element (Earth) — real estate investment is structurally supported by your chart' : str.unfavorable.includes('earth') ? 'property (Earth element) is not your most favorable sector — if investing in real estate, prioritize stable, income-generating assets over speculative plays' : 'property decisions should be timed with favorable luck pillars rather than rushed'}. ${str.favorable.includes('metal') ? 'Financial instruments and banking products also align well.' : ''}</p>`;
+  // Singapore property context — one line
+  wealthText += `<p>${str.favorable.includes('earth') ? 'Property aligns with your favorable Earth element — real estate is structurally supported by your chart.' : str.unfavorable.includes('earth') ? 'Property (Earth) isn\'t your strongest sector — favour stable, income-generating assets over speculation.' : 'Time property decisions to favorable luck pillars rather than rushing in.'}${str.favorable.includes('metal') ? ' Financial and banking products also suit you.' : ''}</p>`;
 
   // ========== 4. LOVE & RELATIONSHIPS ==========
   let loveText = '';
@@ -1998,29 +2143,24 @@ BZ.interpret = function(chart) {
   const spouseMainStem = BZ.STEMS[spouseHidden[0]];
   const spouseMainTG = BZ.tenGod(chart.day.stemIdx, spouseHidden[0]);
 
-  loveText += `<p>Your <strong>Spouse Palace</strong> (Day Branch) is ${spouseBranch.zh} (${spouseBranch.en}, ${spouseBranch.animal}) — ${elTag(spouseBranch.el)} element. The main hidden stem is ${stemTag(spouseHidden[0])}, carrying the ${spouseMainTG} relationship. `;
+  loveText += `<p>Your <strong>Spouse Palace</strong> (Day Branch) is ${spouseBranch.zh} (${spouseBranch.en}, ${spouseBranch.animal}) — ${elTag(spouseBranch.el)}, with ${stemTag(spouseHidden[0])} (${spouseMainTG}) hidden inside.</p>`;
 
   // What the spouse star tells us
   const isSpouseStarInPalace = (chart.gender === 'male' && (spouseMainTG === '正财' || spouseMainTG === '偏财')) ||
                                 (chart.gender === 'female' && (spouseMainTG === '正官' || spouseMainTG === '七杀'));
-  if (isSpouseStarInPalace) {
-    loveText += `This is the spouse star sitting in the spouse palace — a strong indicator of a meaningful, lasting partnership. The spouse is "at home" in your chart.</p>`;
-  } else {
-    loveText += `The spouse star does not sit in the spouse palace, suggesting the relationship axis is more complex — timing and luck pillars play a larger role in when and how partnership materialises.</p>`;
-  }
 
   // Spouse star analysis
   if (chart.gender === 'male') {
     if (hasTG('正财')) {
-      loveText += `<p><strong>正财 (Direct Wealth)</strong> as your spouse star suggests a devoted, practical, and supportive partner. The relationship is grounded in mutual reliability. ${tgCount('正财') > 2 ? 'Multiple wealth stars can indicate divided romantic attention or difficulty committing early.' : ''}</p>`;
+      loveText += `<p><strong>正财 (Direct Wealth)</strong> as your spouse star points to a devoted, practical, reliable partner.${tgCount('正财') > 2 ? ' Multiple wealth stars can mean divided attention or slow commitment early on.' : ''}</p>`;
     } else if (hasTG('偏财')) {
-      loveText += `<p><strong>偏财 (Indirect Wealth)</strong> as your relationship indicator suggests attraction to unconventional or socially dynamic partners. Relationships may begin unexpectedly. ${tgCount('偏财') > 1 ? 'Multiple indirect wealth stars can signal multiple relationships or a complex romantic history before settling.' : ''}</p>`;
+      loveText += `<p><strong>偏财 (Indirect Wealth)</strong> as your spouse star draws you to unconventional, socially dynamic partners; relationships often start unexpectedly.${tgCount('偏财') > 1 ? ' Several can mean a colourful history before you settle.' : ''}</p>`;
     }
   } else {
     if (hasTG('正官')) {
-      loveText += `<p><strong>正官 (Direct Officer)</strong> as your spouse star points to a responsible, status-conscious, and protective partner. You value stability and mutual respect in relationships.</p>`;
+      loveText += `<p><strong>正官 (Direct Officer)</strong> as your spouse star points to a responsible, status-conscious, protective partner; you value stability and mutual respect.</p>`;
     } else if (hasTG('七杀')) {
-      loveText += `<p><strong>七杀 (Seven Killings)</strong> as your relationship indicator suggests attraction to powerful, intense, or unconventional partners. The relationship dynamic is passionate but may involve power struggles. ${hasZhengYin ? 'The presence of Seal stars helps you maintain composure and boundaries.' : ''}</p>`;
+      loveText += `<p><strong>七杀 (Seven Killings)</strong> draws you to powerful, intense partners — passionate, but watch for power struggles.${hasZhengYin ? ' Your Seal stars help you hold boundaries.' : ''}</p>`;
     }
   }
 
@@ -2028,7 +2168,7 @@ BZ.interpret = function(chart) {
   const peachBlossoms = chart.shensha.filter(s => s.zh === '桃花');
   if (peachBlossoms.length > 0) {
     const pbLocs = peachBlossoms.map(p => p.pillar).join(', ');
-    loveText += `<p><strong>桃花 (Peach Blossom)</strong> appears in the ${pbLocs} pillar${peachBlossoms.length > 1 ? 's' : ''} — this enhances personal charisma and romantic attraction. ${peachBlossoms.some(p => p.pillar === 'Day') ? 'In the Day pillar, this is spouse-related charm — your partner finds you magnetically attractive.' : peachBlossoms.some(p => p.pillar === 'Hour') ? 'In the Hour pillar, this charm activates later in life or in private settings.' : 'This charisma is socially visible and helps in both romance and career networking.'}</p>`;
+    loveText += `<p><strong>桃花 (Peach Blossom)</strong> in the ${pbLocs} pillar${peachBlossoms.length > 1 ? 's' : ''} — ${peachBlossoms.some(p => p.pillar === 'Day') ? 'spouse-related charm; your partner finds you magnetic.' : peachBlossoms.some(p => p.pillar === 'Hour') ? 'charm that activates later in life or in private.' : 'socially visible charisma that helps in romance and networking.'}</p>`;
   }
 
   // Spouse palace clashes
@@ -2036,8 +2176,23 @@ BZ.interpret = function(chart) {
     i.type === 'clash' && i.pillars.includes('Day')
   );
   if (spouseClashes.length > 0) {
-    loveText += `<p>The Spouse Palace is in a <strong>clash</strong> (冲) — this creates turbulence in the relationship axis. It does not guarantee separation, but signals that the partnership will be tested: disagreements, periods of distance, or external pressures on the relationship. Awareness and communication are the antidotes.</p>`;
+    loveText += `<p>The Spouse Palace is in a <strong>clash</strong> (冲): the partnership gets tested — disagreements, distance, outside pressure. Tested, not doomed; communication is the antidote.</p>`;
   }
+
+  // Headline (computed last — needs clash/peach-blossom data above)
+  let loveHead;
+  if (spouseClashes.length > 0) {
+    loveHead = `Your relationship axis sits in a <strong>clash</strong> — love runs turbulent and gets tested, but that's friction, not a verdict. Communication defuses it.`;
+  } else if (isSpouseStarInPalace) {
+    loveHead = `Your partner is <strong>"at home"</strong> in your chart — a strong sign of a meaningful, lasting bond.`;
+  } else if (peachBlossoms.some(p => p.pillar === 'Day')) {
+    loveHead = `<strong>Strong mutual attraction</strong> in marriage — your partner finds you magnetic, and the spark stays.`;
+  } else if (peachBlossoms.length > 0) {
+    loveHead = `You've got real <strong>charisma</strong> (Peach Blossom) — magnetism that works in both romance and networking.`;
+  } else {
+    loveHead = `Your relationship axis is <strong>complex</strong> — timing and luck pillars decide when partnership lands more than the natal chart does.`;
+  }
+  loveText = headline(loveHead) + loveText;
 
   // ========== 5. CURRENT PERIOD ==========
   let periodText = '';
@@ -2055,14 +2210,14 @@ BZ.interpret = function(chart) {
     const lpFav = str.favorable.includes(lpStem.el) || str.favorable.includes(lpBranch.el);
     const lpUnfav = str.unfavorable.includes(lpStem.el) && str.unfavorable.includes(lpBranch.el);
 
-    periodText += `<p>You are currently in the <strong>${lpStem.zh}${lpBranch.zh} (${lpStem.en} ${lpBranch.en})</strong> luck pillar, age ${currentLP.ageStart}–${currentLP.ageEnd}. The stem carries ${elTag(lpStem.el)} (${lpTG}) and the branch carries ${elTag(lpBranch.el)}. `;
     if (lpFav) {
-      periodText += `This pillar brings <strong>favorable energy</strong> — the elements align with what your chart needs. This is a period of growth, opportunity, and forward momentum.</p>`;
+      periodText += headline(`You're in a <strong>favorable decade</strong> (${lpStem.zh}${lpBranch.zh}, age ${currentLP.ageStart}–${currentLP.ageEnd}) — momentum is on your side. This is a window to push forward.`);
     } else if (lpUnfav) {
-      periodText += `This pillar brings <strong>challenging energy</strong> — both stem and branch elements work against your chart's needs. Extra caution, patience, and strategic restraint serve you better than aggression during this period.</p>`;
+      periodText += headline(`You're in a <strong>challenging decade</strong> (${lpStem.zh}${lpBranch.zh}, age ${currentLP.ageStart}–${currentLP.ageEnd}) — play defense. Patience and restraint beat aggression right now.`);
     } else {
-      periodText += `This pillar is <strong>mixed</strong> — some elements support you while others create friction. Navigate selectively: lean into opportunities aligned with your favorable elements and be cautious in areas governed by unfavorable ones.</p>`;
+      periodText += headline(`You're in a <strong>mixed decade</strong> (${lpStem.zh}${lpBranch.zh}, age ${currentLP.ageStart}–${currentLP.ageEnd}) — pick your moments. Push where your favorable elements show up; hold back elsewhere.`);
     }
+    periodText += `<p>The stem carries ${elTag(lpStem.el)} (${lpTG}); the branch carries ${elTag(lpBranch.el)}.</p>`;
 
     // LP interactions with natal chart
     const lpBranchInts = BZ.findInteractions(
@@ -2173,34 +2328,32 @@ BZ.interpret = function(chart) {
   const missing = sortedEls.filter(([, v]) => v === 0).map(([k]) => k);
   const weak = sortedEls.filter(([, v]) => v === 1).map(([k]) => k);
 
-  balanceText += `<p>Your chart distributes across ${totalEls} element positions (${chart.hour ? '4' : '3'} stems + ${chart.hour ? '4' : '3'} branches). `;
-  if (dominant.length === 1) {
-    balanceText += `${elTag(dominant[0])} dominates with ${elBal[dominant[0]]} appearances, shaping the overall tone of your chart. `;
+  // Headline: dominant + missing, with the implication baked in
+  const domEl = dominant.length === 1 ? dominant[0] : null;
+  let balHead;
+  if (domEl && str.unfavorable.includes(domEl)) {
+    balHead = `You run on ${elTag(domEl)} — and there's <strong>too much of it</strong> (${elBal[domEl]}/${totalEls}). ${missing.length ? `With ${missing.map(elTag).join(' and ')} missing, your chart leans hard one way` : `Your chart leans hard one way`} and needs deliberate rebalancing toward ${str.favorable.map(elTag).join(' and ')}.`;
+  } else if (domEl) {
+    balHead = `${elTag(domEl)} <strong>leads your chart</strong> (${elBal[domEl]}/${totalEls}) — and it's a favorable one, a deep reservoir to draw on. ${missing.length ? `Mind the gap where ${missing.map(elTag).join(' and ')} ${missing.length > 1 ? 'are' : 'is'} missing.` : `All five elements are present.`}`;
   } else {
-    balanceText += `${dominant.map(elTag).join(' and ')} co-dominate with ${elBal[dominant[0]]} appearances each. `;
+    balHead = `${dominant.map(elTag).join(' and ')} <strong>co-dominate</strong> your chart (${elBal[dominant[0]]} each)${missing.length ? `, while ${missing.map(elTag).join(' and ')} ${missing.length > 1 ? 'are' : 'is'} missing` : ''}.`;
   }
+  balanceText += headline(balHead);
+
+  balanceText += `<p>Spread across ${totalEls} positions: ${sortedEls.map(([k, v]) => `${elTag(k)} ${v}`).join(' · ')}.</p>`;
 
   if (missing.length > 0) {
-    balanceText += `Notably, ${missing.map(elTag).join(' and ')} ${missing.length > 1 ? 'are' : 'is'} <strong>completely absent</strong> from the natal chart.</p>`;
-    balanceText += `<p>A missing element does not mean its qualities are inaccessible — it means the chart does not naturally supply that energy. `;
     for (const m of missing) {
       if (str.favorable.includes(m)) {
-        balanceText += `Since ${elTag(m)} is one of your favorable elements, its absence is significant: you must actively seek it through luck pillars, environment, career choice, or relationships. `;
+        balanceText += `<p>${elTag(m)} is missing <em>and</em> favorable — actively seek it through environment, career, and relationships; luck pillars that bring it will feel like relief.</p>`;
       } else {
-        balanceText += `Since ${elTag(m)} is unfavorable for your chart, its absence is actually a structural advantage — the chart self-corrects by not overloading you with draining energy. `;
+        balanceText += `<p>${elTag(m)} is missing, but it's unfavorable anyway — a quiet structural advantage.</p>`;
       }
     }
-    balanceText += `</p>`;
-  } else {
-    balanceText += `All five elements are represented — your chart has baseline diversity.</p>`;
-    if (weak.length > 0) {
-      balanceText += `<p>However, ${weak.map(elTag).join(' and ')} ${weak.length > 1 ? 'are' : 'is'} underrepresented with only 1 appearance. `;
-      for (const w of weak) {
-        if (str.favorable.includes(w)) {
-          balanceText += `${elTag(w)} being favorable yet scarce means you benefit from environments and periods that boost this element. `;
-        }
-      }
-      balanceText += `</p>`;
+  } else if (weak.length > 0) {
+    const weakFav = weak.filter(w => str.favorable.includes(w));
+    if (weakFav.length > 0) {
+      balanceText += `<p>${weakFav.map(elTag).join(' and ')} ${weakFav.length > 1 ? 'are' : 'is'} favorable but scarce (just 1) — you benefit from environments and periods that boost ${weakFav.length > 1 ? 'them' : 'it'}.</p>`;
     }
   }
 
@@ -2209,19 +2362,18 @@ BZ.interpret = function(chart) {
   if (excess.length > 0) {
     for (const [el, count] of excess) {
       const pct = Math.round((count / totalEls) * 100);
-      balanceText += `<p>${elTag(el)} at ${count}/${totalEls} (${pct}%) is overrepresented. `;
       if (str.unfavorable.includes(el)) {
-        balanceText += `This is problematic since ${elTag(el)} is unfavorable — the chart is weighed toward energy that works against you. `;
         const elTraits = {
-          wood: 'restlessness, over-planning without execution, and interpersonal friction from rigidity',
+          wood: 'restlessness, over-planning without execution, and friction from rigidity',
           fire: 'impulsiveness, burnout, scattered focus, and emotional volatility',
           earth: 'overthinking, stubbornness, stagnation, and resistance to change',
-          metal: 'harsh judgement, emotional coldness, perfectionism, and conflict-seeking',
-          water: 'indecision, anxiety, excessive worry, and difficulty committing',
+          metal: 'harsh judgement, coldness, perfectionism, and conflict-seeking',
+          water: 'indecision, anxiety, worry, and difficulty committing',
         };
-        balanceText += `Excess ${elTag(el)} when unfavorable can manifest as <strong>${elTraits[el] || 'imbalance'}</strong>. Consciously counterbalance with your favorable elements.</p>`;
-      } else {
-        balanceText += `Since ${elTag(el)} is favorable, this concentration is generally productive — it gives you a deep reservoir of this energy to draw from. However, even favorable elements in excess can create one-dimensionality. Stay open to experiences outside your comfort zone.</p>`;
+        balanceText += `<p>Excess ${elTag(el)} (${count}/${totalEls}, ${pct}%) is unfavorable for you — watch for <strong>${elTraits[el] || 'imbalance'}</strong>, and counterbalance with your favorable elements.</p>`;
+      } else if (el !== domEl) {
+        // Skip the dominant favorable element — the headline already makes this point.
+        balanceText += `<p>${elTag(el)} runs deep (${count}/${totalEls}, ${pct}%) and it's favorable — a real reservoir. Just guard against one-dimensionality.</p>`;
       }
     }
   }
@@ -2262,6 +2414,37 @@ BZ.interpret = function(chart) {
     'Hour': 'children, legacy, late life (46+), aspirations, and subconscious desires',
   };
 
+  // Headline: surface the single most notable interaction
+  const _clashes = chart.interactions.filter(i => i.type === 'clash');
+  const _dayClash = _clashes.find(i => i.pillars.includes('Day'));
+  const _combos = chart.interactions.filter(i => i.type === 'combination' || i.type === 'three-harmony' || i.type === 'half-combo');
+  const _transformCombo = _combos.find(i => i.result);
+  const _punish = chart.interactions.filter(i => i.type === 'punishment' || i.type === 'self-punishment');
+  let intHead;
+  if (_dayClash) {
+    const otherP = _dayClash.pillars.find(p => p !== 'Day') || _dayClash.pillars[1];
+    const impl = otherP === 'Year' ? 'a tug-of-war between your own desires and family expectations'
+      : otherP === 'Month' ? 'a restless pull between who you are and what you do — career pivots keep recurring'
+      : otherP === 'Hour' ? 'friction between your present life and your aspirations or children'
+      : 'turbulence right where it\'s most personal';
+    intHead = `A <strong>${_dayClash.branches.join('')} clash</strong> sits at your core (Day–${otherP}) — ${impl}.`;
+  } else if (_clashes.length > 0) {
+    const c = _clashes[0];
+    intHead = `A <strong>${c.branches.join('')} clash</strong> between your ${c.pillars.join('–')} pillars breaks stagnation and forces change — disruption that pushes you to evolve.`;
+  } else if (_transformCombo) {
+    const fav = str.favorable.includes(_transformCombo.result);
+    intHead = `Two of your branches <strong>fuse</strong> (${_transformCombo.branches.join('')}) into ${elTag(_transformCombo.result)} — ${fav ? 'a constructive merger that strengthens your chart' : 'a merger that pulls energy in a direction that doesn\'t fully serve you'}.`;
+  } else if (_combos.length > 0) {
+    intHead = `Your branches <strong>bind together</strong> (${_combos[0].branches.join('')}) — these life areas move as one, for better or worse.`;
+  } else if (_punish.length > 0) {
+    intHead = `A hidden <strong>punishment (刑)</strong> runs through your chart — slow-burn friction to watch in health and close relationships.`;
+  } else if (chart.interactions.length > 0) {
+    intHead = `Subtler currents (harm or destruction) run through your chart — quiet erosion rather than open conflict.`;
+  } else {
+    intHead = `A <strong>quiet chart</strong> — no major internal clashes. Your big shifts are triggered by outside timing (luck pillars and annual years), not internal tension.`;
+  }
+  interactionsText += headline(intHead);
+
   // Stem combination details in interactions narrative
   if (chart.stemCombinations && chart.stemCombinations.length > 0) {
     interactionsText += `<p><strong>Heavenly Stem Combinations (天干合)</strong> operate at the surface level — the visible, conscious layer of chart dynamics. `;
@@ -2287,9 +2470,8 @@ BZ.interpret = function(chart) {
   }
 
   if (chart.interactions.length === 0) {
-    interactionsText += `<p>No major branch interactions detected among the natal pillars. This suggests a relatively stable, undisturbed chart — the four pillars coexist without pulling each other into transformation or conflict. While this means fewer dramatic shifts triggered by internal chart dynamics, it also means external triggers (luck pillars and annual flows) carry more weight when they do activate interactions.</p>`;
+    // Headline already tells the story; nothing more to add.
   } else {
-    interactionsText += `<p>Your natal chart contains <strong>${chart.interactions.length} interaction${chart.interactions.length > 1 ? 's' : ''}</strong> among the branch positions. Interactions are the engines of change in BaZi — they show where energy transforms, clashes, or binds.</p>`;
 
     // Group by type for coherent narrative
     const combos = chart.interactions.filter(i => i.type === 'combination' || i.type === 'three-harmony' || i.type === 'half-combo');
@@ -2299,7 +2481,7 @@ BZ.interpret = function(chart) {
     const destructions = chart.interactions.filter(i => i.type === 'destruction');
 
     if (combos.length > 0) {
-      interactionsText += `<p><strong>Combinations (合)</strong> bind branches together, transforming their energy into a new element. This is fusion — two forces merging into something different. `;
+      interactionsText += `<p><strong>Combinations (合)</strong> — branches fuse, merging their energy into a new element. `;
       for (const c of combos) {
         const pillars = c.pillars;
         const domains = pillars.map(p => p).join('–');
@@ -2320,7 +2502,7 @@ BZ.interpret = function(chart) {
     }
 
     if (clashes.length > 0) {
-      interactionsText += `<p><strong>Clashes (冲)</strong> are direct opposition — two branches face off across the zodiac, creating disruption, forced change, and movement. Clashes are not inherently bad; they break stagnation and force evolution. `;
+      interactionsText += `<p><strong>Clashes (冲)</strong> — direct opposition that breaks stagnation and forces change. `;
       for (const c of clashes) {
         const pillars = c.pillars;
         const domains = pillars.map(p => p).join('–');
@@ -2343,7 +2525,7 @@ BZ.interpret = function(chart) {
     }
 
     if (punishments.length > 0) {
-      interactionsText += `<p><strong>Punishments (刑)</strong> are hidden friction — unlike the obvious disruption of clashes, punishments create slow-burn tension that manifests as health issues, legal troubles, relationship toxicity, or self-sabotage. `;
+      interactionsText += `<p><strong>Punishments (刑)</strong> — hidden, slow-burn friction that surfaces as health, legal, or relationship strain. `;
       for (const p of punishments) {
         if (p.type === 'self-punishment') {
           interactionsText += `The <strong>Self Punishment (自刑)</strong> of ${p.branches[0]} between ${p.pillars.join('–')} suggests internal conflict — the same energy doubled creates stagnation or self-destructive patterns in the domains of <em>${pillarDomain[p.pillars[0]]}</em> and <em>${pillarDomain[p.pillars[1]]}</em>. Awareness is the first step to breaking the loop. `;
@@ -2362,7 +2544,7 @@ BZ.interpret = function(chart) {
     }
 
     if (harms.length > 0) {
-      interactionsText += `<p><strong>Harms (害)</strong> are emotional wounds — betrayal, disappointment, broken trust. Unlike clashes which are overt, harms operate through relationships and expectations. `;
+      interactionsText += `<p><strong>Harms (害)</strong> — emotional wounds that work through relationships: betrayal, disappointment, broken trust. `;
       for (const h of harms) {
         interactionsText += `The ${h.branches.join('')} harm between <strong>${h.pillars.join('–')}</strong> pillars suggests emotional vulnerability between <em>${pillarDomain[h.pillars[0]]}</em> and <em>${pillarDomain[h.pillars[1]]}</em>. `;
       }
@@ -2370,7 +2552,7 @@ BZ.interpret = function(chart) {
     }
 
     if (destructions.length > 0) {
-      interactionsText += `<p><strong>Destructions (破)</strong> are subtle undermining — one branch slowly erodes another's structure. This is not dramatic collapse but gradual wearing down. `;
+      interactionsText += `<p><strong>Destructions (破)</strong> — subtle, gradual erosion of one branch by another. `;
       for (const d of destructions) {
         interactionsText += `The ${d.branches.join('')} destruction between <strong>${d.pillars.join('–')}</strong> pillars suggests slow erosion in the domains of <em>${pillarDomain[d.pillars[0]]}</em> and <em>${pillarDomain[d.pillars[1]]}</em>. `;
       }
@@ -2381,10 +2563,34 @@ BZ.interpret = function(chart) {
   // ========== 8. SHEN SHA STARS ==========
   let shenshaText = '';
 
+  // Headline: name the single standout star in plain English
+  const starLine = {
+    '天乙贵人': `You carry the <strong>Nobleman star</strong> — influential people show up to help you right when you need it.`,
+    '天德贵人': `You carry <strong>Heavenly Virtue</strong> — a protective star; you tend to dodge disasters narrowly and land on your feet.`,
+    '月德贵人': `You carry <strong>Monthly Virtue</strong> — goodwill and good timing follow you, and setbacks heal fast.`,
+    '羊刃': `You carry the <strong>Blade star</strong> — fierce, decisive, double-edged. A weapon when aimed, a hazard when idle.`,
+    '桃花': `You carry <strong>Peach Blossom</strong> — natural charm and magnetism that opens doors in romance and rooms alike.`,
+    '文昌': `You carry the <strong>Academic star</strong> — a genuine edge in exams, credentials, research, and writing.`,
+    '驿马': `You carry the <strong>Travelling Horse</strong> — movement is your element: travel, relocation, a career that won't sit still.`,
+    '华盖': `You carry the <strong>Canopy star</strong> — depth and solitude, with a pull toward art, philosophy, or deep expertise.`,
+    '红鸾': `You carry the <strong>Marriage star</strong> — a strong romantic destiny written into your chart.`,
+    '禄': `You carry the <strong>Prosperity star (禄)</strong> — baseline talent and self-sufficiency that others have to work for.`,
+    '金舆': `You carry the <strong>Golden Carriage</strong> — a life touched by comfort, quality, and status.`,
+    '天医': `You carry the <strong>Heavenly Healer</strong> — a natural gift for healthcare, counseling, and restoring balance.`,
+    '孤辰': `You carry the <strong>Solitary star</strong> — fierce independence that achieves alone but must work to stay connected.`,
+    '寡宿': `You carry the <strong>Widow star</strong> — deep self-containment; intimacy needs conscious cultivation.`,
+    '天喜': `You carry the <strong>Joy star</strong> — celebrations and happy milestones tend to follow you.`,
+  };
+  const starPriority = ['天乙贵人','天德贵人','月德贵人','羊刃','桃花','文昌','驿马','华盖','红鸾','禄','金舆','天医','孤辰','寡宿','天喜'];
+
   if (chart.shensha.length === 0) {
-    shenshaText += `<p>No notable Shen Sha stars are activated in your natal chart. Shen Sha stars are auxiliary markers — their absence simply means the chart's story is told primarily through the Ten Gods, element balance, and interactions rather than through these special star formations.</p>`;
+    shenshaText += headline(`<strong>No special stars</strong> active — your story is told through the core chart (Day Master, elements, interactions), not through flourishes.`);
   } else {
-    shenshaText += `<p>Your chart activates <strong>${chart.shensha.length} Shen Sha star${chart.shensha.length > 1 ? 's' : ''}</strong>. Shen Sha (神煞) are classical markers that highlight specific qualities, talents, or vulnerabilities in the chart. They refine the reading — think of them as annotations on top of the core structure.</p>`;
+    const present = new Set(chart.shensha.map(s => s.zh));
+    const distinctCount = present.size;
+    const topStar = starPriority.find(z => present.has(z));
+    const topLine = topStar ? starLine[topStar] : `Your chart activates ${distinctCount} special star${distinctCount > 1 ? 's' : ''}.`;
+    shenshaText += headline(topLine + (distinctCount > 1 ? ` Plus ${distinctCount - 1} more, detailed below.` : ''));
 
     // Group stars by type for coherent narrative
     const starDetails = {
@@ -2679,11 +2885,11 @@ BZ.renderPillar = function(pillar, label, labelZh, isDayMaster, dmStemIdx) {
 
   let tenGodHtml = '';
   if (isDayMaster) {
-    tenGodHtml = `<span class="dm-badge">Day Master 日主</span>`;
+    tenGodHtml = `<span class="dm-badge">${BZ.g('Day Master 日主', 'Day Master')}</span>`;
   } else {
     const tg = BZ.tenGod(dmStemIdx, pillar.stemIdx);
     const tgEn = BZ.tenGodShort(tg);
-    tenGodHtml = `<span class="ten-god-label ${BZ.badgeClass(stem.el)}">${tg} ${tgEn}</span>`;
+    tenGodHtml = `<span class="ten-god-label ${BZ.badgeClass(stem.el)}">${BZ.g(tg + ' ' + tgEn, tg)}</span>`;
   }
 
   let hiddenHtml = hidden.map(si => {
@@ -2704,7 +2910,7 @@ BZ.renderPillar = function(pillar, label, labelZh, isDayMaster, dmStemIdx) {
       <div class="branch-char ${BZ.elClass(branch.el)}">${branch.zh}${pillar.isVoid ? '<span class="void-badge">空</span>' : ''}</div>
       <div class="branch-label">${branch.animal} ${branch.animalZh}</div>
       <div class="hidden-stems">${hiddenHtml}</div>
-      <div class="nayin ${BZ.elClass(nayin.el)}">${nayin.zh}</div>
+      <div class="nayin ${BZ.elClass(nayin.el)}">${BZ.g(nayin.zh, nayin.zh)}</div>
     </div>`;
 };
 
@@ -2727,22 +2933,54 @@ BZ.render = function(chart) {
 
   let html = '';
 
-  // ---- Four Pillars ----
-  html += `<div class="card fade-in">
-    <div class="card-title">Four Pillars 四柱</div>
-    <div class="pillars-grid ${chart.hour ? '' : 'no-hour'}">
-      ${BZ.renderPillar(chart.hour || chart.year, 'Hour', '时柱', false, chart.day.stemIdx)}
-      ${chart.hour ? '' : '<!-- no hour pillar -->'}
-      ${BZ.renderPillar(chart.day, 'Day', '日柱', true, chart.day.stemIdx)}
-      ${BZ.renderPillar(chart.month, 'Month', '月柱', false, chart.day.stemIdx)}
-      ${BZ.renderPillar(chart.year, 'Year', '年柱', false, chart.day.stemIdx)}
-    </div>
+  // ---- Jump nav (scannability) ----
+  html += `<nav class="result-nav" aria-label="Jump to section">
+    <a href="#r-summary">Summary</a>
+    <a href="#r-pillars">Your Pillars</a>
+    <a href="#r-self">You</a>
+    <a href="#r-elements">Elements</a>
+    <a href="#r-life">Life Areas</a>
+    <a href="#r-timing">Timing</a>
+  </nav>`;
+
+  // ---- Plain-language summary (tier 1: leads the dense chart) ----
+  const sStr = chart.strength;
+  const archetype = BZ.DM_ARCHETYPE[dm.zh] || '';
+  const elWords = list => (list && list.length) ? list.map(el => BZ.EL_EN[el]).join(', ') : 'a balanced mix';
+  const domains = [
+    { name: 'Career', score: interp.careerScore },
+    { name: 'Wealth', score: interp.wealthScore },
+    { name: 'Love', score: interp.loveScore },
+  ];
+  const sorted = [...domains].sort((a, b) => b.score - a.score);
+  const bright = sorted[0], nurture = sorted[sorted.length - 1];
+  const domainLine = bright.score === nurture.score
+    ? `Your chart reads fairly evenly across career, wealth, and relationships.`
+    : `Your brightest area looks like <strong>${bright.name}</strong>; the one to nurture most is <strong>${nurture.name}</strong>.`;
+  const pointsHtml = domains.map(d =>
+    `<span class="summary-point"><span class="sp-label">${d.name}</span> ${BZ.renderStars(d.score)}</span>`
+  ).join('');
+  const hourNote = chart.hour ? '' :
+    `<div class="summary-hour-note"><strong>One thing:</strong> you didn't enter a birth hour, so this reading leaves out the Hour pillar (roughly a quarter of the chart, and the part most about relationships and later life). Add an approximate time for a fuller picture.</div>`;
+
+  html += `<div class="card summary-card fade-in" id="r-summary">
+    <div class="card-title">Your Chart at a Glance</div>
+    <div class="card-subtitle">The short version, in plain language. The detailed chart follows below, with tap-to-explain notes on the technical terms.</div>
+    <p class="summary-lead">
+      You are <strong>${dm.zh} ${dm.en}</strong>, a <span class="sum-el ${BZ.elClass(dm.el)}">${dm.pol === 'yang' ? 'Yang' : 'Yin'} ${BZ.EL_EN[dm.el]}</span> ${BZ.g('Day Master', 'Day Master')} &mdash; ${archetype}.
+      Your chart runs <strong>${sStr.strength}</strong>, so it's best supported by <strong>${elWords(sStr.favorable)}</strong> and asks you to handle <strong>${elWords(sStr.unfavorable)}</strong> with more care.
+      ${domainLine}
+    </p>
+    <div class="summary-points">${pointsHtml}</div>
+    ${hourNote}
   </div>`;
 
-  // Fix: if no hour, only show 3 pillars
+  // ---- Four Pillars ----
+  const pillarsSub = `<div class="card-subtitle">Your birth moment as four element pairs. Read right to left: Year, Month, Day, Hour. The highlighted <strong>Day</strong> pillar is you.</div>`;
   if (!chart.hour) {
-    html = `<div class="card fade-in">
+    html += `<div class="card fade-in" id="r-pillars">
       <div class="card-title">Four Pillars 四柱</div>
+      ${pillarsSub}
       <div class="pillars-grid no-hour">
         ${BZ.renderPillar(chart.day, 'Day', '日柱', true, chart.day.stemIdx)}
         ${BZ.renderPillar(chart.month, 'Month', '月柱', false, chart.day.stemIdx)}
@@ -2750,8 +2988,9 @@ BZ.render = function(chart) {
       </div>
     </div>`;
   } else {
-    html = `<div class="card fade-in">
+    html += `<div class="card fade-in" id="r-pillars">
       <div class="card-title">Four Pillars 四柱</div>
+      ${pillarsSub}
       <div class="pillars-grid">
         ${BZ.renderPillar(chart.hour, 'Hour', '时柱', false, chart.day.stemIdx)}
         ${BZ.renderPillar(chart.day, 'Day', '日柱', true, chart.day.stemIdx)}
@@ -2768,22 +3007,23 @@ BZ.render = function(chart) {
   const favHtml = str.favorable.map(el => `<span class="${BZ.badgeClass(el)}">${BZ.EL_ZH[el]} ${BZ.EL_EN[el]}</span>`).join('');
   const unfavHtml = str.unfavorable.map(el => `<span class="${BZ.badgeClass(el)}">${BZ.EL_ZH[el]} ${BZ.EL_EN[el]}</span>`).join('');
 
-  html += `<div class="card fade-in">
+  html += `<div class="card fade-in" id="r-self">
     <div class="card-title">Day Master Analysis 日主分析</div>
+    <div class="card-subtitle">A closer look at who you are at the core, and the ${BZ.g('balance', 'Strength')} of your element across the chart.</div>
     <div class="dm-summary">
       <div class="dm-info">
         <h3 class="${BZ.elClass(dm.el)}">${dm.zh} ${dm.pol === 'yang' ? 'Yang' : 'Yin'} ${BZ.EL_EN[dm.el]}</h3>
         <p>${dm.en} (${dm.zh}) &mdash; ${dm.pol === 'yang' ? 'Yang' : 'Yin'} ${BZ.EL_EN[dm.el]} Day Master</p>
         <div class="strength-bar"><div class="strength-fill" style="width:${barPct}%;background:${barColor}"></div></div>
-        <div class="strength-label" style="color:${barColor}">${str.strength}</div>
+        <div class="strength-label" style="color:${barColor}">${BZ.g(str.strength, 'Strength')}</div>
       </div>
       <div>
         <div class="gods-section">
-          <h4>Favorable Elements 用神</h4>
+          <h4>${BZ.g('Favorable Elements 用神', 'Favorable Elements')}</h4>
           <div class="gods-list">${favHtml}</div>
         </div>
         <div class="gods-section">
-          <h4>Unfavorable Elements 忌神</h4>
+          <h4>${BZ.g('Unfavorable Elements 忌神', 'Unfavorable Elements')}</h4>
           <div class="gods-list">${unfavHtml}</div>
         </div>
       </div>
@@ -2808,8 +3048,9 @@ BZ.render = function(chart) {
       <div class="balance-bar" style="width:${pct}%;background:var(--${el})"></div>
     </div>`;
   }
-  html += `<div class="card fade-in">
+  html += `<div class="card fade-in" id="r-elements">
     <div class="card-title">Element Balance 五行分布</div>
+    <div class="card-subtitle">How the five elements are spread across your chart. A tall bar means lots of that energy; a low or empty one shows where it runs thin.</div>
     <div class="balance-grid">${balanceHtml}</div>
     <div class="interp-text" style="margin-top:20px">${interp.balance}</div>
   </div>`;
@@ -2862,11 +3103,12 @@ BZ.render = function(chart) {
     }
     intHtml += '</div>';
   }
-  html += `<div class="card fade-in">
-    <div class="card-title">Interactions 干支关系</div>
+  html += `<details class="card fade-in">
+    <summary class="card-title">Interactions 干支关系</summary>
+    <div class="card-subtitle">Advanced detail: how your pillars combine, clash, or react with one another.</div>
     ${intHtml}
     <div class="interp-text" style="margin-top:20px">${interp.interactions}</div>
-  </div>`;
+  </details>`;
 
   // ---- Shen Sha ----
   let ssHtml = '';
@@ -2884,11 +3126,15 @@ BZ.render = function(chart) {
     }
     ssHtml += '</div>';
   }
-  html += `<div class="card fade-in">
-    <div class="card-title">Shen Sha Stars 神煞</div>
+  html += `<details class="card fade-in">
+    <summary class="card-title">Shen Sha Stars 神煞</summary>
+    <div class="card-subtitle">Advanced detail: symbolic "stars" that add an auspicious or cautionary flavour to the chart.</div>
     ${ssHtml}
     <div class="interp-text" style="margin-top:20px">${interp.shensha}</div>
-  </div>`;
+  </details>`;
+
+  // ---- Life Domains group ----
+  html += `<div class="domain-group" id="r-life">Life Areas &mdash; what your chart leans toward</div>`;
 
   // ---- Career Interpretation ----
   html += `<div class="card fade-in">
@@ -2924,8 +3170,9 @@ BZ.render = function(chart) {
     </div>`;
   }
   lpHtml += '</div>';
-  html += `<div class="card fade-in">
+  html += `<div class="card fade-in" id="r-timing">
     <div class="card-title">10-Year Luck Pillars 大运 (${chart.luckPillars.forward ? 'Forward' : 'Backward'}, starts age ${chart.luckPillars.startAge})</div>
+    <div class="card-subtitle">Your life in 10-year chapters, each coloured by its own element pair. The highlighted block is the period you're in now.</div>
     ${lpHtml}
   </div>`;
 
@@ -3012,7 +3259,65 @@ BZ.render = function(chart) {
   rs.innerHTML = html;
   rs.classList.remove('hidden');
   document.body.classList.add('results-bg-active');
+  BZ.initGloss();
   rs.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+// ============================================================
+// GLOSSARY POPOVER — plain-language definitions on hover / tap
+// ============================================================
+BZ.initGloss = function() {
+  let pop = document.getElementById('gloss-pop');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'gloss-pop';
+    document.body.appendChild(pop);
+  }
+  let activeEl = null;
+
+  const defFor = key => BZ.GLOSS[key] || BZ.NAYIN_MEANINGS[key] || '';
+  const termFor = el => el.textContent.trim();
+
+  const place = el => {
+    const def = defFor(el.dataset.g);
+    if (!def) return;
+    pop.innerHTML = '<span class="gp-term">' + termFor(el) + '</span>' + def;
+    pop.classList.add('show');
+    const r = el.getBoundingClientRect();
+    const pw = Math.min(280, window.innerWidth - 24);
+    pop.style.maxWidth = pw + 'px';
+    let left = r.left + r.width / 2 - pw / 2;
+    left = Math.max(12, Math.min(left, window.innerWidth - pw - 12));
+    const ph = pop.offsetHeight;
+    let top = r.top - ph - 10;
+    if (top < 12) top = r.bottom + 10; // flip below if no room above
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+    activeEl = el;
+  };
+  const hide = () => { pop.classList.remove('show'); activeEl = null; };
+
+  const rs = document.getElementById('result-section');
+  // Desktop hover
+  rs.addEventListener('mouseover', e => {
+    const el = e.target.closest('.gloss');
+    if (el) place(el);
+  });
+  rs.addEventListener('mouseout', e => {
+    const el = e.target.closest('.gloss');
+    if (el && !el.contains(e.relatedTarget)) hide();
+  });
+  // Touch / click toggle
+  rs.addEventListener('click', e => {
+    const el = e.target.closest('.gloss');
+    if (el) {
+      e.preventDefault();
+      if (activeEl === el) hide(); else place(el);
+    } else {
+      hide();
+    }
+  });
+  window.addEventListener('scroll', hide, { passive: true });
 };
 
 // ============================================================
