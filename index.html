@@ -935,11 +935,15 @@ footer a { color: var(--accent); text-decoration: none; }
 .bz-elements span:nth-child(5) { --el-color: #4f86cf; } /* 水 Water — blue */
 .bz-elements span.lit {
   color: var(--el-color);
-  animation: bz-el-pulse 1.4s ease-in-out infinite;
-}
-@keyframes bz-el-pulse {
-  0%, 100% { text-shadow: 0 0 6px var(--el-color); opacity: 0.8; transform: translateY(-3px) scale(1); }
-  50%      { text-shadow: 0 0 18px var(--el-color); opacity: 1; transform: translateY(-3px) scale(1.12); }
+  transform: translateY(-3px);
+  background: linear-gradient(105deg,
+    var(--el-color) 0%,
+    color-mix(in srgb, var(--el-color) 40%, #fff) 50%,
+    var(--el-color) 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3.5s ease-in-out infinite;
 }
 
 /* Status text + progress */
@@ -961,7 +965,7 @@ footer a { color: var(--accent); text-decoration: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .bz-ring::before, .bz-core, .bz-elements span.lit { animation: none !important; }
-  .bz-elements span.lit { text-shadow: 0 0 10px var(--el-color); }
+  .bz-elements span.lit { -webkit-text-fill-color: var(--el-color); }
 }
 
 /* Respect reduced-motion / low-power: drop the continuous repaints */
