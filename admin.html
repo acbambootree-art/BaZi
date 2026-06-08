@@ -107,9 +107,10 @@ ADMIN.req = async function(url, opts) {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const res = await fetch(url, opts);
-      // Retry transient gateway errors (e.g. during a redeploy) rather than failing.
-      if (res.status >= 502 && res.status <= 504) {
-        lastErr = new Error('gateway ' + res.status);
+      // 401/503 are real auth answers — return them. Anything else that isn't OK
+      // (404 or 5xx during a redeploy swap) is transient — retry before failing.
+      if (!res.ok && res.status !== 401 && res.status !== 503) {
+        lastErr = new Error('status ' + res.status);
         await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
         continue;
       }
