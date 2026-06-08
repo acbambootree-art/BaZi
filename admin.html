@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Orders · Focused Decision Reading</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0f; --card: rgba(18,18,28,0.9); --accent: #c9a44a;
+    --text: #e8e4df; --sec: #9a9590; --muted: #5c5856; --border: rgba(201,164,74,0.18);
+  }
+  body {
+    background: var(--bg); color: var(--text); min-height: 100vh;
+    font-family: 'Inter', 'Segoe UI', sans-serif; padding: 24px 16px 60px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+  h1 { font-family: Georgia, serif; color: var(--accent); font-weight: 600; font-size: 1.5rem; letter-spacing: 0.03em; }
+  h1 small { display: block; font-size: 0.8rem; color: var(--sec); font-family: 'Inter', sans-serif; font-weight: 400; margin-top: 4px; }
+  .toolbar { display: flex; gap: 10px; align-items: center; }
+  .btn {
+    background: linear-gradient(135deg, #c9a44a, #a07d30); color: #0a0a0f; border: none;
+    padding: 9px 16px; border-radius: 8px; font-weight: 600; font-size: 0.82rem; cursor: pointer;
+    letter-spacing: 0.04em; transition: opacity 0.2s, transform 0.15s;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--accent); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .summary { color: var(--sec); font-size: 0.85rem; margin-bottom: 16px; }
+  /* Key gate */
+  .gate { max-width: 380px; margin: 12vh auto 0; text-align: center; background: var(--card);
+    border: 1px solid var(--border); border-radius: 14px; padding: 36px 28px; }
+  .gate h2 { color: var(--accent); font-family: Georgia, serif; font-weight: 600; margin-bottom: 16px; }
+  .gate input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+    color: var(--text); padding: 12px 14px; border-radius: 8px; font-size: 1rem; margin-bottom: 14px; }
+  .gate input:focus { outline: none; border-color: rgba(201,164,74,0.5); }
+  .gate .btn { width: 100%; padding: 12px; }
+  .err { color: #e74c3c; font-size: 0.85rem; margin-top: 12px; min-height: 18px; }
+  /* Order cards */
+  .order { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; }
+  .order-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .ref { font-family: ui-monospace, monospace; color: var(--accent); font-size: 0.9rem; font-weight: 600; }
+  .date { color: var(--muted); font-size: 0.78rem; }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge { font-size: 0.68rem; font-weight: 600; padding: 3px 9px; border-radius: 20px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .b-paid { background: rgba(94,189,115,0.15); color: #5ebd73; border: 1px solid rgba(94,189,115,0.4); }
+  .b-claimed { background: rgba(212,168,67,0.15); color: #d4a843; border: 1px solid rgba(212,168,67,0.4); }
+  .b-pending { background: rgba(154,149,144,0.12); color: var(--sec); border: 1px solid var(--border); }
+  .b-refunded { background: rgba(231,76,60,0.12); color: #e74c3c; border: 1px solid rgba(231,76,60,0.4); }
+  .b-delivered { background: rgba(91,155,213,0.15); color: #5b9bd5; border: 1px solid rgba(91,155,213,0.4); }
+  .b-method { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .q { background: rgba(201,164,74,0.05); border-left: 2px solid var(--accent); padding: 12px 14px; border-radius: 6px;
+    font-size: 0.95rem; line-height: 1.55; margin-bottom: 12px; white-space: pre-wrap; }
+  .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 6px 18px; font-size: 0.82rem; color: var(--sec); margin-bottom: 12px; }
+  .meta b { color: var(--text); font-weight: 500; }
+  .meta a { color: var(--accent); text-decoration: none; }
+  .chart { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px 14px; font-size: 0.8rem;
+    color: var(--sec); white-space: pre-wrap; line-height: 1.6; margin-bottom: 12px; font-family: ui-monospace, monospace; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .actions .btn { font-size: 0.76rem; padding: 7px 13px; }
+  .empty { text-align: center; color: var(--muted); padding: 40px; font-style: italic; }
+  .delivered-note { color: #5b9bd5; font-size: 0.8rem; align-self: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Key gate -->
+  <div id="gate" class="gate">
+    <h2>Orders Dashboard</h2>
+    <p style="color:var(--sec);font-size:0.85rem;margin-bottom:18px">Enter your admin key to view Focused Decision Reading orders.</p>
+    <input type="password" id="key-input" placeholder="Admin key" autocomplete="off">
+    <button class="btn" onclick="ADMIN.login()">Unlock</button>
+    <div id="gate-err" class="err"></div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dash" style="display:none">
+    <header>
+      <h1>Focused Decision Reading<small>Orders dashboard</small></h1>
+      <div class="toolbar">
+        <button class="btn ghost" onclick="ADMIN.load()">Refresh</button>
+        <button class="btn ghost" onclick="ADMIN.logout()">Lock</button>
+      </div>
+    </header>
+    <div id="summary" class="summary"></div>
+    <div id="list"></div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+const ADMIN = {};
+ADMIN.key = localStorage.getItem('bz_admin_key') || '';
+
+ADMIN.esc = function(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+};
+
+ADMIN.req = async function(url, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({ 'x-admin-key': ADMIN.key }, opts.headers || {});
+  const res = await fetch(url, opts);
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  return { res, data };
+};
+
+ADMIN.login = async function() {
+  const input = document.getElementById('key-input');
+  const errEl = document.getElementById('gate-err');
+  ADMIN.key = input.value.trim();
+  if (!ADMIN.key) { errEl.textContent = 'Please enter your key.'; return; }
+  errEl.textContent = 'Checking…';
+  const { res } = await ADMIN.req('/api/admin/orders');
+  if (res.ok) {
+    localStorage.setItem('bz_admin_key', ADMIN.key);
+    errEl.textContent = '';
+    ADMIN.showDash();
+    ADMIN.load();
+  } else if (res.status === 401) {
+    errEl.textContent = 'Invalid key.';
+  } else if (res.status === 503) {
+    errEl.textContent = 'Admin is not configured on the server (ADMIN_KEY not set).';
+  } else {
+    errEl.textContent = 'Could not connect. The server may be waking up — try again.';
+  }
+};
+
+ADMIN.logout = function() {
+  localStorage.removeItem('bz_admin_key');
+  ADMIN.key = '';
+  document.getElementById('dash').style.display = 'none';
+  document.getElementById('gate').style.display = 'block';
+  document.getElementById('key-input').value = '';
+};
+
+ADMIN.showDash = function() {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('dash').style.display = 'block';
+};
+
+ADMIN.LANG = { both: 'Bilingual', en: 'English', zh: '中文' };
+
+ADMIN.statusBadge = function(s) {
+  const map = { paid: ['b-paid','Paid'], paynow_claimed: ['b-claimed','PayNow claimed'], pending: ['b-pending','Pending'], refunded: ['b-refunded','Refunded'] };
+  const [cls, label] = map[s] || ['b-pending', s];
+  return '<span class="badge ' + cls + '">' + label + '</span>';
+};
+
+ADMIN.load = async function() {
+  const listEl = document.getElementById('list');
+  const sumEl = document.getElementById('summary');
+  sumEl.textContent = 'Loading…';
+  const { res, data } = await ADMIN.req('/api/admin/orders');
+  if (!res.ok) {
+    if (res.status === 401) return ADMIN.logout();
+    sumEl.textContent = 'Could not load orders (server may be waking up). Tap Refresh.';
+    return;
+  }
+  const orders = data.orders || [];
+  const undelivered = orders.filter(o => !o.delivered_at && o.payment_status !== 'refunded').length;
+  sumEl.innerHTML = orders.length + ' order' + (orders.length === 1 ? '' : 's') + ' · <b style="color:var(--accent)">' + undelivered + '</b> awaiting delivery';
+
+  if (!orders.length) { listEl.innerHTML = '<div class="empty">No orders yet.</div>'; return; }
+
+  listEl.innerHTML = orders.map(o => {
+    const birth = o.birth_year
+      ? o.birth_year + '-' + String(o.birth_month).padStart(2,'0') + '-' + String(o.birth_day).padStart(2,'0')
+        + (o.birth_hour != null && o.birth_hour >= 0 ? ' · hour #' + o.birth_hour : ' · hour unknown')
+        + (o.gender ? ' · ' + o.gender : '')
+      : '—';
+    const amount = o.currency + ' ' + (o.amount_cents/100).toFixed(2);
+    const e = ADMIN.esc;
+    return `<div class="order">
+      <div class="order-top">
+        <div><span class="ref">${e(o.reference)}</span> <span class="date">${e(o.created_at)} · ${e(amount)}</span></div>
+        <div class="badges">
+          ${ADMIN.statusBadge(o.payment_status)}
+          <span class="badge b-method">${e(o.payment_method)}</span>
+          ${o.delivered_at ? '<span class="badge b-delivered">Delivered</span>' : ''}
+        </div>
+      </div>
+      <div class="q">${e(o.question)}</div>
+      <div class="meta">
+        <span><b>${e(o.name)}</b></span>
+        <span><a href="mailto:${e(o.email)}">${e(o.email)}</a></span>
+        <span>${o.phone ? e(o.phone) : '<span style="color:var(--muted)">no phone</span>'}</span>
+        <span>Language: <b>${e(ADMIN.LANG[o.language] || o.language)}</b></span>
+        <span>Birth: ${e(birth)}</span>
+        ${o.paynow_reference ? '<span>PayNow ref: ' + e(o.paynow_reference) + '</span>' : ''}
+      </div>
+      ${o.chart_summary ? '<div class="chart">' + e(o.chart_summary) + '</div>' : ''}
+      <div class="actions">
+        ${o.payment_status !== 'paid' ? `<button class="btn" onclick="ADMIN.setStatus('${e(o.reference)}', {paymentStatus:'paid'})">Mark Paid</button>` : ''}
+        ${!o.delivered_at
+          ? `<button class="btn ghost" onclick="ADMIN.setStatus('${e(o.reference)}', {delivered:true})">Mark Delivered</button>`
+          : `<span class="delivered-note">Delivered ${e(o.delivered_at)}</span> <button class="btn ghost" onclick="ADMIN.setStatus('${e(o.reference)}', {delivered:false})">Undo</button>`}
+      </div>
+    </div>`;
+  }).join('');
+};
+
+ADMIN.setStatus = async function(ref, body) {
+  const { res } = await ADMIN.req('/api/admin/orders/' + encodeURIComponent(ref) + '/status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (res.ok) ADMIN.load();
+  else if (res.status === 401) ADMIN.logout();
+};
+
+// Boot: if a key is saved, try to go straight in.
+document.getElementById('key-input').addEventListener('keydown', e => { if (e.key === 'Enter') ADMIN.login(); });
+if (ADMIN.key) {
+  ADMIN.showDash();
+  ADMIN.load();
+}
+</script>
+</body>
+</html>

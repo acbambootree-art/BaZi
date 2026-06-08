@@ -27,3 +27,6 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      # Admin orders dashboard at /admin.html — set a long random secret
+      - key: ADMIN_KEY
+        sync: false

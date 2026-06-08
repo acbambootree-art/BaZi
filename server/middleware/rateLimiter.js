@@ -40,4 +40,12 @@ const orderLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-module.exports = { registerLimiter, resendLimiter, verifyLimiter, loginLimiter, orderLimiter };
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  message: { error: 'Too many admin requests. Please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+module.exports = { registerLimiter, resendLimiter, verifyLimiter, loginLimiter, orderLimiter, adminLimiter };

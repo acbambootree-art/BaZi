@@ -5,7 +5,7 @@ const { getDb } = require('../db/init');
 const { generatePayNowQR } = require('../services/paynow');
 const { sendOrderNotification, sendOrderConfirmation } = require('../services/email');
 const { decisionReadingRules, validate } = require('../middleware/validator');
-const { orderLimiter } = require('../middleware/rateLimiter');
+const { orderLimiter, adminLimiter } = require('../middleware/rateLimiter');
 
 const PRICE_CENTS = 4800;
 const CURRENCY = 'SGD';
@@ -149,6 +149,54 @@ router.post('/decision-reading/:ref/paynow-confirm', orderLimiter, async (req, r
   } catch (err) {
     console.error('[DECISION-READING] paynow-confirm error:', err);
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+});
+
+// ─── Admin: list + manage orders (protected by ADMIN_KEY) ───
+function requireAdmin(req, res, next) {
+  const key = process.env.ADMIN_KEY;
+  if (!key) return res.status(503).json({ error: 'Admin is not configured. Set ADMIN_KEY in the environment.' });
+  const provided = req.headers['x-admin-key'] || req.query.key;
+  if (!provided || provided !== key) return res.status(401).json({ error: 'Unauthorized' });
+  next();
+}
+
+const VALID_STATUSES = ['pending', 'paynow_claimed', 'paid', 'refunded'];
+
+router.get('/admin/orders', adminLimiter, requireAdmin, (req, res) => {
+  try {
+    const db = getDb();
+    const orders = db.prepare('SELECT * FROM decision_readings ORDER BY id DESC LIMIT 300').all();
+    res.json({ orders });
+  } catch (err) {
+    console.error('[ADMIN] list error:', err);
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+router.post('/admin/orders/:ref/status', adminLimiter, requireAdmin, (req, res) => {
+  try {
+    const { ref } = req.params;
+    const { paymentStatus, delivered } = req.body || {};
+    const db = getDb();
+    const order = db.prepare('SELECT id FROM decision_readings WHERE reference = ?').get(ref);
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
+
+    if (paymentStatus) {
+      if (!VALID_STATUSES.includes(paymentStatus)) return res.status(400).json({ error: 'Invalid status.' });
+      db.prepare("UPDATE decision_readings SET payment_status = ?, updated_at = datetime('now') WHERE id = ?").run(paymentStatus, order.id);
+    }
+    if (delivered === true) {
+      db.prepare("UPDATE decision_readings SET delivered_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(order.id);
+    } else if (delivered === false) {
+      db.prepare("UPDATE decision_readings SET delivered_at = NULL, updated_at = datetime('now') WHERE id = ?").run(order.id);
+    }
+
+    const updated = db.prepare('SELECT * FROM decision_readings WHERE id = ?').get(order.id);
+    res.json({ order: updated });
+  } catch (err) {
+    console.error('[ADMIN] status update error:', err);
+    res.status(500).json({ error: 'Something went wrong.' });
   }
 });
 
