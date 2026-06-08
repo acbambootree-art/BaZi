@@ -922,14 +922,24 @@ footer a { color: var(--accent); text-decoration: none; }
   50% { opacity: 1; transform: scale(1.08); }
 }
 
-/* Five Elements row — light up one by one */
+/* Five Elements row — each lights up in its own elemental colour, one by one */
 .bz-elements { display: flex; gap: 18px; }
 .bz-elements span {
   font-family: var(--font-zh); font-size: 1.5rem; font-weight: 700;
   color: var(--text-muted); transition: color 0.4s ease, text-shadow 0.4s ease, transform 0.4s ease;
 }
+.bz-elements span:nth-child(1) { --el-color: #5fae57; } /* 木 Wood  — green */
+.bz-elements span:nth-child(2) { --el-color: #e0533d; } /* 火 Fire  — red */
+.bz-elements span:nth-child(3) { --el-color: #d8a73f; } /* 土 Earth — ochre */
+.bz-elements span:nth-child(4) { --el-color: #ece6d6; } /* 金 Metal — white-gold */
+.bz-elements span:nth-child(5) { --el-color: #4f86cf; } /* 水 Water — blue */
 .bz-elements span.lit {
-  color: var(--accent); text-shadow: 0 0 16px var(--accent-glow); transform: translateY(-3px);
+  color: var(--el-color);
+  animation: bz-el-pulse 1.4s ease-in-out infinite;
+}
+@keyframes bz-el-pulse {
+  0%, 100% { text-shadow: 0 0 6px var(--el-color); opacity: 0.8; transform: translateY(-3px) scale(1); }
+  50%      { text-shadow: 0 0 18px var(--el-color); opacity: 1; transform: translateY(-3px) scale(1.12); }
 }
 
 /* Status text + progress */
@@ -950,7 +960,8 @@ footer a { color: var(--accent); text-decoration: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bz-ring::before, .bz-core { animation: none !important; }
+  .bz-ring::before, .bz-core, .bz-elements span.lit { animation: none !important; }
+  .bz-elements span.lit { text-shadow: 0 0 10px var(--el-color); }
 }
 
 /* Respect reduced-motion / low-power: drop the continuous repaints */
