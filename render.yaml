@@ -2,9 +2,14 @@ services:
   - type: web
     name: bazi-calculator
     runtime: node
-    plan: free
+    plan: starter
     buildCommand: cd server && npm install
     startCommand: cd server && node server.js
+    # Persistent disk so the orders/users SQLite DB survives deploys & restarts.
+    disk:
+      name: bazi-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
@@ -17,7 +22,7 @@ services:
       - key: PUBLIC_BASE_URL
         sync: false
       - key: DB_PATH
-        value: ./db/bazi.db
+        value: /var/data/bazi.db
       # Focused Decision Reading — paid one-question readings
       - key: ORDER_NOTIFY_EMAIL
         value: cj@360nightnday.com
