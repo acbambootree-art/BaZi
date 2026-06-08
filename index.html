@@ -431,18 +431,19 @@ details.card[open] > summary.card-title { margin-bottom: 20px; }
   border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent-glow);
 }
 
-/* Results background video */
-.results-bg-video {
+/* Results background image */
+.results-bg-image {
   display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  object-fit: cover; pointer-events: none;
+  background: #0a0a0f url('results-bg.png') no-repeat left center;
+  background-size: cover; pointer-events: none;
 }
 .results-bg-overlay {
   display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  pointer-events: none; background: rgba(10,10,15,0.78);
+  pointer-events: none; background: rgba(10,10,15,0.7);
 }
-.results-bg-active .results-bg-video,
+.results-bg-active .results-bg-image,
 .results-bg-active .results-bg-overlay { display: block; }
-.results-bg-active .results-bg-video { z-index: 0; }
+.results-bg-active .results-bg-image { z-index: 0; }
 .results-bg-active .results-bg-overlay { z-index: 1; }
 .results-bg-active main.container { position: relative; z-index: 2; }
 .results-bg-active footer { position: relative; z-index: 2; }
@@ -957,7 +958,7 @@ footer a { color: var(--accent); text-decoration: none; }
   .card-title, .pillar.day-master, .btn-register, .consult-btn, .premium-card, .preview-cta-btn {
     animation: none !important;
   }
-  .hero-video, .results-bg-video { display: none !important; }
+  .hero-video { display: none !important; }
 }
 </style>
 </head>
@@ -972,9 +973,7 @@ footer a { color: var(--accent); text-decoration: none; }
   <div class="bz-progress"><div class="bz-progress-bar" id="bz-progress-bar"></div></div>
 </div>
 
-<video class="results-bg-video" muted loop playsinline preload="none">
-  <source src="Background3.mp4" type="video/mp4">
-</video>
+<div class="results-bg-image"></div>
 <div class="results-bg-overlay"></div>
 <header class="hero">
   <video class="hero-video" autoplay muted loop playsinline>
@@ -3803,12 +3802,7 @@ BZ.verify = function() {
 // ============================================================
 BZ.initVideoPerf = function() {
   const hero = document.querySelector('.hero-video');
-  const bg = document.querySelector('.results-bg-video');
   const safePlay = v => { if (v) { const p = v.play(); if (p && p.catch) p.catch(() => {}); } };
-
-  // Only the visible video should ever run. results-bg starts display:none (won't
-  // decode); pause it explicitly so it never competes with the hero.
-  if (bg) bg.pause();
 
   // Pause the hero whenever it scrolls out of view (e.g. after results render).
   if (hero && 'IntersectionObserver' in window) {
@@ -3823,14 +3817,14 @@ BZ.initVideoPerf = function() {
     }, { threshold: 0.05 });
     io.observe(hero);
   }
-  BZ._video = { hero, bg, safePlay };
+  BZ._video = { hero, safePlay };
 };
 
-// Called by render(): show results background, and ensure exactly one video plays.
+// Called by render(): the results background (static image) is now showing, so
+// stop decoding the hero video — it has scrolled away.
 BZ.activateResultsVideo = function() {
   const v = BZ._video; if (!v) return;
-  if (v.hero) v.hero.pause();      // hero is now scrolled away — stop decoding it
-  if (v.bg) v.safePlay(v.bg);      // play the lighter results-bg loop
+  if (v.hero) v.hero.pause();
 };
 
 // Initialize
