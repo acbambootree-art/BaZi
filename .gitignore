@@ -1,5 +1,6 @@
 node_modules/
 server/.env
 server/db/bazi.db
+/db/
 .DS_Store
 *.orig.mp4

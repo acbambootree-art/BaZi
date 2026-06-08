@@ -32,4 +32,12 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-module.exports = { registerLimiter, resendLimiter, verifyLimiter, loginLimiter };
+const orderLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: { error: 'Too many order attempts. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+module.exports = { registerLimiter, resendLimiter, verifyLimiter, loginLimiter, orderLimiter };

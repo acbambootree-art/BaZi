@@ -14,5 +14,16 @@ services:
         value: onboarding@resend.dev
       - key: VERIFICATION_BASE_URL
         sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
       - key: DB_PATH
         value: ./db/bazi.db
+      # Focused Decision Reading — paid one-question readings
+      - key: ORDER_NOTIFY_EMAIL
+        value: cj@360nightnday.com
+      - key: PAYNOW_MOBILE
+        value: "+6580108950"
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false

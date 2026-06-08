@@ -71,4 +71,44 @@ const loginRules = [
     .normalizeEmail(),
 ];
 
-module.exports = { registerRules, resendRules, loginRules, validate };
+/**
+ * Validation rules for the Focused Decision Reading order endpoint.
+ */
+const decisionReadingRules = [
+  body('name')
+    .trim()
+    .notEmpty().withMessage('Name is required')
+    .isLength({ max: 100 }).withMessage('Name must be under 100 characters'),
+
+  body('email')
+    .trim()
+    .notEmpty().withMessage('Email is required')
+    .isEmail().withMessage('Please enter a valid email address')
+    .normalizeEmail(),
+
+  body('phone')
+    .optional({ values: 'falsy' })
+    .trim()
+    .matches(/^\+?[\d\s-]{6,20}$/).withMessage('Please enter a valid phone number'),
+
+  body('question')
+    .trim()
+    .notEmpty().withMessage('Please describe your question')
+    .isLength({ min: 5, max: 2000 }).withMessage('Question must be 5–2000 characters'),
+
+  body('language')
+    .optional()
+    .isIn(['en', 'zh', 'both']).withMessage('Invalid language选项'),
+
+  body('paymentMethod')
+    .isIn(['stripe', 'paynow']).withMessage('Invalid payment method'),
+
+  body('birthYear').optional({ values: 'falsy' }).isInt({ min: 1900, max: 2100 }),
+  body('birthMonth').optional({ values: 'falsy' }).isInt({ min: 1, max: 12 }),
+  body('birthDay').optional({ values: 'falsy' }).isInt({ min: 1, max: 31 }),
+  body('birthHour').optional({ values: 'falsy' }).isInt({ min: -1, max: 11 }),
+  body('gender').optional({ values: 'falsy' }).isIn(['male', 'female']),
+  body('chartSummary').optional({ values: 'falsy' }).isLength({ max: 2000 }),
+];
+
+module.exports = { registerRules, resendRules, loginRules, decisionReadingRules, validate };

@@ -6,6 +6,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const { getDb } = require('./db/init');
 const authRoutes = require('./routes/auth');
+const { router: decisionRoutes, stripeWebhook } = require('./routes/decisionReading');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,10 +25,14 @@ app.use(cors({
   methods: ['GET', 'POST'],
 }));
 
+// Stripe webhook needs the raw, unparsed body — register before express.json.
+app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), stripeWebhook);
+
 app.use(express.json({ limit: '10kb' }));
 
 // ─── API Routes ─────────────────────────────────────────────
 app.use('/api', authRoutes);
+app.use('/api', decisionRoutes);
 
 // ─── Serve static frontend files ────────────────────────────
 // Serve from parent directory where index.html, hero.mp4, Background2.mp4 live
