@@ -103,10 +103,25 @@ ADMIN.esc = function(s) {
 ADMIN.req = async function(url, opts) {
   opts = opts || {};
   opts.headers = Object.assign({ 'x-admin-key': ADMIN.key }, opts.headers || {});
-  const res = await fetch(url, opts);
-  let data = {};
-  try { data = await res.json(); } catch (e) {}
-  return { res, data };
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url, opts);
+      // Retry transient gateway errors (e.g. during a redeploy) rather than failing.
+      if (res.status >= 502 && res.status <= 504) {
+        lastErr = new Error('gateway ' + res.status);
+        await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+        continue;
+      }
+      let data = {};
+      try { data = await res.json(); } catch (e) {}
+      return { res, data };
+    } catch (e) {
+      lastErr = e;
+      await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+    }
+  }
+  throw lastErr || new Error('request failed');
 };
 
 ADMIN.login = async function() {
@@ -115,7 +130,13 @@ ADMIN.login = async function() {
   ADMIN.key = input.value.trim();
   if (!ADMIN.key) { errEl.textContent = 'Please enter your key.'; return; }
   errEl.textContent = 'Checking…';
-  const { res } = await ADMIN.req('/api/admin/orders');
+  let res;
+  try {
+    ({ res } = await ADMIN.req('/api/admin/orders'));
+  } catch (e) {
+    errEl.textContent = 'Could not reach the server. Please try again in a moment.';
+    return;
+  }
   if (res.ok) {
     localStorage.setItem('bz_admin_key', ADMIN.key);
     errEl.textContent = '';
@@ -126,7 +147,7 @@ ADMIN.login = async function() {
   } else if (res.status === 503) {
     errEl.textContent = 'Admin is not configured on the server (ADMIN_KEY not set).';
   } else {
-    errEl.textContent = 'Could not connect. The server may be waking up — try again.';
+    errEl.textContent = 'Unexpected response (' + res.status + '). Please try again.';
   }
 };
 
@@ -155,10 +176,16 @@ ADMIN.load = async function() {
   const listEl = document.getElementById('list');
   const sumEl = document.getElementById('summary');
   sumEl.textContent = 'Loading…';
-  const { res, data } = await ADMIN.req('/api/admin/orders');
+  let res, data;
+  try {
+    ({ res, data } = await ADMIN.req('/api/admin/orders'));
+  } catch (e) {
+    sumEl.textContent = 'Could not reach the server. Tap Refresh in a moment.';
+    return;
+  }
   if (!res.ok) {
     if (res.status === 401) return ADMIN.logout();
-    sumEl.textContent = 'Could not load orders (server may be waking up). Tap Refresh.';
+    sumEl.textContent = 'Could not load orders (status ' + res.status + '). Tap Refresh.';
     return;
   }
   const orders = data.orders || [];
@@ -205,11 +232,14 @@ ADMIN.load = async function() {
 };
 
 ADMIN.setStatus = async function(ref, body) {
-  const { res } = await ADMIN.req('/api/admin/orders/' + encodeURIComponent(ref) + '/status', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  let res;
+  try {
+    ({ res } = await ADMIN.req('/api/admin/orders/' + encodeURIComponent(ref) + '/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }));
+  } catch (e) { return; }
   if (res.ok) ADMIN.load();
   else if (res.status === 401) ADMIN.logout();
 };
