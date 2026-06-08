@@ -4173,11 +4173,13 @@ BZ.submitDecisionOrder = async function(method) {
   const question = document.getElementById('dr-question').value.trim();
   const name = document.getElementById('dr-name').value.trim();
   const email = document.getElementById('dr-email').value.trim();
+  const phone = document.getElementById('dr-phone').value.trim();
 
   status.className = 'reg-status';
   if (question.length < 5) { status.className = 'reg-status error'; status.textContent = 'Please describe your question.'; return; }
   if (!name) { status.className = 'reg-status error'; status.textContent = 'Please enter your name.'; return; }
   if (!email) { status.className = 'reg-status error'; status.textContent = 'Please enter your email.'; return; }
+  if (!phone) { status.className = 'reg-status error'; status.textContent = 'Please enter your WhatsApp / mobile number.'; return; }
 
   const btns = document.querySelectorAll('.dr-pay-buttons .btn-register');
   btns.forEach(b => b.disabled = true);
@@ -4185,8 +4187,7 @@ BZ.submitDecisionOrder = async function(method) {
   status.textContent = 'Preparing your order… (first request may take a moment)';
 
   const payload = {
-    name, email,
-    phone: document.getElementById('dr-phone').value.trim(),
+    name, email, phone,
     question,
     language: (document.querySelector('input[name="dr-lang"]:checked') || {}).value || 'both',
     paymentMethod: method,
@@ -4366,8 +4367,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <input type="email" id="dr-email" placeholder="report delivered here" required>
           </div>
           <div class="reg-field full-width">
-            <label for="dr-phone">Phone / WhatsApp <span style="color:var(--text-muted)">(optional)</span></label>
-            <input type="tel" id="dr-phone" placeholder="+65 ...">
+            <label for="dr-phone">WhatsApp / Mobile</label>
+            <input type="tel" id="dr-phone" placeholder="+65 ..." required>
           </div>
         </div>
 

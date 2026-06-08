@@ -87,8 +87,8 @@ const decisionReadingRules = [
     .normalizeEmail(),
 
   body('phone')
-    .optional({ values: 'falsy' })
     .trim()
+    .notEmpty().withMessage('A WhatsApp / mobile number is required')
     .matches(/^\+?[\d\s-]{6,20}$/).withMessage('Please enter a valid phone number'),
 
   body('question')
