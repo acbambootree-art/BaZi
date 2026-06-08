@@ -650,6 +650,60 @@ footer a { color: var(--accent); text-decoration: none; }
   color: var(--text-muted); font-family: var(--font-en); font-style: italic;
 }
 
+/* Focused Decision Reading — offer card + order modal */
+.decision-promo { margin-top: 20px; }
+.decision-examples {
+  text-align: center; font-family: var(--font-en); font-size: 1rem;
+  color: var(--text-sec); line-height: 1.8; margin: 6px 0 4px;
+}
+.decision-examples em { color: var(--accent); font-style: italic; }
+.decision-detail {
+  text-align: center; font-family: var(--font-en); font-size: 0.9rem;
+  color: var(--text-muted); margin-top: 10px;
+}
+.decision-modal-card { max-width: 540px; }
+.decision-modal-card textarea {
+  width: 100%; background: var(--bg-input); color: var(--text);
+  border: 1px solid rgba(201,164,74,0.18); border-radius: 8px;
+  padding: 12px 14px; font-family: var(--font-en); font-size: 0.98rem;
+  line-height: 1.5; resize: vertical; min-height: 84px;
+}
+.decision-modal-card textarea:focus { outline: none; border-color: rgba(201,164,74,0.4); }
+.decision-modal-card textarea::placeholder { color: var(--text-muted); }
+.dr-lang-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.dr-lang-group label {
+  flex: 1; min-width: 90px; display: flex; align-items: center; gap: 6px;
+  padding: 9px 12px; border: 1px solid rgba(201,164,74,0.18); border-radius: 8px;
+  font-family: var(--font-ui); font-size: 0.82rem; color: var(--text-sec); cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.dr-lang-group label:has(input:checked) {
+  border-color: var(--accent); background: var(--accent-glow); color: var(--text);
+}
+.dr-lang-group input { accent-color: var(--accent); }
+.dr-birth { margin-top: 18px; }
+.dr-birth-title {
+  font-family: var(--font-ui); font-size: 0.72rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-sec); margin-bottom: 10px;
+}
+.dr-birth .form-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.dr-pay-buttons { display: flex; gap: 12px; margin-top: 8px; }
+.dr-pay-buttons .btn-register { margin-top: 0; }
+.dr-pay-stripe { background: linear-gradient(135deg, #c9a44a, #a07d30); }
+.dr-pay-paynow {
+  background: transparent; border: 1px solid var(--accent); color: var(--accent);
+}
+.dr-pay-paynow:hover { background: var(--accent-glow); }
+.dr-paynow-box {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  margin: 8px 0 18px;
+}
+.dr-paynow-box img {
+  width: 220px; height: 220px; border-radius: 12px; background: #fff; padding: 10px;
+}
+.dr-paynow-meta { text-align: center; font-size: 0.9rem; line-height: 1.9; color: var(--text-sec); }
+.dr-paynow-meta strong { color: var(--accent); }
+
 /* Responsive */
 @media (max-width: 640px) {
   .hero { min-height: 320px; }
@@ -677,6 +731,8 @@ footer a { color: var(--accent); text-decoration: none; }
   .branch-label { font-size: 0.7rem; }
   .premium-preview-grid { grid-template-columns: 1fr; }
   .premium-title { font-size: 1.2rem; }
+  .dr-birth .form-grid { grid-template-columns: repeat(2, 1fr); }
+  .dr-pay-buttons { flex-direction: column; }
   .btn-premium { width: 100%; padding: 14px 32px; font-size: 0.9rem; }
   .reg-modal-card { padding: 32px 24px; max-width: 95vw; }
   .reg-form-grid { grid-template-columns: 1fr; }
@@ -779,7 +835,8 @@ footer a { color: var(--accent); text-decoration: none; }
 .login-overlay {
   display: none; position: fixed; inset: 0; z-index: 9999;
   background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
-  align-items: center; justify-content: center;
+  align-items: safe center; justify-content: center;
+  overflow-y: auto; padding: 24px 12px;
 }
 .login-overlay.active { display: flex; }
 .login-tabs {
@@ -823,6 +880,78 @@ footer a { color: var(--accent); text-decoration: none; }
 }
 .btn-logout:hover { border-color: rgba(201,164,74,0.4); color: var(--accent); }
 
+/* ============================================================
+   CALCULATING OVERLAY — ritual "casting the chart" loader
+   ============================================================ */
+.bz-loader {
+  position: fixed; inset: 0; z-index: 3000;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: 30px; padding: 24px;
+  background: radial-gradient(ellipse at center, rgba(14,14,22,0.96), rgba(8,8,12,0.99));
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  opacity: 0; transition: opacity 0.5s ease;
+}
+.bz-loader.active { display: flex; opacity: 1; }
+.bz-loader.closing { opacity: 0; }
+
+/* Rotating ring with central character */
+.bz-ring {
+  position: relative; width: 150px; height: 150px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.bz-ring::before {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0%, var(--accent) 50%, transparent 75%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  animation: bz-spin 1.6s linear infinite;
+}
+.bz-ring::after {
+  content: ''; position: absolute; inset: 14px; border-radius: 50%;
+  border: 1px solid rgba(201,164,74,0.18);
+}
+@keyframes bz-spin { to { transform: rotate(360deg); } }
+.bz-core {
+  font-family: var(--font-zh); font-size: 3.2rem; font-weight: 900;
+  color: var(--accent); text-shadow: 0 0 24px var(--accent-glow);
+  animation: bz-pulse 1.8s ease-in-out infinite;
+}
+@keyframes bz-pulse {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+/* Five Elements row — light up one by one */
+.bz-elements { display: flex; gap: 18px; }
+.bz-elements span {
+  font-family: var(--font-zh); font-size: 1.5rem; font-weight: 700;
+  color: var(--text-muted); transition: color 0.4s ease, text-shadow 0.4s ease, transform 0.4s ease;
+}
+.bz-elements span.lit {
+  color: var(--accent); text-shadow: 0 0 16px var(--accent-glow); transform: translateY(-3px);
+}
+
+/* Status text + progress */
+.bz-status {
+  font-family: var(--font-en); font-size: 1.18rem; font-weight: 500;
+  color: var(--text); letter-spacing: 0.02em; text-align: center; min-height: 1.5em;
+  transition: opacity 0.35s ease;
+}
+.bz-status.fade { opacity: 0; }
+.bz-progress {
+  width: 220px; max-width: 70vw; height: 2px; border-radius: 2px;
+  background: rgba(201,164,74,0.15); overflow: hidden;
+}
+.bz-progress-bar {
+  height: 100%; width: 0%; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent));
+  transition: width 0.3s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bz-ring::before, .bz-core { animation: none !important; }
+}
+
 /* Respect reduced-motion / low-power: drop the continuous repaints */
 @media (prefers-reduced-motion: reduce) {
   .card-title, .pillar.day-master, .btn-register, .consult-btn, .premium-card, .preview-cta-btn {
@@ -833,6 +962,16 @@ footer a { color: var(--accent); text-decoration: none; }
 </style>
 </head>
 <body>
+<!-- Calculating overlay -->
+<div class="bz-loader" id="bz-loader" aria-hidden="true">
+  <div class="bz-ring"><div class="bz-core">排</div></div>
+  <div class="bz-elements">
+    <span data-el="0">木</span><span data-el="1">火</span><span data-el="2">土</span><span data-el="3">金</span><span data-el="4">水</span>
+  </div>
+  <div class="bz-status" id="bz-status">Casting your Four Pillars…</div>
+  <div class="bz-progress"><div class="bz-progress-bar" id="bz-progress-bar"></div></div>
+</div>
+
 <video class="results-bg-video" muted loop playsinline preload="none">
   <source src="Background3.mp4" type="video/mp4">
 </video>
@@ -879,6 +1018,26 @@ footer a { color: var(--accent); text-decoration: none; }
     </div>
     <button class="btn btn-full mt-16" id="calc-btn" onclick="BZ.calculate()">Calculate 排盘</button>
     <div class="reg-prompt" id="main-reg-prompt"></div>
+  </div>
+
+  <!-- Focused Decision Reading — paid offer (top entry point) -->
+  <div class="card card-premium decision-promo" id="decision-promo">
+    <div class="premium-header" style="margin-bottom:12px">
+      <span class="premium-badge">Personal Reading</span>
+      <div class="premium-title">Focused Decision Reading<span class="premium-title-zh">一事一断 · 专项决策</span></div>
+      <p class="premium-subtitle">One real question, answered properly — by a reader, not an algorithm.</p>
+    </div>
+    <div class="premium-divider"></div>
+    <p class="decision-examples">
+      <em>"Should I take this job offer — and when?"</em><br>
+      <em>"Is this a good year to expand?"</em><br>
+      <em>"What does my chart say about this partnership?"</em>
+    </p>
+    <p class="decision-detail">A written bilingual report (English + 中文), 600–1,000 words, tied entirely to your question. Delivered within 24–48 hours.</p>
+    <div class="text-center" style="margin-top:20px">
+      <button class="btn-premium" onclick="BZ.showDecisionModal(false)">Ask Your Question — S$48</button>
+    </div>
+    <p class="premium-footer-note">Secure payment by card or PayNow.</p>
   </div>
 
   <div id="result-section" class="hidden"></div>
@@ -3242,7 +3401,24 @@ BZ.render = function(chart) {
     <div class="interp-text">${interp.period}</div>
   </div>`;
 
-  // Purpose-Star section removed
+  // ---- Focused Decision Reading upsell ----
+  html += `<div class="card card-premium decision-promo" id="decision-card">
+    <div class="premium-header" style="margin-bottom:12px">
+      <span class="premium-badge">Personal Reading</span>
+      <div class="premium-title">Focused Decision Reading<span class="premium-title-zh">一事一断 · 专项决策</span></div>
+      <p class="premium-subtitle">You've seen the map. Now get a decision.</p>
+    </div>
+    <div class="premium-divider"></div>
+    <p class="decision-examples">
+      Bring one real question — a job offer, a move, a partnership, the timing of a big leap —
+      and get it answered properly against <em>your</em> chart.
+    </p>
+    <p class="decision-detail">A written bilingual report (English + 中文), 600–1,000 words, tied entirely to your question. Delivered within 24–48 hours.</p>
+    <div class="text-center" style="margin-top:20px">
+      <button class="btn-premium" onclick="BZ.showDecisionModal(true)">Ask Your Question — S$48</button>
+    </div>
+    <p class="premium-footer-note">Your birth details from this reading will be carried over. Secure payment by card or PayNow.</p>
+  </div>`;
 
   // ---- Disclaimer ----
   html += `<div class="card fade-in">
@@ -3508,24 +3684,90 @@ BZ.calculate = function() {
 
   if (!year || !month || !day) { alert('Please select a valid date.'); return; }
 
-  // Show loading state
   const btn = document.getElementById('calc-btn');
-  btn.textContent = 'Calculating...';
   btn.disabled = true;
 
-  // Use setTimeout to allow UI to update before heavy computation
-  setTimeout(() => {
-    try {
-      const chart = BZ.compute(year, month, day, hourBranch, gender);
-      BZ._lastChart = chart;
-      BZ.render(chart);
-    } catch (e) {
-      console.error('BaZi calculation error:', e);
-      alert('Calculation error. Please check the date and try again.');
-    }
-    btn.textContent = 'Calculate 排盘';
+  // Compute synchronously (it's fast), but stage the reveal behind a short
+  // "casting the chart" ritual so the reading feels considered, not instant.
+  let chart = null, computeError = null;
+  try {
+    chart = BZ.compute(year, month, day, hourBranch, gender);
+    BZ._lastChart = chart;
+  } catch (e) {
+    console.error('BaZi calculation error:', e);
+    computeError = e;
+  }
+
+  BZ.runLoader(() => {
     btn.disabled = false;
-  }, 50);
+    if (computeError || !chart) {
+      alert('Calculation error. Please check the date and try again.');
+      return;
+    }
+    BZ.render(chart);
+  });
+};
+
+// Animated "calculating" overlay. Cycles status lines, lights the five
+// elements, fills a progress bar, then invokes `done` and dismisses itself.
+BZ.runLoader = function(done) {
+  const loader = document.getElementById('bz-loader');
+  const statusEl = document.getElementById('bz-status');
+  const barEl = document.getElementById('bz-progress-bar');
+  const els = loader ? loader.querySelectorAll('.bz-elements span') : [];
+
+  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const DURATION = reduced ? 700 : 2600;
+
+  const steps = [
+    'Casting your Four Pillars…',
+    'Reading the Heavenly Stems & Earthly Branches…',
+    'Balancing the Five Elements…',
+    'Tracing your Ten-Year Luck Cycles…',
+    'Interpreting your Day Master…'
+  ];
+
+  if (!loader) { done(); return; } // graceful fallback if markup missing
+
+  // Reset state
+  els.forEach(s => s.classList.remove('lit'));
+  if (barEl) barEl.style.width = '0%';
+  statusEl.textContent = steps[0];
+  statusEl.classList.remove('fade');
+  loader.classList.remove('closing');
+  loader.classList.add('active');
+  loader.setAttribute('aria-hidden', 'false');
+
+  // Fill the progress bar across the full duration.
+  requestAnimationFrame(() => { if (barEl) { barEl.style.transition = 'width ' + DURATION + 'ms linear'; barEl.style.width = '100%'; } });
+
+  const timers = [];
+  // Cycle status lines.
+  const stepMs = DURATION / steps.length;
+  steps.forEach((text, i) => {
+    if (i === 0) return;
+    timers.push(setTimeout(() => {
+      statusEl.classList.add('fade');
+      setTimeout(() => { statusEl.textContent = text; statusEl.classList.remove('fade'); }, 300);
+    }, stepMs * i));
+  });
+  // Light the five elements one by one.
+  els.forEach((s, i) => {
+    timers.push(setTimeout(() => s.classList.add('lit'), (DURATION / els.length) * (i + 0.5)));
+  });
+
+  // Finish: render results, then fade the overlay out.
+  timers.push(setTimeout(() => {
+    done();
+    loader.classList.add('closing');
+    setTimeout(() => {
+      loader.classList.remove('active', 'closing');
+      loader.setAttribute('aria-hidden', 'true');
+      if (barEl) barEl.style.transition = 'none';
+    }, 500);
+  }, DURATION));
+
+  BZ._loaderTimers = timers;
 };
 
 // Debug mode: verify known charts
@@ -3791,6 +4033,205 @@ BZ.logout = async function() {
   BZ.clearSession();
 };
 
+// ============================================================
+// Focused Decision Reading — paid one-question reading
+// ============================================================
+BZ.PAYCFG = { stripeEnabled: false, payNowMobile: '+6580108950', price: 48, currency: 'SGD' };
+BZ._orderRef = null;
+
+BZ.loadPaymentConfig = async function() {
+  try {
+    const r = await fetch(BZ.API_BASE + '/api/payment-config');
+    if (r.ok) BZ.PAYCFG = await r.json();
+  } catch (e) { /* keep defaults */ }
+  const stripeBtn = document.getElementById('dr-pay-stripe');
+  if (stripeBtn && !BZ.PAYCFG.stripeEnabled) stripeBtn.style.display = 'none';
+};
+
+BZ._showDecisionStep = function(step) {
+  ['form', 'paynow', 'done'].forEach(s => {
+    document.getElementById('decision-step-' + s).classList.toggle('hidden', s !== step);
+  });
+};
+
+BZ.showDecisionModal = function(fromChart) {
+  // Populate the birth selects by cloning the already-built main selectors,
+  // then mirror their current values (the main form's `selected` is a runtime
+  // property that doesn't survive innerHTML cloning, so copy .value too).
+  ['year', 'month', 'day', 'hour'].forEach(k => {
+    const src = document.getElementById('sel-' + k);
+    const dst = document.getElementById('dr-' + k);
+    if (src && dst) {
+      if (!dst.options.length) dst.innerHTML = src.innerHTML;
+      dst.value = src.value;
+    }
+  });
+  const mainGender = document.querySelector('input[name="gender"]:checked');
+  if (mainGender) {
+    const g = document.querySelector('input[name="dr-gender"][value="' + mainGender.value + '"]');
+    if (g) g.checked = true;
+  }
+
+  // Prefill from the chart they just calculated.
+  if (fromChart && BZ._lastChart) {
+    const c = BZ._lastChart;
+    document.getElementById('dr-year').value = c.birthYear;
+    document.getElementById('dr-month').value = c.birthMonth;
+    document.getElementById('dr-day').value = c.birthDay;
+    document.getElementById('dr-hour').value = c.hour ? c.hour.branchIdx : -1;
+    const g = document.querySelector('input[name="dr-gender"][value="' + c.gender + '"]');
+    if (g) g.checked = true;
+  }
+
+  // Prefill name/email if signed in.
+  if (BZ.session) {
+    if (!document.getElementById('dr-name').value) document.getElementById('dr-name').value = BZ.session.name || '';
+    if (!document.getElementById('dr-email').value) document.getElementById('dr-email').value = BZ.session.email || '';
+  }
+
+  document.getElementById('decision-status').textContent = '';
+  document.getElementById('decision-status').className = 'reg-status';
+  BZ._showDecisionStep('form');
+  document.getElementById('decision-overlay').classList.add('active');
+};
+
+BZ.hideDecisionModal = function() {
+  document.getElementById('decision-overlay').classList.remove('active');
+};
+
+BZ.showDecisionDone = function(ref, msg) {
+  document.getElementById('dr-done-ref').textContent = ref || '';
+  document.getElementById('dr-done-msg').textContent = msg;
+  BZ._showDecisionStep('done');
+  document.getElementById('decision-overlay').classList.add('active');
+};
+
+// Build a compact chart summary to give the reader context.
+BZ.buildChartSummary = function() {
+  const c = BZ._lastChart;
+  if (!c) return '';
+  const S = BZ.STEMS, B = BZ.BRANCHES;
+  const pil = p => p ? S[p.stemIdx].zh + B[p.branchIdx].zh : '—';
+  const dm = S[c.day.stemIdx];
+  const fav = (c.strength.favorable || []).map(e => BZ.EL_EN[e]).join(', ');
+  const unf = (c.strength.unfavorable || []).map(e => BZ.EL_EN[e]).join(', ');
+  return [
+    'Pillars: Y ' + pil(c.year) + ' · M ' + pil(c.month) + ' · D ' + pil(c.day) + ' · H ' + pil(c.hour),
+    'Day Master: ' + dm.zh + ' ' + dm.en + ' (' + dm.pol + ' ' + BZ.EL_EN[dm.el] + ')',
+    'Strength: ' + c.strength.strength + ' (level ' + c.strength.level + '/5)',
+    'Favorable: ' + fav + ' | Unfavorable: ' + unf,
+  ].join('\n');
+};
+
+BZ.submitDecisionOrder = async function(method) {
+  const status = document.getElementById('decision-status');
+  const question = document.getElementById('dr-question').value.trim();
+  const name = document.getElementById('dr-name').value.trim();
+  const email = document.getElementById('dr-email').value.trim();
+
+  status.className = 'reg-status';
+  if (question.length < 5) { status.className = 'reg-status error'; status.textContent = 'Please describe your question.'; return; }
+  if (!name) { status.className = 'reg-status error'; status.textContent = 'Please enter your name.'; return; }
+  if (!email) { status.className = 'reg-status error'; status.textContent = 'Please enter your email.'; return; }
+
+  const btns = document.querySelectorAll('.dr-pay-buttons .btn-register');
+  btns.forEach(b => b.disabled = true);
+  status.textContent = 'Preparing your order…';
+
+  const payload = {
+    name, email,
+    phone: document.getElementById('dr-phone').value.trim(),
+    question,
+    language: (document.querySelector('input[name="dr-lang"]:checked') || {}).value || 'both',
+    paymentMethod: method,
+    birthYear: document.getElementById('dr-year').value,
+    birthMonth: document.getElementById('dr-month').value,
+    birthDay: document.getElementById('dr-day').value,
+    birthHour: document.getElementById('dr-hour').value,
+    gender: (document.querySelector('input[name="dr-gender"]:checked') || {}).value,
+    chartSummary: BZ.buildChartSummary(),
+  };
+
+  try {
+    const res = await fetch(BZ.API_BASE + '/api/decision-reading', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await res.json();
+
+    if (!res.ok) {
+      status.className = 'reg-status error';
+      status.textContent = result.details ? result.details.map(d => d.message).join('. ') : (result.error || 'Something went wrong.');
+      btns.forEach(b => b.disabled = false);
+      return;
+    }
+
+    BZ._orderRef = result.reference;
+
+    if (result.method === 'stripe' && result.checkoutUrl) {
+      window.location.href = result.checkoutUrl; // off to Stripe Checkout
+      return;
+    }
+
+    // PayNow: show the QR step.
+    document.getElementById('dr-qr').src = result.qr;
+    document.getElementById('dr-paynow-mobile').textContent = result.payNowMobile;
+    document.getElementById('dr-paynow-ref').textContent = result.reference;
+    document.getElementById('decision-paynow-status').textContent = '';
+    document.getElementById('decision-paynow-status').className = 'reg-status';
+    document.getElementById('dr-paid-btn').disabled = false;
+    BZ._showDecisionStep('paynow');
+  } catch (err) {
+    status.className = 'reg-status error';
+    status.textContent = 'Network error. Please try again.';
+  }
+  btns.forEach(b => b.disabled = false);
+};
+
+BZ.confirmPayNow = async function() {
+  const btn = document.getElementById('dr-paid-btn');
+  const status = document.getElementById('decision-paynow-status');
+  if (!BZ._orderRef) return;
+  btn.disabled = true;
+  status.className = 'reg-status';
+  status.textContent = 'Recording your payment…';
+  try {
+    const res = await fetch(BZ.API_BASE + '/api/decision-reading/' + encodeURIComponent(BZ._orderRef) + '/paynow-confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bankReference: document.getElementById('dr-bankref').value.trim() }),
+    });
+    const result = await res.json();
+    if (res.ok) {
+      BZ.showDecisionDone(BZ._orderRef, result.message + ' You\'ll receive your bilingual report within 24–48 hours.');
+    } else {
+      status.className = 'reg-status error';
+      status.textContent = result.error || 'Something went wrong.';
+      btn.disabled = false;
+    }
+  } catch (err) {
+    status.className = 'reg-status error';
+    status.textContent = 'Network error. Please try again.';
+    btn.disabled = false;
+  }
+};
+
+// Handle return from Stripe Checkout (?paid=1&order=FDR-…).
+BZ.checkReturnFromPayment = function() {
+  const q = new URLSearchParams(window.location.search);
+  if (q.get('paid') === '1') {
+    BZ.showDecisionDone(q.get('order') || '',
+      'Payment received — your Focused Decision Reading is confirmed. We\'ll email your bilingual report within 24–48 hours.');
+    history.replaceState({}, '', window.location.pathname);
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  BZ.loadPaymentConfig();
+  BZ.checkReturnFromPayment();
+});
+
 </script>
 
 <!-- Login / Register Modal -->
@@ -3848,6 +4289,109 @@ BZ.logout = async function() {
       <div id="reg2-status" class="reg-status"></div>
       <div class="reg-footer">A verification email will be sent to activate your account.</div>
     </div>
+  </div>
+</div>
+
+<!-- Focused Decision Reading — order modal -->
+<div id="decision-overlay" class="login-overlay" onclick="if(event.target===this) BZ.hideDecisionModal()">
+  <div class="reg-modal-card decision-modal-card">
+    <button class="reg-close" onclick="BZ.hideDecisionModal()" aria-label="Close">&times;</button>
+
+    <!-- Step 1: order form -->
+    <div id="decision-step-form">
+      <div class="reg-header">
+        <h2>Focused Decision Reading</h2>
+        <div class="reg-subtitle">一事一断 · S$48</div>
+        <p>One question, one decision — a written bilingual report within 24–48h.</p>
+      </div>
+      <form id="decision-form" onsubmit="return false">
+        <div class="reg-form-grid">
+          <div class="reg-field full-width">
+            <label for="dr-question">Your question / the decision</label>
+            <textarea id="dr-question" placeholder="e.g. I've been offered a role in Jakarta — should I take it, and is this the right year to move?" maxlength="2000" required></textarea>
+          </div>
+          <div class="reg-field full-width">
+            <label>Report language</label>
+            <div class="dr-lang-group">
+              <label><input type="radio" name="dr-lang" value="both" checked> Bilingual</label>
+              <label><input type="radio" name="dr-lang" value="en"> English</label>
+              <label><input type="radio" name="dr-lang" value="zh"> 中文</label>
+            </div>
+          </div>
+          <div class="reg-field">
+            <label for="dr-name">Name</label>
+            <input type="text" id="dr-name" maxlength="100" required>
+          </div>
+          <div class="reg-field">
+            <label for="dr-email">Email</label>
+            <input type="email" id="dr-email" placeholder="report delivered here" required>
+          </div>
+          <div class="reg-field full-width">
+            <label for="dr-phone">Phone / WhatsApp <span style="color:var(--text-muted)">(optional)</span></label>
+            <input type="tel" id="dr-phone" placeholder="+65 ...">
+          </div>
+        </div>
+
+        <div class="dr-birth">
+          <div class="dr-birth-title">Birth details</div>
+          <div class="form-grid">
+            <div class="field"><label>Year</label><select id="dr-year"></select></div>
+            <div class="field"><label>Month</label><select id="dr-month"></select></div>
+            <div class="field"><label>Day</label><select id="dr-day"></select></div>
+            <div class="field"><label>Hour</label><select id="dr-hour"></select></div>
+          </div>
+          <div class="field" style="margin-top:10px">
+            <label>Gender</label>
+            <div class="gender-group">
+              <label><input type="radio" name="dr-gender" value="male" checked> Male</label>
+              <label><input type="radio" name="dr-gender" value="female"> Female</label>
+            </div>
+          </div>
+        </div>
+
+        <div id="decision-status" class="reg-status"></div>
+        <div class="dr-pay-buttons">
+          <button type="button" id="dr-pay-stripe" class="btn-register dr-pay-stripe" onclick="BZ.submitDecisionOrder('stripe')">Pay by card</button>
+          <button type="button" class="btn-register dr-pay-paynow" onclick="BZ.submitDecisionOrder('paynow')">Pay by PayNow</button>
+        </div>
+        <div class="reg-footer">You'll get a confirmation email and your report within 24–48 hours.</div>
+      </form>
+    </div>
+
+    <!-- Step 2: PayNow -->
+    <div id="decision-step-paynow" class="hidden">
+      <div class="reg-header">
+        <h2>Pay by PayNow</h2>
+        <div class="reg-subtitle">S$48.00</div>
+        <p>Scan with your bank app, then tap "I've paid".</p>
+      </div>
+      <div class="dr-paynow-box">
+        <img id="dr-qr" alt="PayNow QR code">
+        <div class="dr-paynow-meta">
+          <div>PayNow to <strong id="dr-paynow-mobile"></strong></div>
+          <div>Amount <strong>S$48.00</strong></div>
+          <div>Reference <strong id="dr-paynow-ref"></strong></div>
+        </div>
+      </div>
+      <div class="reg-field full-width">
+        <label for="dr-bankref">Bank transaction reference <span style="color:var(--text-muted)">(optional)</span></label>
+        <input type="text" id="dr-bankref" placeholder="Helps us match your payment faster">
+      </div>
+      <div id="decision-paynow-status" class="reg-status"></div>
+      <button type="button" id="dr-paid-btn" class="btn-register" onclick="BZ.confirmPayNow()">I've paid</button>
+      <div class="reg-footer">We'll verify your payment and email your report within 24–48 hours.</div>
+    </div>
+
+    <!-- Step 3: done -->
+    <div id="decision-step-done" class="hidden text-center">
+      <div class="reg-header">
+        <h2>Thank you</h2>
+        <div class="reg-subtitle">Order <span id="dr-done-ref"></span></div>
+      </div>
+      <p id="dr-done-msg" style="color:var(--text-sec);font-family:var(--font-en);font-size:1rem;line-height:1.7;margin:8px 0 24px"></p>
+      <button type="button" class="btn-register" onclick="BZ.hideDecisionModal()">Close</button>
+    </div>
+
   </div>
 </div>
 
