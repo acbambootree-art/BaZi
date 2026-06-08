@@ -730,6 +730,10 @@ footer a { color: var(--accent); text-decoration: none; }
   .branch-label { font-size: 0.7rem; }
   .premium-preview-grid { grid-template-columns: 1fr; }
   .premium-title { font-size: 1.2rem; }
+  /* Decision modal: collapse to a single column so nothing overflows.
+     Scoped selector (higher specificity) so it wins over the base 2-col rule. */
+  .decision-modal-card .reg-form-grid { grid-template-columns: 1fr; }
+  .decision-modal-card { padding: 32px 20px; }
   .dr-birth .form-grid { grid-template-columns: repeat(2, 1fr); }
   .dr-pay-buttons { flex-direction: column; }
   .btn-premium { width: 100%; padding: 14px 32px; font-size: 0.9rem; }
@@ -4131,6 +4135,39 @@ BZ.buildChartSummary = function() {
   ].join('\n');
 };
 
+// Resilient JSON POST. The free-tier host can cold-start (~20–50s) and return
+// a 502/HTML page instead of JSON during wake-up — retry transient failures so
+// the user sees "waking up" instead of a bare "Network error". The order and
+// confirm endpoints are idempotent on retry.
+BZ._postJSON = async function(url, body, statusEl) {
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0 && statusEl) {
+      statusEl.className = 'reg-status';
+      statusEl.textContent = 'Waking up the server… one moment.';
+    }
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        // Cold start / proxy returned HTML — transient, wait and retry.
+        lastErr = new Error('Server not ready');
+        await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+        continue;
+      }
+      return { res, data: await res.json() };
+    } catch (e) {
+      lastErr = e;
+      await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+    }
+  }
+  throw lastErr || new Error('Request failed');
+};
+
 BZ.submitDecisionOrder = async function(method) {
   const status = document.getElementById('decision-status');
   const question = document.getElementById('dr-question').value.trim();
@@ -4144,7 +4181,8 @@ BZ.submitDecisionOrder = async function(method) {
 
   const btns = document.querySelectorAll('.dr-pay-buttons .btn-register');
   btns.forEach(b => b.disabled = true);
-  status.textContent = 'Preparing your order…';
+  status.className = 'reg-status';
+  status.textContent = 'Preparing your order… (first request may take a moment)';
 
   const payload = {
     name, email,
@@ -4161,12 +4199,7 @@ BZ.submitDecisionOrder = async function(method) {
   };
 
   try {
-    const res = await fetch(BZ.API_BASE + '/api/decision-reading', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const result = await res.json();
+    const { res, data: result } = await BZ._postJSON(BZ.API_BASE + '/api/decision-reading', payload, status);
 
     if (!res.ok) {
       status.className = 'reg-status error';
@@ -4192,7 +4225,7 @@ BZ.submitDecisionOrder = async function(method) {
     BZ._showDecisionStep('paynow');
   } catch (err) {
     status.className = 'reg-status error';
-    status.textContent = 'Network error. Please try again.';
+    status.textContent = 'Couldn\'t reach the server — it may be waking up. Please tap again in a moment.';
   }
   btns.forEach(b => b.disabled = false);
 };
@@ -4205,12 +4238,10 @@ BZ.confirmPayNow = async function() {
   status.className = 'reg-status';
   status.textContent = 'Recording your payment…';
   try {
-    const res = await fetch(BZ.API_BASE + '/api/decision-reading/' + encodeURIComponent(BZ._orderRef) + '/paynow-confirm', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bankReference: document.getElementById('dr-bankref').value.trim() }),
-    });
-    const result = await res.json();
+    const { res, data: result } = await BZ._postJSON(
+      BZ.API_BASE + '/api/decision-reading/' + encodeURIComponent(BZ._orderRef) + '/paynow-confirm',
+      { bankReference: document.getElementById('dr-bankref').value.trim() },
+      status);
     if (res.ok) {
       BZ.showDecisionDone(BZ._orderRef, result.message + ' You\'ll receive your bilingual report within 24–48 hours.');
     } else {
@@ -4220,7 +4251,7 @@ BZ.confirmPayNow = async function() {
     }
   } catch (err) {
     status.className = 'reg-status error';
-    status.textContent = 'Network error. Please try again.';
+    status.textContent = 'Couldn\'t reach the server — it may be waking up. Please tap again in a moment.';
     btn.disabled = false;
   }
 };
