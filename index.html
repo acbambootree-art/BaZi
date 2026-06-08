@@ -886,8 +886,7 @@ footer a { color: var(--accent); text-decoration: none; }
   position: fixed; inset: 0; z-index: 3000;
   display: none; flex-direction: column; align-items: center; justify-content: center;
   gap: 30px; padding: 24px;
-  background: radial-gradient(ellipse at center, rgba(14,14,22,0.96), rgba(8,8,12,0.99));
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  background: radial-gradient(ellipse at center, #0e0e16 0%, #08080c 100%);
   opacity: 0; transition: opacity 0.5s ease;
 }
 .bz-loader.active { display: flex; opacity: 1; }
@@ -947,7 +946,9 @@ footer a { color: var(--accent); text-decoration: none; }
 /* Status text + progress */
 .bz-status {
   font-family: var(--font-en); font-size: 1.18rem; font-weight: 500;
-  color: var(--text); letter-spacing: 0.02em; text-align: center; min-height: 1.5em;
+  color: var(--text); letter-spacing: 0.02em; text-align: center;
+  line-height: 1.45; max-width: 24ch; min-height: 2.9em;
+  display: flex; align-items: center; justify-content: center;
   transition: opacity 0.35s ease;
 }
 .bz-status.fade { opacity: 0; }
