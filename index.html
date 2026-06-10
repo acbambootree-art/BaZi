@@ -822,6 +822,8 @@ footer a { color: var(--accent); text-decoration: none; }
   border: 1px solid rgba(201,164,74,0.12); border-radius: 12px;
   background: rgba(201,164,74,0.03);
 }
+/* No content (signed-out visitor) → don't show an empty bordered box. */
+.reg-prompt:empty { display: none; }
 .reg-prompt p {
   font-family: var(--font-en); font-size: 0.95rem; color: var(--text-sec);
   margin-bottom: 10px;
