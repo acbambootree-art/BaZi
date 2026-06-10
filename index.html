@@ -152,6 +152,30 @@ main { padding: 40px 0 64px; }
 .summary-point { display: flex; align-items: baseline; gap: 8px; color: var(--text-sec); }
 .summary-point .sp-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
 .summary-point .sp-val { color: var(--text); font-weight: 600; }
+
+/* ---- Today for You daily card ---- */
+.today-card { border-color: rgba(201,164,74,0.3); }
+.today-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.today-pillar-chars { font-family: var(--font-zh); font-size: 2.2rem; line-height: 1; letter-spacing: 0.08em; }
+.today-pillar-meta { flex: 1; min-width: 180px; }
+.today-pillar-name { font-size: 1rem; color: var(--text); font-weight: 600; }
+.today-pillar-date { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+.today-rating { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; padding: 6px 14px; border-radius: 20px; border: 1px solid; white-space: nowrap; }
+.today-rating .tr-zh { font-family: var(--font-zh); font-size: 0.9rem; margin-right: 6px; }
+.today-rating.tr-good { color: var(--wood); border-color: var(--wood-border); background: var(--wood-bg); }
+.today-rating.tr-steady { color: var(--accent); border-color: rgba(201,164,74,0.3); background: var(--accent-light); }
+.today-rating.tr-care { color: var(--fire); border-color: var(--fire-border); background: var(--fire-bg); }
+.today-lines { display: grid; gap: 10px; margin-top: 4px; }
+.today-line { display: flex; gap: 10px; align-items: baseline; font-size: 0.95rem; color: var(--text-sec); line-height: 1.65; }
+.today-line .tl-tag { flex-shrink: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; padding: 2px 8px; border-radius: 4px; }
+.today-line .tl-lean { color: var(--wood); background: var(--wood-bg); }
+.today-line .tl-care { color: var(--fire); background: var(--fire-bg); }
+.today-cta { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 0.88rem; color: var(--text-muted); }
+.today-cta a { color: var(--accent); text-decoration: none; }
+.today-cta a:hover { text-decoration: underline; }
+.almanac-link { text-align: center; margin: 14px 0 0; font-size: 0.88rem; }
+.almanac-link a { color: var(--text-muted); text-decoration: none; letter-spacing: 0.04em; }
+.almanac-link a:hover { color: var(--accent); }
 .summary-hour-note {
   margin-top: 18px; font-family: var(--font-en); font-size: 0.88rem; line-height: 1.6;
   color: var(--text-sec); border: 1px solid rgba(201,164,74,0.18);
@@ -1039,6 +1063,7 @@ footer a { color: var(--accent); text-decoration: none; }
     </div>
     <button class="btn btn-full mt-16" id="calc-btn" onclick="BZ.calculate()">Calculate 排盘</button>
     <div class="reg-prompt" id="main-reg-prompt"></div>
+    <p class="almanac-link"><a href="/today">今日黄历 · Today's Day Pillar &rarr;</a></p>
   </div>
 
   <!-- Focused Decision Reading — paid offer (top entry point) -->
@@ -3102,6 +3127,115 @@ BZ.renderPillar = function(pillar, label, labelZh, isDayMaster, dmStemIdx) {
     </div>`;
 };
 
+// ============================================================
+// TODAY FOR YOU — daily forecast from today's day pillar
+// ============================================================
+BZ.EL_ACTIVITIES = {
+  wood:  { lean: 'growth moves — start the project, book the lesson, send the pitch that opens a new door', care: 'overcommitting — enthusiasm runs ahead of capacity on Wood days' },
+  fire:  { lean: 'visibility — present, publish, network, put your work in front of people', care: 'impulse and friction — heated words travel fast on Fire days' },
+  earth: { lean: 'consolidation — contracts, property matters, tidying finances, steady routines', care: 'inertia — don’t let stability turn into stalling' },
+  metal: { lean: 'decisions — cut what isn’t working, negotiate terms, do the precise detailed work', care: 'harshness — sharp judgement can read as cold today' },
+  water: { lean: 'connection — conversations, research, travel, ideas that need to flow', care: 'drift — Water days scatter focus unless you set one anchor task' },
+};
+
+BZ.todayForecast = function(chart, date) {
+  const d = date || new Date();
+  const sexIdx = BZ.getDayIndex(d.getFullYear(), d.getMonth() + 1, d.getDate());
+  const stemIdx = sexIdx % 10, branchIdx = sexIdx % 12;
+  const stem = BZ.STEMS[stemIdx], branch = BZ.BRANCHES[branchIdx];
+  const str = chart.strength;
+
+  // Element alignment: does today's qi feed or drain this chart?
+  let score = 0;
+  if (str.favorable.includes(stem.el)) score++;
+  if (str.unfavorable.includes(stem.el)) score--;
+  if (str.favorable.includes(branch.el)) score++;
+  if (str.unfavorable.includes(branch.el)) score--;
+
+  // Branch interactions with the natal day branch (self) and year branch (zodiac)
+  const dayBr = chart.day.branchIdx, yearBr = chart.year.branchIdx;
+  const clashesWith = b => BZ.SIX_CLASHES.some(p => (p[0] === branchIdx && p[1] === b) || (p[1] === branchIdx && p[0] === b));
+  const combinesWith = b => BZ.SIX_COMBOS.some(c => (c.a === branchIdx && c.b === b) || (c.b === branchIdx && c.a === b));
+  const personalClash = clashesWith(dayBr);
+  const zodiacClash = !personalClash && clashesWith(yearBr);
+  const harmony = combinesWith(dayBr);
+  if (personalClash) score -= 2;
+  else if (zodiacClash) score -= 1;
+  if (harmony) score += 1;
+
+  let rating, ratingZh, ratingClass;
+  if (score >= 2) { rating = 'Favorable'; ratingZh = '吉'; ratingClass = 'tr-good'; }
+  else if (score <= -2) { rating = 'Handle with care'; ratingZh = '慎'; ratingClass = 'tr-care'; }
+  else { rating = 'Steady'; ratingZh = '平'; ratingClass = 'tr-steady'; }
+
+  // Lean line: a favorable element present in today's pillar, or — if the day
+  // doesn't feed this chart — the user's own favorable element as counterbalance
+  const favPresent = str.favorable.includes(stem.el) ? stem.el
+    : str.favorable.includes(branch.el) ? branch.el
+    : null;
+  let lean;
+  if (favPresent) {
+    lean = `Today carries ${BZ.EL_EN[favPresent]} ${BZ.EL_ZH[favPresent]} — one of your favorable elements. Good for ${BZ.EL_ACTIVITIES[favPresent].lean}.`;
+  } else {
+    const counterEl = str.favorable[0];
+    lean = `Today's ${BZ.EL_EN[stem.el]} qi doesn't feed your chart directly — keep the day steady, and bring in your own ${BZ.EL_EN[counterEl]} ${BZ.EL_ZH[counterEl]}: ${BZ.EL_ACTIVITIES[counterEl].lean}.`;
+  }
+  if (harmony) lean += ` Today’s ${branch.zh} also combines with your day branch ${BZ.BRANCHES[dayBr].zh} (六合) — cooperation and agreements flow more easily than usual.`;
+
+  // Care line: a clash with your own pillars outranks element friction
+  let care;
+  if (personalClash) {
+    care = `Today’s ${branch.zh} clashes your day branch ${BZ.BRANCHES[dayBr].zh} (${branch.zh}${BZ.BRANCHES[dayBr].zh}相冲) — a personal clash day. Keep plans flexible, avoid locking in major commitments, and don’t force confrontations.`;
+  } else if (zodiacClash) {
+    care = `Today’s ${branch.zh} clashes your year branch ${BZ.BRANCHES[yearBr].zh} — the classic “clash zodiac” day for ${BZ.BRANCHES[yearBr].animal}. Routine matters are fine; just leave margin in plans and travel.`;
+  } else {
+    const careEl = str.unfavorable.includes(stem.el) ? stem.el
+      : str.unfavorable.includes(branch.el) ? branch.el : null;
+    care = careEl
+      ? `${BZ.EL_EN[careEl]} ${BZ.EL_ZH[careEl]} is one of your unfavorable elements and it’s active today — watch for ${BZ.EL_ACTIVITIES[careEl].care}.`
+      : `No major friction with your chart today — the usual advice applies: ${BZ.EL_ACTIVITIES[stem.el].care}.`;
+  }
+
+  return {
+    date: d, sexIdx, stemIdx, branchIdx, stem, branch,
+    score, rating, ratingZh, ratingClass,
+    personalClash, zodiacClash, harmony,
+    lean, care,
+  };
+};
+
+BZ.renderTodayCard = function(chart) {
+  const f = BZ.todayForecast(chart);
+  const dateStr = f.date.toLocaleDateString('en-SG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const significant = f.personalClash || f.score >= 2 || f.score <= -2;
+
+  let cta;
+  if (!BZ.session) {
+    cta = `Want this reading waiting for you every morning? <a href="#" onclick="event.preventDefault(); BZ.showLoginModal('register')">Create a free account</a> and your chart is saved.`;
+  } else if (significant) {
+    cta = `Facing a real decision on a day like this? A <a href="#" onclick="event.preventDefault(); BZ.showDecisionModal(true)">Focused Decision Reading</a> answers one question properly, against your full chart.`;
+  } else {
+    cta = `Curious what the day looks like for everyone? See the <a href="/today">general almanac for today</a>.`;
+  }
+
+  return `<div class="card today-card fade-in" id="r-today">
+    <div class="card-title">Today for You 今日运势</div>
+    <div class="today-head">
+      <div class="today-pillar-chars"><span class="${BZ.elClass(f.stem.el)}">${f.stem.zh}</span><span class="${BZ.elClass(f.branch.el)}">${f.branch.zh}</span></div>
+      <div class="today-pillar-meta">
+        <div class="today-pillar-name">${f.stem.en} ${f.branch.en} — ${BZ.EL_EN[f.stem.el]} over ${BZ.EL_EN[f.branch.el]} · ${f.branch.animal} day</div>
+        <div class="today-pillar-date">${dateStr}</div>
+      </div>
+      <div class="today-rating ${f.ratingClass}"><span class="tr-zh">${f.ratingZh}</span>${f.rating}</div>
+    </div>
+    <div class="today-lines">
+      <div class="today-line"><span class="tl-tag tl-lean">Lean in</span><span>${f.lean}</span></div>
+      <div class="today-line"><span class="tl-tag tl-care">Take care</span><span>${f.care}</span></div>
+    </div>
+    <div class="today-cta">${cta}</div>
+  </div>`;
+};
+
 BZ.render = function(chart) {
   BZ._lastChart = chart; // Store for re-render on auth change
   const dm = BZ.STEMS[chart.day.stemIdx];
@@ -3123,6 +3257,7 @@ BZ.render = function(chart) {
 
   // ---- Jump nav (scannability) ----
   html += `<nav class="result-nav" aria-label="Jump to section">
+    <a href="#r-today">Today</a>
     <a href="#r-summary">Summary</a>
     <a href="#r-pillars">Your Pillars</a>
     <a href="#r-self">You</a>
@@ -3130,6 +3265,9 @@ BZ.render = function(chart) {
     <a href="#r-life">Life Areas</a>
     <a href="#r-timing">Timing</a>
   </nav>`;
+
+  // ---- Today for You (tier 0: the reason to come back tomorrow) ----
+  html += BZ.renderTodayCard(chart);
 
   // ---- Plain-language summary (tier 1: leads the dense chart) ----
   const sStr = chart.strength;
@@ -3714,6 +3852,7 @@ BZ.calculate = function() {
   try {
     chart = BZ.compute(year, month, day, hourBranch, gender);
     BZ._lastChart = chart;
+    BZ.saveChartToAccount(year, month, day, hourBranch, gender);
   } catch (e) {
     console.error('BaZi calculation error:', e);
     computeError = e;
@@ -3870,6 +4009,7 @@ BZ.saveSession = function(token, user) {
 
 BZ.clearSession = function() {
   BZ.session = null;
+  BZ._savedChart = null;
   localStorage.removeItem('bz_session');
   BZ.updateAuthUI();
 };
@@ -3886,6 +4026,7 @@ BZ.restoreSession = async function() {
       const data = await res.json();
       BZ.session = { token: s.token, name: data.user.name, email: data.user.email };
       BZ.updateAuthUI();
+      BZ.loadSavedChart();
     } else {
       BZ.clearSession();
     }
@@ -3894,11 +4035,68 @@ BZ.restoreSession = async function() {
   }
 };
 
+// ─── Saved chart: persist + restore the user's birth details ─
+BZ._savedChart = null;
+
+BZ.saveChartToAccount = function(year, month, day, hourBranch, gender) {
+  if (!BZ.session) return;
+  BZ._savedChart = { birthYear: year, birthMonth: month, birthDay: day, hourBranch: hourBranch, gender: gender };
+  fetch(BZ.API_BASE + '/api/chart', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + BZ.session.token },
+    body: JSON.stringify(BZ._savedChart),
+  }).catch(() => {}); // Fire-and-forget — never block the reading on a save
+};
+
+BZ.loadSavedChart = async function() {
+  if (!BZ.session) return;
+  try {
+    const res = await fetch(BZ.API_BASE + '/api/chart', {
+      headers: { 'Authorization': 'Bearer ' + BZ.session.token },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.chart) {
+      BZ._savedChart = data.chart;
+      BZ.prefillForm(data.chart);
+      BZ.updateAuthUI();
+    }
+  } catch (e) {
+    // Offline — saved chart just won't prefill this visit
+  }
+};
+
+BZ.prefillForm = function(c) {
+  const selYear = document.getElementById('sel-year');
+  const selMonth = document.getElementById('sel-month');
+  if (!selYear || !selYear.options.length) return;
+  selYear.value = c.birthYear;
+  selMonth.value = c.birthMonth;
+  BZ.updateDays();
+  document.getElementById('sel-day').value = c.birthDay;
+  document.getElementById('sel-hour').value = c.hourBranch;
+  const genderInput = document.querySelector('input[name="gender"][value="' + c.gender + '"]');
+  if (genderInput) {
+    genderInput.checked = true;
+    genderInput.dispatchEvent(new Event('change'));
+  }
+};
+
+BZ.openSavedChart = function() {
+  if (!BZ._savedChart) return;
+  BZ.prefillForm(BZ._savedChart);
+  BZ.calculate();
+};
+
 BZ.updateAuthUI = function() {
   const prompt = document.getElementById('main-reg-prompt');
   if (prompt) {
     if (BZ.session) {
+      const chartBtn = BZ._savedChart
+        ? '<a href="#" class="btn-reg-prompt" onclick="event.preventDefault(); BZ.openSavedChart()">Open My Chart · Today\'s Reading</a> '
+        : '';
       prompt.innerHTML = '<p>Signed in as <strong style="color:var(--accent)">' + BZ.session.name + '</strong> (' + BZ.session.email + ')</p>'
+        + chartBtn
         + '<a href="#" class="btn-reg-prompt" onclick="event.preventDefault(); BZ.logout()">Sign Out</a>';
     } else {
       prompt.innerHTML = '<p>Want personalized day-to-day destiny insights? Log in or create a free account to unlock Purpose-Star readings.</p>'

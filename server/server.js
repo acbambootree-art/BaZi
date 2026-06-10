@@ -6,6 +6,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const { getDb } = require('./db/init');
 const authRoutes = require('./routes/auth');
+const chartRoutes = require('./routes/charts');
 const { router: decisionRoutes, stripeWebhook } = require('./routes/decisionReading');
 
 const app = express();
@@ -32,6 +33,7 @@ app.use(express.json({ limit: '10kb' }));
 
 // ─── API Routes ─────────────────────────────────────────────
 app.use('/api', authRoutes);
+app.use('/api', chartRoutes);
 app.use('/api', decisionRoutes);
 
 // ─── Serve static frontend files ────────────────────────────

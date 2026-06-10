@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://bazi-calculator-oqnl.onrender.com/api/:path*"
+    },
+    {
+      "source": "/today",
+      "destination": "/today.html"
     }
   ]
 }

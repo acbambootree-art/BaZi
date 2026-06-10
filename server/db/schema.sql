@@ -17,6 +17,24 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);
 CREATE INDEX IF NOT EXISTS idx_users_session_token ON users(session_token);
 
+-- Saved birth charts (one chart per user+label; 'self' is the primary chart)
+CREATE TABLE IF NOT EXISTS charts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  label TEXT NOT NULL DEFAULT 'self',
+  birth_year INTEGER NOT NULL,
+  birth_month INTEGER NOT NULL,
+  birth_day INTEGER NOT NULL,
+  hour_branch INTEGER NOT NULL DEFAULT -1,
+  gender TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(user_id, label),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_charts_user ON charts(user_id);
+
 -- Focused Decision Reading orders (paid one-question written readings)
 CREATE TABLE IF NOT EXISTS decision_readings (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
