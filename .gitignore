@@ -5,3 +5,4 @@ server/db/bazi.db
 /db/
 .DS_Store
 *.orig.mp4
+.gstack/
