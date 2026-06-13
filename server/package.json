@@ -5,7 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test": "node --test engine/test/engine.test.js engine/test/validation.test.js",
+    "gen:validation": "node engine/validation/generate.js",
+    "gen:vsop": "node engine/validation/extract-vsop.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.0.0",
@@ -18,5 +21,11 @@
     "qrcode": "^1.5.4",
     "resend": "^4.0.0",
     "stripe": "^17.5.0"
+  },
+  "devDependencies": {
+    "@lunisolar/plugin-char8ex": "^0.2.5",
+    "astronomia": "^4.2.0",
+    "lunar-javascript": "^1.7.7",
+    "lunisolar": "^2.6.0"
   }
 }
