@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>八字排盘 | BaZi Calculator</title>
+<meta name="description" content="Free BaZi (Four Pillars of Destiny) calculator. Enter your birth date and time to cast your chart — Day Master, Five Elements balance, Ten-Year Luck Pillars, and a personalised daily reading. Classical Zi Ping method, 命星指引.">
+<link rel="canonical" href="https://mingpan.live/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32x32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="/favicon-16x16.png" sizes="16x16" type="image/png">
@@ -21,6 +23,19 @@
 <meta name="twitter:title" content="八字排盘 · BaZi Four Pillars of Destiny">
 <meta name="twitter:description" content="Calculate your BaZi chart and get a personalised daily reading. Purpose-Star Astrology · 命星指引.">
 <meta name="twitter:image" content="https://mingpan.live/og-image.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "八字排盘 · BaZi Four Pillars Calculator",
+  "url": "https://mingpan.live/",
+  "applicationCategory": "LifestyleApplication",
+  "operatingSystem": "Any",
+  "description": "Free BaZi (Four Pillars of Destiny) calculator. Cast your chart from your birth date and time — Day Master, Five Elements balance, Ten-Year Luck Pillars, and a personalised daily reading. Classical Zi Ping method.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "SGD" },
+  "inLanguage": ["en", "zh"]
+}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -791,6 +806,9 @@ footer a { color: var(--accent); text-decoration: none; }
   .pillar { min-width: 0; padding: 14px 6px; }
   .dm-summary { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: repeat(2, 1fr); }
+  /* Primary birth form: single column on mobile so long option labels
+     (e.g. "1 - January", "戌时 Xu (19:00-20:59)") never truncate. */
+  #input-section .form-grid { grid-template-columns: 1fr; }
   .balance-grid { grid-template-columns: repeat(5, 1fr); }
   .current-year-grid { grid-template-columns: 1fr; }
   .year-pillar-display { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px; }
@@ -3680,7 +3698,8 @@ BZ.render = function(chart) {
 
   // ---- Consult a Master ----
   html += `<div class="card fade-in">
-    <div class="copy-section">
+    <div class="copy-section" style="display:flex;flex-direction:column;gap:12px;align-items:center">
+      <button class="btn" style="width:auto" onclick="BZ.copyShareLink(this)">Share this chart</button>
       <a class="btn consult-btn" href="https://wa.me/6589422200" target="_blank" rel="noopener">Consult a Master</a>
     </div>
   </div>`;
@@ -3952,7 +3971,58 @@ BZ.calculate = function() {
       return;
     }
     BZ.render(chart);
+    BZ.updateShareURL(year, month, day, hourBranch, gender);
   });
+};
+
+// ─── Shareable chart links ──────────────────────────────────
+// Encode the current birth inputs into the URL so a chart can be shared;
+// a visitor opening that link is auto-cast into the same reading.
+BZ.updateShareURL = function(year, month, day, hourBranch, gender) {
+  try {
+    const p = new URLSearchParams({
+      y: year, m: month, d: day, h: hourBranch,
+      g: gender === 'female' ? 'f' : 'm'
+    });
+    history.replaceState(null, '', '?' + p.toString());
+  } catch (e) { /* non-fatal */ }
+};
+
+BZ.copyShareLink = function(btn) {
+  const url = window.location.href;
+  const done = () => {
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = 'Link copied ✓';
+    setTimeout(() => { btn.textContent = orig; }, 1800);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(done).catch(() => { prompt('Copy this link:', url); });
+  } else {
+    prompt('Copy this link:', url);
+  }
+};
+
+// Read birth inputs from the URL (if present), prefill the form, and cast.
+BZ.applyShareParams = function() {
+  const q = new URLSearchParams(window.location.search);
+  const y = parseInt(q.get('y')), m = parseInt(q.get('m')), d = parseInt(q.get('d'));
+  if (!y || !m || !d) return false;
+  const h = q.has('h') ? parseInt(q.get('h')) : -1;
+  const g = q.get('g') === 'f' ? 'female' : 'male';
+  const selYear = document.getElementById('sel-year');
+  const selMonth = document.getElementById('sel-month');
+  if (y >= 1920 && y <= new Date().getFullYear() + 10) selYear.value = y;
+  if (m >= 1 && m <= 12) selMonth.value = m;
+  BZ.updateDays();
+  const selDay = document.getElementById('sel-day');
+  if (d >= 1 && d <= selDay.options.length) selDay.value = d;
+  const selHour = document.getElementById('sel-hour');
+  if (!isNaN(h)) selHour.value = h;
+  const genderInput = document.querySelector('input[name="gender"][value="' + g + '"]');
+  if (genderInput) { genderInput.checked = true; genderInput.dispatchEvent(new Event('change')); }
+  BZ.calculate();
+  return true;
 };
 
 // Animated "calculating" overlay. Cycles status lines, lights the five
@@ -4080,6 +4150,7 @@ document.addEventListener('DOMContentLoaded', () => {
   BZ.init();
   BZ.initVideoPerf();
   if (window.location.search.includes('debug')) BZ.verify();
+  else BZ.applyShareParams();
 });
 // ============================================================
 // Auth: Session, Login, Registration
