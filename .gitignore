@@ -6,3 +6,7 @@ server/db/bazi.db
 .DS_Store
 *.orig.mp4
 .gstack/
+
+# SQLite WAL sidecar files (local dev)
+server/db/bazi.db-shm
+server/db/bazi.db-wal

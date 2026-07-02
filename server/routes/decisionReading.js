@@ -4,6 +4,7 @@ const router = express.Router();
 const { getDb } = require('../db/init');
 const { generatePayNowQR } = require('../services/paynow');
 const { sendOrderNotification, sendOrderConfirmation } = require('../services/email');
+const { fulfillOrder } = require('../services/fulfillment');
 const { decisionReadingRules, validate } = require('../middleware/validator');
 const { orderLimiter, adminLimiter } = require('../middleware/rateLimiter');
 
@@ -185,6 +186,11 @@ router.post('/admin/orders/:ref/status', adminLimiter, requireAdmin, (req, res) 
     if (paymentStatus) {
       if (!VALID_STATUSES.includes(paymentStatus)) return res.status(400).json({ error: 'Invalid status.' });
       db.prepare("UPDATE decision_readings SET payment_status = ?, updated_at = datetime('now') WHERE id = ?").run(paymentStatus, order.id);
+      // PayNow flow: once the admin verifies the transfer and marks the order
+      // paid, generate and deliver the reading automatically.
+      if (paymentStatus === 'paid') {
+        fulfillOrder(ref).catch(e => console.error('[ADMIN] fulfill failed:', e.message));
+      }
     }
     if (delivered === true) {
       db.prepare("UPDATE decision_readings SET delivered_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(order.id);
@@ -226,6 +232,8 @@ function stripeWebhook(req, res) {
         const paid = { ...order, payment_status: 'paid' };
         sendOrderNotification(paid).catch(e => console.error('[DR] notify failed:', e.message));
         sendOrderConfirmation(paid).catch(e => console.error('[DR] confirm failed:', e.message));
+        // Payment verified — generate and deliver the reading automatically.
+        fulfillOrder(order.reference).catch(e => console.error('[DR] fulfill failed:', e.message));
       }
     } catch (e) {
       console.error('[STRIPE] Failed to process completed session:', e.message);

@@ -8,6 +8,7 @@ const { getDb } = require('./db/init');
 const authRoutes = require('./routes/auth');
 const chartRoutes = require('./routes/charts');
 const { router: decisionRoutes, stripeWebhook } = require('./routes/decisionReading');
+const { router: forecastRoutes } = require('./routes/forecast');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,6 +36,7 @@ app.use(express.json({ limit: '10kb' }));
 app.use('/api', authRoutes);
 app.use('/api', chartRoutes);
 app.use('/api', decisionRoutes);
+app.use('/api', forecastRoutes);
 
 // ─── Serve static frontend files ────────────────────────────
 // Serve from parent directory where index.html, hero.mp4, Background2.mp4 live

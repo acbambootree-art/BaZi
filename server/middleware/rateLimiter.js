@@ -48,4 +48,12 @@ const adminLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-module.exports = { registerLimiter, resendLimiter, verifyLimiter, loginLimiter, orderLimiter, adminLimiter };
+const forecastLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: { error: 'Too many forecast requests. Please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+module.exports = { registerLimiter, resendLimiter, verifyLimiter, loginLimiter, orderLimiter, adminLimiter, forecastLimiter };

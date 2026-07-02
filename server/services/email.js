@@ -179,4 +179,76 @@ async function sendOrderConfirmation(order) {
   });
 }
 
-module.exports = { sendVerificationEmail, sendOrderNotification, sendOrderConfirmation };
+/**
+ * Deliver the finished Focused Decision Reading to the customer.
+ * The owner is BCC'd so every auto-generated reading can be spot-checked.
+ */
+async function sendReadingDelivery(order, readingHtml) {
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  const bcc = process.env.ORDER_NOTIFY_EMAIL || 'cj@360nightnday.com';
+  const client = getResend();
+
+  const html = `
+  <div style="font-family:'Segoe UI',Tahoma,sans-serif;max-width:620px;margin:0 auto;background:#0a0a0f;color:#e8e6f0;padding:36px;border-radius:14px">
+    <div style="color:#c9a44a;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:10px;text-align:center">Purpose-Star Astrology · 命星指引</div>
+    <h2 style="color:#c9a44a;margin:0 0 18px;text-align:center">Your Focused Decision Reading</h2>
+    <div style="background:rgba(201,164,74,0.06);border:1px solid rgba(201,164,74,0.2);border-radius:10px;padding:16px;margin:0 0 22px">
+      <div style="color:#9a9590;font-size:12px;margin-bottom:6px">Your question</div>
+      <div style="font-size:14px;line-height:1.6;color:#e8e6f0;white-space:pre-wrap">${esc(order.question)}</div>
+    </div>
+    ${readingHtml}
+    <p style="color:#9a9590;font-size:13px;line-height:1.7;margin-top:26px">
+      If anything in this reading is unclear, just reply to this email — we're happy to clarify.
+    </p>
+    <p style="color:#5c5856;font-size:12px;margin-top:18px">Order reference: ${esc(order.reference)}</p>
+    <p style="color:#5c5856;font-size:11px;font-style:italic;margin-top:14px;text-align:center">The stars incline, they do not compel.</p>
+  </div>`;
+
+  if (!client) {
+    console.log('\n[EMAIL] No RESEND_API_KEY set — logging reading delivery to console:');
+    console.log(`  To: ${order.email} (BCC: ${bcc})`);
+    console.log(`  Subject: Your Focused Decision Reading — ${order.reference}`);
+    console.log('');
+    return { success: true, dev: true };
+  }
+
+  try {
+    const result = await client.emails.send({
+      from: `Purpose-Star Astrology <${fromEmail}>`,
+      to: [order.email],
+      bcc: [bcc],
+      subject: `Your Focused Decision Reading — ${order.reference}`,
+      html,
+    });
+    console.log(`[EMAIL] Delivered reading ${order.reference} to ${order.email}`, result?.data?.id || '');
+    return { success: true, id: result.data?.id };
+  } catch (err) {
+    console.error(`[EMAIL] Failed to deliver reading ${order.reference}:`, err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Alert the owner that an order needs manual fulfillment.
+ */
+async function sendFulfillmentAlert(order, reason) {
+  const to = process.env.ORDER_NOTIFY_EMAIL || 'cj@360nightnday.com';
+  const html = `
+  <div style="font-family:'Segoe UI',Tahoma,sans-serif;max-width:560px;margin:0 auto;background:#0a0a0f;color:#e8e6f0;padding:32px;border-radius:14px">
+    <h2 style="color:#e07a5f;margin:0 0 10px">Decision Reading needs manual fulfillment</h2>
+    <p style="color:#cfcadf;font-size:14px;line-height:1.7">Order <strong style="color:#c9a44a">${esc(order.reference)}</strong> for ${esc(order.name)} (${esc(order.email)}).</p>
+    <p style="color:#cfcadf;font-size:14px;line-height:1.7">${esc(reason)}</p>
+    <div style="background:rgba(201,164,74,0.06);border:1px solid rgba(201,164,74,0.2);border-radius:10px;padding:16px;margin-top:14px">
+      <div style="color:#9a9590;font-size:12px;margin-bottom:6px">Their question</div>
+      <div style="font-size:14px;line-height:1.6;white-space:pre-wrap">${esc(order.question)}</div>
+    </div>
+  </div>`;
+  return sendEmail({
+    to,
+    subject: `ACTION NEEDED: Decision Reading ${order.reference}`,
+    html,
+    replyTo: order.email,
+  });
+}
+
+module.exports = { sendVerificationEmail, sendOrderNotification, sendOrderConfirmation, sendReadingDelivery, sendFulfillmentAlert };

@@ -56,6 +56,9 @@ CREATE TABLE IF NOT EXISTS decision_readings (
   payment_status TEXT NOT NULL DEFAULT 'pending',
   stripe_session_id TEXT,
   paynow_reference TEXT,
+  reading_text TEXT,
+  reading_model TEXT,
+  reading_generated_at TEXT,
   delivered_at TEXT,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
@@ -63,3 +66,15 @@ CREATE TABLE IF NOT EXISTS decision_readings (
 
 CREATE INDEX IF NOT EXISTS idx_dr_reference ON decision_readings(reference);
 CREATE INDEX IF NOT EXISTS idx_dr_stripe_session ON decision_readings(stripe_session_id);
+
+-- Cached AI daily forecasts: one row per interpretation key per day.
+-- Users whose chart facts resolve to the same key share the same text.
+CREATE TABLE IF NOT EXISTS daily_forecasts (
+  cache_key TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  model TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_daily_forecasts_date ON daily_forecasts(date);

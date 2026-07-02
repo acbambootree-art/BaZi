@@ -35,3 +35,10 @@ services:
       # Admin orders dashboard at /admin.html — set a long random secret
       - key: ADMIN_KEY
         sync: false
+      # AI readings: cached daily forecasts (Haiku) + automated Decision
+      # Reading fulfillment (Opus). Without the key both fall back to
+      # template copy / manual fulfillment.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: FORECAST_DAILY_CAP
+        value: "400"

@@ -3228,12 +3228,45 @@ BZ.renderTodayCard = function(chart) {
       </div>
       <div class="today-rating ${f.ratingClass}"><span class="tr-zh">${f.ratingZh}</span>${f.rating}</div>
     </div>
+    <div id="today-headline" style="display:none;color:var(--gold,#c9a44a);font-style:italic;font-size:15px;margin:2px 0 10px"></div>
     <div class="today-lines">
-      <div class="today-line"><span class="tl-tag tl-lean">Lean in</span><span>${f.lean}</span></div>
-      <div class="today-line"><span class="tl-tag tl-care">Take care</span><span>${f.care}</span></div>
+      <div class="today-line"><span class="tl-tag tl-lean">Lean in</span><span id="today-lean-text">${f.lean}</span></div>
+      <div class="today-line"><span class="tl-tag tl-care">Take care</span><span id="today-care-text">${f.care}</span></div>
     </div>
     <div class="today-cta">${cta}</div>
   </div>`;
+};
+
+// Upgrade the Today card with the server's AI-written forecast. The server
+// keys generations on the chart's interpretation facts and caches them, so
+// identical chart-fact combinations share one generation. Falls back
+// silently to the template text above if the API is unavailable.
+BZ.enhanceTodayCard = function(chart) {
+  const leanEl = document.getElementById('today-lean-text');
+  const careEl = document.getElementById('today-care-text');
+  if (!leanEl || !careEl || !chart.birthYear) return;
+  const d = new Date();
+  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  fetch('/api/forecast/today', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      birthYear: chart.birthYear,
+      birthMonth: chart.birthMonth,
+      birthDay: chart.birthDay,
+      hourBranch: chart.hour ? chart.hour.branchIdx : -1,
+      gender: chart.gender || undefined,
+      date: dateStr,
+    }),
+  }).then(r => (r.ok ? r.json() : null)).then(data => {
+    if (!data || data.source !== 'ai') return;
+    if (data.lean) leanEl.textContent = data.lean;
+    if (data.care) careEl.textContent = data.care;
+    if (data.headline) {
+      const h = document.getElementById('today-headline');
+      if (h) { h.textContent = '"' + data.headline + '"'; h.style.display = 'block'; }
+    }
+  }).catch(() => {});
 };
 
 BZ.render = function(chart) {
@@ -3604,6 +3637,7 @@ BZ.render = function(chart) {
   document.body.classList.add('results-bg-active');
   if (BZ.activateResultsVideo) BZ.activateResultsVideo();
   BZ.initGloss();
+  BZ.enhanceTodayCard(chart);
   rs.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 

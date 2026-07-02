@@ -31,6 +31,17 @@ function getDb() {
     }
   }
 
+  const drExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='decision_readings'").get();
+  if (drExists) {
+    const drCols = db.prepare("PRAGMA table_info(decision_readings)").all().map(c => c.name);
+    if (!drCols.includes('reading_text')) {
+      db.exec("ALTER TABLE decision_readings ADD COLUMN reading_text TEXT");
+      db.exec("ALTER TABLE decision_readings ADD COLUMN reading_model TEXT");
+      db.exec("ALTER TABLE decision_readings ADD COLUMN reading_generated_at TEXT");
+      console.log('[DB] Migrated: added reading columns to decision_readings');
+    }
+  }
+
   // Run schema (creates tables + indexes if not exist)
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   db.exec(schema);
