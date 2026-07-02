@@ -11,6 +11,14 @@ function getResend() {
   return resend;
 }
 
+// Brand medallion for email headers. Email clients don't render SVG and often
+// block data URIs, so reference a hosted PNG. The icon's dark background matches
+// the emails' near-black cards, so it reads as just the gold emblem.
+const EMAIL_LOGO_URL = process.env.EMAIL_LOGO_URL || 'https://mingpan.live/apple-touch-icon.png';
+function emailLogo() {
+  return `<img src="${EMAIL_LOGO_URL}" width="58" height="58" alt="Purpose-Star Astrology" style="display:block;margin:0 auto 14px;border-radius:50%;border:0">`;
+}
+
 /**
  * Send verification email to the user.
  * Falls back to console logging if no Resend API key is configured.
@@ -156,6 +164,7 @@ async function sendOrderConfirmation(order) {
 
   const html = `
   <div style="font-family:'Segoe UI',Tahoma,sans-serif;max-width:520px;margin:0 auto;background:#0a0a0f;color:#e8e6f0;padding:36px;border-radius:14px;text-align:center">
+    ${emailLogo()}
     <div style="color:#c9a44a;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:10px">Purpose-Star Astrology · 命星指引</div>
     <h2 style="color:#c9a44a;margin:0 0 14px">We've received your reading</h2>
     <p style="color:#cfcadf;font-size:15px;line-height:1.7;margin:0 0 18px">
@@ -190,6 +199,7 @@ async function sendReadingDelivery(order, readingHtml) {
 
   const html = `
   <div style="font-family:'Segoe UI',Tahoma,sans-serif;max-width:620px;margin:0 auto;background:#0a0a0f;color:#e8e6f0;padding:36px;border-radius:14px">
+    ${emailLogo()}
     <div style="color:#c9a44a;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:10px;text-align:center">Purpose-Star Astrology · 命星指引</div>
     <h2 style="color:#c9a44a;margin:0 0 18px;text-align:center">Your Focused Decision Reading</h2>
     <div style="background:rgba(201,164,74,0.06);border:1px solid rgba(201,164,74,0.2);border-radius:10px;padding:16px;margin:0 0 22px">
