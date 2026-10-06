@@ -114,3 +114,16 @@ CREATE TABLE IF NOT EXISTS corpus_meta (
   key TEXT PRIMARY KEY,
   value TEXT
 );
+
+-- Site-visit chat per Smart Luopan consult (AI-3).
+CREATE TABLE IF NOT EXISTS luopan_chats (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reference TEXT NOT NULL,
+  role TEXT NOT NULL,            -- 'user' | 'assistant'
+  content TEXT NOT NULL,
+  citations TEXT,                -- JSON array for assistant turns
+  model TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_luopan_chats_ref ON luopan_chats(reference, id);

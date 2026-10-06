@@ -154,6 +154,16 @@
   .refx summary::before { content: '›'; color: var(--ink-3); transition: transform .25s var(--spring); display: inline-block; }
   .refx[open] summary::before { transform: rotate(90deg); }
   .refx p { font-size: 0.9rem; line-height: 1.7; color: var(--ink-2); margin: 8px 0 2px 14px; white-space: pre-wrap; font-family: 'Noto Serif SC', 'Songti SC', Georgia, serif; }
+  .chatlog { max-height: 420px; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; padding: 2px; }
+  .msg { display: flex; animation: rise .35s var(--ease) both; }
+  .msg.user { justify-content: flex-end; }
+  .bub { max-width: 86%; padding: 10px 13px; border-radius: 16px; font-size: 0.92rem; line-height: 1.55; white-space: pre-wrap; }
+  .msg.user .bub { background: var(--ink); color: #fff; border-bottom-right-radius: 5px; }
+  .msg.assistant .bub { background: rgba(255,255,255,0.75); border: 1px solid rgba(184,146,58,0.22); border-bottom-left-radius: 5px; }
+  .bub.typing { display: flex; gap: 4px; padding: 14px 16px; }
+  .bub.typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); animation: blink 1.2s infinite ease-in-out; }
+  .bub.typing span:nth-child(2) { animation-delay: .2s } .bub.typing span:nth-child(3) { animation-delay: .4s }
+  @keyframes blink { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
   .hidden { display: none !important; }
   @media print { .nav, header .btn, .steps, .bg { display: none; } body { background: #fff; } .card { box-shadow: none; border-color: #ddd; background: #fff; animation: none; } }
 </style>
@@ -597,23 +607,16 @@ function renderReport() {
       <div class="hint" style="margin-bottom:8px">Passages matched to the rules that fired. Quotes are classical text; notes are modern commentary.</div>
       ${r.references.map((p, i) => `<details class="refx"><summary><span class="badge ${p.type === 'quote' ? 'b-info' : 'b-warn'}">${p.type}</span> <b>${esc(p.source)}</b> · ${esc(p.section)}</summary><p>${esc(p.text)}</p></details>`).join('')}
     </div>` : ''}
-    ${S.reference ? `<div class="card" id="askCard">
-      <h2>Ask about this house</h2>
-      <div style="display:flex; gap:8px"><input id="askQ" placeholder="e.g. Why should the desk not face south this year?"><button class="btn sm" id="askBtn">Ask</button></div>
-      <div id="askOut" style="margin-top:10px"></div>
+    ${S.reference ? `<div class="card" id="chatCard">
+      <div class="rv"><h2 style="margin:0">On-site assistant</h2><button class="btn ghost sm" id="chatClear">Clear</button></div>
+      <div class="hint" style="margin-bottom:8px">Ask anything about this house while you are there. Answers use only this audit and cite the classics.</div>
+      <div class="chips" id="chatChips">${['What should we do first this year?', 'Why this bed direction?', 'Which room suits the child?', 'Is the reading reliable?', 'What cures go where?'].map(q => `<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join('')}</div>
+      <div id="chatLog" class="chatlog"></div>
+      <div style="display:flex; gap:8px; margin-top:10px"><input id="chatQ" placeholder="Type a question…" autocomplete="off"><button class="btn sm" id="chatSend">Send</button></div>
     </div>` : ''}
     <div class="card hint">Structural fixes come first; items are element carriers. Advice assumes the recorded facing.
       <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap"><button class="btn ghost sm" onclick="window.print()">Print / PDF</button><button class="btn ghost sm" id="btnNew">New consult</button>${S.reference ? `<button class="btn sm" id="btnNarrative">${S.narrative ? 'Rewrite client report' : 'Write client report'}</button>` : '<span class="hint" style="align-self:center">Save the consult to write the client report.</span>'}</div></div>`;
-  const ab = $('#askBtn');
-  if (ab) ab.onclick = async () => {
-    const q = $('#askQ').value.trim(); if (q.length < 3) return;
-    ab.disabled = true; ab.textContent = '…'; $('#askOut').innerHTML = '<div class="hint">Thinking…</div>';
-    try { const d = await api('/api/luopan/consults/' + S.reference + '/ask', { method: 'POST', body: JSON.stringify({ question: q }) });
-      $('#askOut').innerHTML = `<div class="who" style="margin-top:0"><b>Q:</b> ${esc(q)}<br><br>${esc(d.answer)}</div>${citationsHtml(d.citations)}`; }
-    catch (e) { $('#askOut').innerHTML = `<div class="err">${esc(e.message)}</div>`; }
-    finally { ab.disabled = false; ab.textContent = 'Ask'; }
-  };
-  $('#askQ') && $('#askQ').addEventListener('keydown', e => { if (e.key === 'Enter') ab.click(); });
+  if ($('#chatCard')) initChat();
   const nb = $('#btnNarrative');
   if (nb) nb.onclick = async () => {
     nb.disabled = true; nb.textContent = 'Writing… (about a minute)';
@@ -651,6 +654,31 @@ function narrativeHtml(n) {
     <p class="hint">${esc(n.closing)}</p>
     ${citationsHtml(n.citations)}
   </div>`;
+}
+// ---------- on-site chat ----------
+function bubble(t) {
+  return `<div class="msg ${t.role}"><div class="bub">${esc(t.content)}${t.role === 'assistant' ? citationsHtml(t.citations) : ''}</div></div>`;
+}
+async function initChat() {
+  const log = $('#chatLog'), input = $('#chatQ'), send = $('#chatSend');
+  const render = turns => { log.innerHTML = turns.length ? turns.map(bubble).join('') : '<div class="hint" style="padding:6px 0">No questions yet.</div>'; log.scrollTop = log.scrollHeight; };
+  let turns = [];
+  try { turns = (await api('/api/luopan/consults/' + S.reference + '/chat')).turns; } catch {}
+  render(turns);
+  const submit = async q => {
+    q = (q || '').trim(); if (q.length < 2) return;
+    turns.push({ role: 'user', content: q }); render(turns);
+    log.insertAdjacentHTML('beforeend', '<div class="msg assistant"><div class="bub typing"><span></span><span></span><span></span></div></div>'); log.scrollTop = log.scrollHeight;
+    send.disabled = true; input.value = '';
+    try { const d = await api('/api/luopan/consults/' + S.reference + '/chat', { method: 'POST', body: JSON.stringify({ message: q }) });
+      turns.push({ role: 'assistant', content: d.answer, citations: d.citations }); }
+    catch (e) { turns.push({ role: 'assistant', content: 'Could not answer: ' + e.message, citations: [] }); }
+    finally { send.disabled = false; render(turns); }
+  };
+  send.onclick = () => submit(input.value);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(input.value); });
+  $('#chatChips').querySelectorAll('[data-q]').forEach(ch => ch.onclick = () => submit(ch.dataset.q));
+  $('#chatClear').onclick = async () => { if (!confirm('Clear this conversation?')) return; await api('/api/luopan/consults/' + S.reference + '/chat', { method: 'POST', body: JSON.stringify({ reset: true }) }); turns = []; render(turns); };
 }
 function citationsHtml(cites) {
   if (!cites || !cites.length) return '';

@@ -116,6 +116,38 @@ router.post('/luopan/consults/:ref/ask', async (req, res) => {
   } catch (e) { console.error('[LUOPAN] ask error:', e); res.status(500).json({ error: e.message || 'Could not answer.' }); }
 });
 
+router.get('/luopan/consults/:ref/chat', (req, res) => {
+  try {
+    const rows = getDb().prepare('SELECT id, role, content, citations, created_at FROM luopan_chats WHERE reference = ? ORDER BY id').all(req.params.ref);
+    res.json({ turns: rows.map(r => ({ ...r, citations: r.citations ? JSON.parse(r.citations) : [] })) });
+  } catch (e) { console.error('[LUOPAN] chat list error:', e); res.status(500).json({ error: 'Could not load chat.' }); }
+});
+
+router.post('/luopan/consults/:ref/chat', async (req, res) => {
+  const db = getDb();
+  if (req.body && req.body.reset) {
+    db.prepare('DELETE FROM luopan_chats WHERE reference = ?').run(req.params.ref);
+    return res.json({ ok: true });
+  }
+  if (!narrative.isConfigured()) return res.status(503).json({ error: 'AI assistant is not configured (ANTHROPIC_API_KEY).' });
+  const message = String((req.body && req.body.message) || '').trim().slice(0, 800);
+  if (message.length < 2) return res.status(400).json({ error: 'Say something.' });
+  try {
+    const row = db.prepare('SELECT * FROM luopan_consults WHERE reference = ?').get(req.params.ref);
+    if (!row) return res.status(404).json({ error: 'Not found' });
+    const { references, ...audit } = analyse(JSON.parse(row.payload));
+    const history = db.prepare('SELECT role, content FROM luopan_chats WHERE reference = ? ORDER BY id').all(req.params.ref);
+    const passages = corpus.search([...corpus.termsForQuestion(message), ...corpus.termsForReport(audit)], 6);
+    const out = await narrative.chat(message, history, audit, passages);
+    const ins = db.prepare('INSERT INTO luopan_chats (reference, role, content, citations, model) VALUES (?, ?, ?, ?, ?)');
+    db.transaction(() => {
+      ins.run(req.params.ref, 'user', message, null, null);
+      ins.run(req.params.ref, 'assistant', out.answer, JSON.stringify(out.citations), out.model);
+    })();
+    res.json({ answer: out.answer, citations: out.citations, model: out.model });
+  } catch (e) { console.error('[LUOPAN] chat error:', e); res.status(500).json({ error: e.message || 'Could not answer.' }); }
+});
+
 router.post('/luopan/consults/:ref/review', (req, res) => {
   try {
     const note = String((req.body && req.body.note) || '').slice(0, 2000);

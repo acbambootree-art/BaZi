@@ -119,4 +119,45 @@ async function ask(question, report, passages = []) {
   return { ...out, model: response.model || MODEL };
 }
 
-module.exports = { isConfigured, generateNarrative, ask };
+const CHAT_SYSTEM = `You are the senior feng shui consultant behind Smart Luopan, talking with a junior consultant who is standing in the client's home right now, phone in hand. The audit for this house is given as verified JSON after these instructions; numbered classical passages retrieved for the latest question follow in the user turn.
+
+Style: short, practical, spoken-English answers (40–150 words). Answer the question first, then one line of reasoning. Suggest a concrete next step on site when useful (re-measure, check a wall, move the bed). Teach a little, never lecture.
+
+Hard rules: use ONLY facts in the audit; never recompute stars, bearings, gua or favourable elements, and never invent a product or ritual. If the audit cannot answer, say what input or reading would settle it. Cite passages inline as [n] only when one genuinely supports the point; say when a passage is a modern note. Never predict illness, death or specific money outcomes. The house motto: "The stars incline, they do not compel."`;
+
+/** Keep the last `limit` turns, always starting with a user turn, as plain-text API messages. */
+function buildMessages(history, limit = 12) {
+  let turns = history.slice(-limit);
+  while (turns.length && turns[0].role !== 'user') turns = turns.slice(1);
+  return turns.map(t => ({ role: t.role, content: t.content }));
+}
+
+/**
+ * One chat turn. `history` is prior turns [{role, content}] (oldest first);
+ * `message` is the new user message. Returns { answer, citations, model }.
+ */
+async function chat(message, history, report, passages = []) {
+  const c = getClient();
+  if (!c) return null;
+  const classicalPassages = passages.map((p, i) => ({ n: i + 1, source: p.source, section: p.section, type: p.type, text: p.text }));
+  const messages = buildMessages(history);
+  messages.push({ role: 'user', content: JSON.stringify({ message, classicalPassages }) });
+  const response = await c.beta.messages.create({
+    model: MODEL, max_tokens: 1500,
+    betas: ['server-side-fallback-2026-06-01'], fallbacks: [{ model: FALLBACK }],
+    // Stable prefix (instructions + audit) cached across turns of the same consult.
+    system: [
+      { type: 'text', text: CHAT_SYSTEM },
+      { type: 'text', text: 'AUDIT JSON:\n' + JSON.stringify(report), cache_control: { type: 'ephemeral' } },
+    ],
+    output_config: { format: { type: 'json_schema', schema: ASK_SCHEMA } },
+    messages,
+  });
+  if (response.stop_reason === 'refusal') throw new Error('The model declined this question');
+  const text = response.content.filter(b => b.type === 'text').map(b => b.text).join('').trim();
+  const out = JSON.parse(text);
+  out.citations = (out.citations || []).filter(x => classicalPassages[x.n - 1]).map(x => ({ ...x, ...classicalPassages[x.n - 1] }));
+  return { ...out, model: response.model || MODEL };
+}
+
+module.exports = { isConfigured, generateNarrative, ask, chat, buildMessages };
