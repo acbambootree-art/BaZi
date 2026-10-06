@@ -1,6 +1,6 @@
 # Smart Luopan — research & product brief
 
-Date: 2026-10-06. Status: Phase 1 built 2026-10-07 (`luopan.html`, `server/engine/fengshui.js`, `server/routes/luopan.js`); Phase 2 (Flying Star) and Phase 3 (用神 layer `server/engine/yongshen.js`, cure vetoes, AI client report via `server/services/luopanNarrative.js`) built 2026-10-07. AI-2 (classical corpus retrieval with citations, `server/corpus/*.md` + `server/services/corpus.js`, references card, ask-about-this-house endpoint) built 2026-10-07 with a seed corpus of 41 passages. Remaining: full public-domain texts in the corpus folder, the 50-chart 用神 reference set, multi-turn site-visit chat.
+Date: 2026-10-06. Status: Phase 1 built 2026-10-07 (`luopan.html`, `server/engine/fengshui.js`, `server/routes/luopan.js`); Phase 2 (Flying Star) and Phase 3 (用神 layer `server/engine/yongshen.js`, cure vetoes, AI client report via `server/services/luopanNarrative.js`) built 2026-10-07. AI-2 (classical corpus retrieval with citations, `server/corpus/*.md` + `server/services/corpus.js`, references card, ask-about-this-house endpoint) built 2026-10-07; corpus = 41 seed passages plus ~1,900 passages of full public-domain texts fetched from zh.wikisource.org (`server/corpus/fetch.js`). Remaining: the 50-chart 用神 reference set, multi-turn site-visit chat.
 
 ## 0. Verdict in five lines
 

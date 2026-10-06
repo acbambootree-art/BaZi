@@ -66,6 +66,7 @@ function ensureIngested() {
     db.prepare("INSERT INTO corpus_meta (key, value) VALUES ('hash', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(hash);
   });
   tx();
+  rowCache = null;
   const n = db.prepare('SELECT COUNT(*) AS n FROM corpus_chunks').get().n;
   console.log(`[CORPUS] ingested ${n} passages from ${files.length} files`);
   return n;
@@ -75,12 +76,17 @@ function ensureIngested() {
  * Retrieve passages for a list of terms (rule ids or Chinese/English key words).
  * Tag hits score 3, text hits 1 per term. Returns top `limit`.
  */
+let rowCache = null;
+function rows() {
+  if (!rowCache) rowCache = getDb().prepare('SELECT id, source, era, section, tags, type, text FROM corpus_chunks').all();
+  return rowCache;
+}
+
 function search(terms, limit = 8) {
-  const db = getDb();
   const clean = [...new Set(terms.map(t => String(t || '').trim()).filter(t => t.length >= 2))];
   if (!clean.length) return [];
-  const rows = db.prepare('SELECT id, source, era, section, tags, type, text FROM corpus_chunks').all();
-  const scored = rows.map(r => {
+  const all = rows();
+  const scored = all.map(r => {
     let score = 0;
     const tagSet = r.tags.split(/\s+/);
     for (const t of clean) {
@@ -89,6 +95,7 @@ function search(terms, limit = 8) {
       if (r.text.includes(t) || r.section.includes(t)) score += 1;
     }
     if (score && r.type === 'quote') score += 0.5;
+    if (score) score += 0.5 * (1 - Math.min(r.text.length, 1000) / 1000); // shorter, more precise passages win ties
     return { ...r, score };
   }).filter(r => r.score > 0).sort((a, b) => b.score - a.score || a.id - b.id);
   return scored.slice(0, limit);
