@@ -8,6 +8,7 @@ const { requireAdmin } = require('../middleware/adminAuth');
 const { adminLimiter } = require('../middleware/rateLimiter');
 const F = require('../engine/fengshui');
 const FS = require('../engine/flyingstar');
+const narrative = require('../services/luopanNarrative');
 
 // Floor-plan photos ride inside the consult JSON, so this router takes a
 // larger body than the global 10kb limit.
@@ -23,6 +24,7 @@ function validConsult(b) {
     if (!Number.isInteger(p.birthMonth) || p.birthMonth < 1 || p.birthMonth > 12) return `Birth month for ${p.name} is invalid.`;
     if (!Number.isInteger(p.birthDay) || p.birthDay < 1 || p.birthDay > 31) return `Birth day for ${p.name} is invalid.`;
     if (p.gender !== 'male' && p.gender !== 'female') return `Gender for ${p.name} must be male or female.`;
+    if (p.birthHour != null && (!Number.isInteger(p.birthHour) || p.birthHour < 0 || p.birthHour > 23)) return `Birth hour for ${p.name} must be 0–23.`;
   }
   if (!Array.isArray(b.rooms)) return 'rooms must be an array.';
   for (const r of b.rooms) {
@@ -75,8 +77,24 @@ router.get('/luopan/consults/:ref', (req, res) => {
   try {
     const row = getDb().prepare('SELECT * FROM luopan_consults WHERE reference = ?').get(req.params.ref);
     if (!row) return res.status(404).json({ error: 'Not found' });
-    res.json({ ...row, payload: JSON.parse(row.payload), report: JSON.parse(row.report) });
+    res.json({ ...row, payload: JSON.parse(row.payload), report: JSON.parse(row.report), narrative: row.narrative ? JSON.parse(row.narrative) : null });
   } catch (e) { console.error('[LUOPAN] get error:', e); res.status(500).json({ error: 'Could not load consult.' }); }
+});
+
+router.post('/luopan/consults/:ref/narrative', async (req, res) => {
+  if (!narrative.isConfigured()) return res.status(503).json({ error: 'AI writer is not configured (ANTHROPIC_API_KEY).' });
+  try {
+    const db = getDb();
+    const row = db.prepare('SELECT * FROM luopan_consults WHERE reference = ?').get(req.params.ref);
+    if (!row) return res.status(404).json({ error: 'Not found' });
+    if (row.narrative && !req.body?.regenerate) return res.json({ narrative: JSON.parse(row.narrative), model: row.narrative_model, cached: true });
+    const payload = JSON.parse(row.payload);
+    const report = analyse(payload); // always from the current engine
+    const out = await narrative.generateNarrative({ clientName: row.client_name, address: row.address, houseType: row.house_type }, report);
+    db.prepare(`UPDATE luopan_consults SET narrative = ?, narrative_model = ?, report = ? WHERE reference = ?`)
+      .run(JSON.stringify(out.narrative), out.model, JSON.stringify(report), req.params.ref);
+    res.json({ narrative: out.narrative, model: out.model, cached: false });
+  } catch (e) { console.error('[LUOPAN] narrative error:', e); res.status(500).json({ error: e.message || 'Could not write the narrative.' }); }
 });
 
 router.post('/luopan/consults/:ref/review', (req, res) => {

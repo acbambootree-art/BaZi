@@ -42,6 +42,16 @@ function getDb() {
     }
   }
 
+  const lpExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='luopan_consults'").get();
+  if (lpExists) {
+    const lpCols = db.prepare("PRAGMA table_info(luopan_consults)").all().map(c => c.name);
+    if (!lpCols.includes('narrative')) {
+      db.exec("ALTER TABLE luopan_consults ADD COLUMN narrative TEXT");
+      db.exec("ALTER TABLE luopan_consults ADD COLUMN narrative_model TEXT");
+      console.log('[DB] Migrated: added narrative columns to luopan_consults');
+    }
+  }
+
   // Run schema (creates tables + indexes if not exist)
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   db.exec(schema);

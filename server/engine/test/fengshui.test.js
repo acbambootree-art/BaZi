@@ -108,4 +108,8 @@ test('analyseConsult: 2026, south-facing flat, bedroom in S for a Gua 6 male', (
   assert.ok(study.why.includes('FS-25'));
   assert.equal(study.verdict, 'poor');
   assert.equal(r.flyingStar.grid.N.mountain, 9);
+  // BaZi layer present and used for ranking
+  assert.ok(r.people[0].bazi && r.people[0].bazi.yongShen);
+  assert.ok(master.why.includes('BZ-RANK'));
+  assert.ok(['favourable', 'neutral', 'avoid'].includes(master.occupants[0].bedHead.baziFit));
 });

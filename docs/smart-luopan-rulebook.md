@@ -127,6 +127,8 @@ Use: bed-head/desk-facing ranking (用神 direction first, 喜神 second, never 
 
 Effort: algorithm ~3 days; reference set ~2 days of collection.
 
+Implemented 2026-10-07 in `server/engine/yongshen.js` with one refinement: at season-start months (亥, 巳) the 调候 override applies only when the day master is not weak; at peak months (子丑午未) it applies regardless. The reference set is still to be collected.
+
 ---
 
 ## C. Cures catalogue (products + rituals)

@@ -11,6 +11,8 @@
 
 const A = require('./astro');
 const FS = require('./flyingstar');
+const Y = require('./yongshen');
+const { computeChart } = require('./index');
 
 const DIRS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 // Clockwise from 子 (centred on 0°). index = floor(((bearing + 7.5) % 360) / 15)
@@ -187,8 +189,13 @@ function analyseConsult(c) {
     const by = baziYearOf(p.birthYear, p.birthMonth, p.birthDay);
     const gua = lifeGua(by, p.gender);
     const em = eightMansions(gua);
+    let bazi = null;
+    try {
+      const chart = computeChart({ year: p.birthYear, month: p.birthMonth, day: p.birthDay, hour: p.birthHour ?? null, minute: 0, timeZone: 'Asia/Singapore', gender: p.gender });
+      bazi = { ...Y.analyse(chart.pillars), pillars: ['year', 'month', 'day', 'hour'].map(k => chart.pillars[k] ? chart.pillars[k].ganZhi : null), hourKnown: chart.pillars.hour != null };
+    } catch (e) { bazi = null; }
     return { id: p.id, name: p.name, gender: p.gender, baziYear: by, gua, guaName: em.name, group: em.group, directions: em.directions,
-      doorStar: em.byDirection[facing.direction] };
+      doorStar: em.byDirection[facing.direction], bazi };
   });
   const byId = Object.fromEntries(people.map(p => [p.id, p]));
 
@@ -250,7 +257,13 @@ function analyseConsult(c) {
     const occupants = (r.occupants || []).map(id => byId[id]).filter(Boolean).map(p => {
       const sectorStar = sector ? p.directions && eightMansions(p.gua).byDirection[sector] : null;
       const order = USE_ORDER[r.use] || USE_ORDER.default;
-      const options = order.map(k => ({ star: STARS[k].zh, name: STARS[k].name, direction: p.directions[k], meaning: STARS[k].meaning }));
+      let options = order.map(k => ({ star: STARS[k].zh, name: STARS[k].name, direction: p.directions[k], meaning: STARS[k].meaning, element: Y.elementOfDirection(p.directions[k]) }));
+      // Layer 5: BaZi tie-break — favourable element first, 忌神 last, Eight Mansions order otherwise.
+      if (p.bazi) {
+        const tier = o => o.element === p.bazi.yongShen ? 0 : o.element === p.bazi.xiShen ? 1 : p.bazi.jiShen.includes(o.element) ? 3 : 2;
+        options = options.map((o, i) => ({ ...o, i })).sort((a, b) => tier(a) - tier(b) || a.i - b.i).map(({ i, ...o }) => ({ ...o, baziFit: tier(o) <= 1 ? 'favourable' : tier(o) === 3 ? 'avoid' : 'neutral' }));
+        why.push('BZ-RANK');
+      }
       const facingOptions = options.filter(o => !bannedFacing.has(o.direction));
       const bedHead = options[0];
       const o = { id: p.id, name: p.name, gua: p.gua, guaName: p.guaName, sectorStar,
@@ -260,12 +273,31 @@ function analyseConsult(c) {
       };
       if (sectorStar && !sectorStar.good) {
         warnings.push({ id: 'EM-ROOM', severity: 'advise', person: p.name, text: `${p.name} (Gua ${p.gua}): the ${sector} is ${sectorStar.zh} ${sectorStar.name} (${sectorStar.meaning}). Prefer another room if one is free; otherwise sleep with the head toward ${bedHead.direction} (${bedHead.star}).` });
-        cures.push({ id: 'EM-DRAIN', ...CURES[DRAIN[sectorStar.element]], reason: `${sectorStar.zh} is ${sectorStar.element}; drained by ${CURES[DRAIN[sectorStar.element]].element}`, person: p.name });
+        let cureEl = DRAIN[sectorStar.element], note = '';
+        if (p.bazi && p.bazi.jiShen.includes(cureEl)) {
+          const control = Object.keys(DRAIN).find(k => DRAIN[DRAIN[k]] === sectorStar.element && k !== sectorStar.element) || Y.CONTROLLED_BY[sectorStar.element];
+          if (!p.bazi.jiShen.includes(control)) { note = ` (${CURES[cureEl].element} is ${p.name}'s 忌神, so the controlling element is used instead)`; cureEl = control; why.push('BZ-CURE-VETO'); }
+          else note = ` (note: ${CURES[cureEl].element} is also ${p.name}'s 忌神; keep the item small)`;
+        }
+        cures.push({ id: 'EM-DRAIN', ...CURES[cureEl], reason: `${sectorStar.zh} is ${sectorStar.element}; treated with ${CURES[cureEl].element}${note}`, person: p.name });
         why.push('EM-ROOM');
+      }
+      if (p.bazi && sector) {
+        const secEl = Y.elementOfDirection(sector);
+        if (p.bazi.jiShen.includes(secEl)) warnings.push({ id: 'BZ-SECTOR', severity: 'low', person: p.name, text: `${p.name}: this ${sector} sector is ${Y.ZH[secEl]} ${secEl}, their 忌神. Decorate inside with ${p.bazi.colours.favourable} (${p.bazi.zh.yongShen}${p.bazi.zh.xiShen}) rather than ${secEl} colours.` });
+        else if ([p.bazi.yongShen, p.bazi.xiShen].includes(secEl)) warnings.push({ id: 'BZ-SECTOR', severity: 'boost', person: p.name, text: `${p.name}: this ${sector} sector is ${Y.ZH[secEl]} ${secEl}, a favourable element for them.` });
       }
       why.push('EM-BED');
       return o;
     });
+
+    // Layer 5: room cures vs occupants' 忌神 (annual / Flying Star cures have no person)
+    const occJi = new Set(occupants.flatMap(o => (byId[o.id] && byId[o.id].bazi) ? byId[o.id].bazi.jiShen : []));
+    for (const cu of cures) {
+      if (cu.person) continue;
+      const el = cu.element.toLowerCase();
+      if (occJi.has(el)) { cu.reason += ` — ${cu.element} is a 忌神 for someone sleeping here: use the smallest effective item, metal-coloured rather than massed`; if (!why.includes('BZ-CURE-NOTE')) why.push('BZ-CURE-NOTE'); }
+    }
 
     const verdictScore = warnings.reduce((s, w) => s + ({ hard: 3, medium: 2, low: 1, advise: 1, boost: -1 }[w.severity] || 0), 0);
     const verdict = verdictScore <= 0 ? 'good' : verdictScore <= 2 ? 'fair' : 'poor';

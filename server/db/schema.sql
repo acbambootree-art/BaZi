@@ -91,6 +91,8 @@ CREATE TABLE IF NOT EXISTS luopan_consults (
   report TEXT NOT NULL,
   review_note TEXT,
   reviewed_at TEXT,
+  narrative TEXT,
+  narrative_model TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 

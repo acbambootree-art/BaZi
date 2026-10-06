@@ -332,7 +332,7 @@ function renderPeople() {
         <input data-f="birthMonth" type="number" inputmode="numeric" placeholder="Month" value="${p.birthMonth}">
         <input data-f="birthDay" type="number" inputmode="numeric" placeholder="Day" value="${p.birthDay}">
       </div>
-      <select data-f="gender" style="margin-top:8px"><option value="male" ${p.gender==='male'?'selected':''}>Male</option><option value="female" ${p.gender==='female'?'selected':''}>Female</option></select>
+      <div class="row" style="margin-top:8px"><select data-f="gender"><option value="male" ${p.gender==='male'?'selected':''}>Male</option><option value="female" ${p.gender==='female'?'selected':''}>Female</option></select><input data-f="birthHour" type="number" inputmode="numeric" min="0" max="23" placeholder="Hour 0–23 (optional)" value="${p.birthHour ?? ''}"></div>
     </div>`).join('');
   $('#people').querySelectorAll('[data-f]').forEach(el => el.oninput = () => { S.people[+el.closest('.person').dataset.i][el.dataset.f] = el.value; persist(); });
   $('#people').querySelectorAll('[data-del]').forEach(b => b.onclick = () => { S.people.splice(+b.dataset.del, 1); S.rooms.forEach(r => r.occupants = r.occupants.filter(id => S.people.some(p => p.id === id))); renderPeople(); persist(); });
@@ -522,14 +522,14 @@ function payload() {
   return {
     clientName: S.clientName, address: S.address, houseType: S.houseType, topYear: +S.topYear || null, renoYear: +S.renoYear || null,
     facing: { bearing: f.bearing, spread: f.spread, accuracy: f.accuracy, source: f.source, confidence: f.confidence, readings: S.readings },
-    people: S.people.map(p => ({ id: p.id, name: p.name, birthYear: +p.birthYear, birthMonth: +p.birthMonth, birthDay: +p.birthDay, gender: p.gender })),
+    people: S.people.map(p => ({ id: p.id, name: p.name, birthYear: +p.birthYear, birthMonth: +p.birthMonth, birthDay: +p.birthDay, birthHour: p.birthHour === '' || p.birthHour == null ? null : +p.birthHour, gender: p.gender })),
     rooms: S.rooms.map(r => ({ id: r.id, name: r.name, use: r.use, sector: r.sector, occupants: r.occupants, form: r.form, pt: r.pt })),
     plan: { centre: S.plan.centre, door: S.plan.door, dataUrl: S.plan.dataUrl || null },
   };
 }
 async function runAnalysis() {
   $('#report').innerHTML = '<div class="card hint">Analysing…</div>';
-  try { const d = await api('/api/luopan/analyse', { method: 'POST', body: JSON.stringify(payload()) }); S.report = d.report; S.reference = null; renderReport(); }
+  try { const d = await api('/api/luopan/analyse', { method: 'POST', body: JSON.stringify(payload()) }); S.report = d.report; S.reference = null; S.narrative = null; renderReport(); }
   catch (e) { $('#report').innerHTML = `<div class="card err">${esc(e.message)}</div>`; }
 }
 async function saveConsult() {
@@ -568,7 +568,9 @@ function renderReport() {
     <div class="card">
       <h2>Household</h2>
       ${r.people.map(p => `<div class="who"><b>${esc(p.name)}</b> · Gua ${p.gua} ${p.guaName} · ${p.group} group · door is ${p.doorStar.zh} ${p.doorStar.name}<br>
-        <span class="hint">Best: 生氣 ${p.directions.shengQi} · 天醫 ${p.directions.tianYi} · 延年 ${p.directions.yanNian} · 伏位 ${p.directions.fuWei} &nbsp;|&nbsp; Avoid: 禍害 ${p.directions.huoHai} · 五鬼 ${p.directions.wuGui} · 六煞 ${p.directions.liuSha} · 絕命 ${p.directions.jueMing}</span></div>`).join('')}
+        <span class="hint">Best: 生氣 ${p.directions.shengQi} · 天醫 ${p.directions.tianYi} · 延年 ${p.directions.yanNian} · 伏位 ${p.directions.fuWei} &nbsp;|&nbsp; Avoid: 禍害 ${p.directions.huoHai} · 五鬼 ${p.directions.wuGui} · 六煞 ${p.directions.liuSha} · 絕命 ${p.directions.jueMing}</span>
+        ${p.bazi ? `<div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap; align-items:center"><span class="stars">${p.bazi.pillars.filter(Boolean).join(' ')}${p.bazi.hourKnown ? '' : ' <i>(no hour)</i>'}</span><span class="stars">${p.bazi.dayMaster.stem} ${p.bazi.dayMaster.zh} <i>${p.bazi.strength.label}</i></span><span class="badge b-${p.bazi.confidence === 'high' ? 'good' : p.bazi.confidence === 'medium' ? 'warn' : 'bad'}">${p.bazi.confidence} confidence</span></div>
+        <span class="hint">用神 <b style="color:var(--accent-ink)">${p.bazi.zh.yongShen} ${p.bazi.yongShen}</b> · 喜神 ${p.bazi.zh.xiShen} ${p.bazi.xiShen} · 忌神 ${p.bazi.zh.jiShen} ${p.bazi.jiShen.join(', ')}${p.bazi.tiaoHou ? ` · 调候 ${p.bazi.tiaoHou}` : ''}<br>Favourable directions ${p.bazi.directions.favourable.join(', ')}; colours ${esc(p.bazi.colours.favourable)}. Avoid ${p.bazi.directions.avoid.join(', ') || '—'}; ${esc(p.bazi.colours.avoid)}.${p.bazi.confidence === 'low' ? ' <span style="color:var(--warn)">Borderline chart: a senior should confirm the 用神.</span>' : ''}</span>` : ''}</div>`).join('')}
     </div>
     ${r.rooms.map(room => `
     <div class="card">
@@ -577,14 +579,21 @@ function renderReport() {
       ${room.flyingStar ? `<div class="hint" style="margin-bottom:6px">Mountain ${room.flyingStar.mountainStar.zh} (${room.flyingStar.mountainStar.timeliness}, ${esc(room.flyingStar.mountainStar.theme)}) · Water ${room.flyingStar.waterStar.zh} (${room.flyingStar.waterStar.timeliness}, ${esc(room.flyingStar.waterStar.theme)}). Best use: ${room.flyingStar.bestUse}.</div>` : ''}
       ${room.warnings.length ? `<ul class="warn-list">${room.warnings.map(w => `<li class="${sev(w.severity)}">${esc(w.text)}</li>`).join('')}</ul>` : '<div class="hint">No annual or form issues in this sector.</div>'}
       ${room.occupants.map(o => `<div class="who"><b>${esc(o.name)}</b> (Gua ${o.gua})${o.sectorStar ? ` · this sector is ${o.sectorStar.zh} ${o.sectorStar.name} for them` : ''}<br>
-        ${o.bedHead ? `Sleep with head toward <b>${o.bedHead.direction}</b> (${o.bedHead.star} ${o.bedHead.name}: ${o.bedHead.meaning}). ` : ''}
-        ${o.deskFacing ? `Desk or seat facing <b>${o.deskFacing.direction}</b> (${o.deskFacing.star} ${o.deskFacing.name}).` : ''}
+        ${o.bedHead ? `Sleep with head toward <b>${o.bedHead.direction}</b> (${o.bedHead.star} ${o.bedHead.name}: ${o.bedHead.meaning}${o.bedHead.baziFit ? `; ${o.bedHead.element} is ${o.bedHead.baziFit} for their chart` : ''}). ` : ''}
+        ${o.deskFacing ? `Desk or seat facing <b>${o.deskFacing.direction}</b> (${o.deskFacing.star} ${o.deskFacing.name}${o.deskFacing.baziFit ? `; ${o.deskFacing.baziFit}` : ''}).` : ''}
         ${o.deskFacingBanned.length ? `<span class="hint"> Not ${o.deskFacingBanned.join('/')} this year (Tai Sui / Three Killings).</span>` : ''}</div>`).join('')}
       ${room.cures.length ? `<h2 style="margin-top:12px; font-size:0.85rem">Cures</h2><ul class="cure-list">${room.cures.map(c => `<li><b style="color:var(--text)">${c.element}</b>: ${esc(c.items)}. Place ${esc(c.placement)}. <i>(${esc(c.reason)}${c.person ? ', for ' + esc(c.person) : ''})</i></li>`).join('')}</ul>` : ''}
       <div class="why">rules: ${room.why.join(' ')}</div>
     </div>`).join('')}
-    <div class="card hint">Structural fixes come first; items are element carriers. Advice assumes the recorded facing. BaZi favourable elements arrive in Phase 3.
-      <div style="margin-top:10px; display:flex; gap:8px"><button class="btn ghost sm" onclick="window.print()">Print / PDF</button><button class="btn ghost sm" id="btnNew">New consult</button></div></div>`;
+    <div id="narrative">${S.narrative ? narrativeHtml(S.narrative) : ''}</div>
+    <div class="card hint">Structural fixes come first; items are element carriers. Advice assumes the recorded facing.
+      <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap"><button class="btn ghost sm" onclick="window.print()">Print / PDF</button><button class="btn ghost sm" id="btnNew">New consult</button>${S.reference ? `<button class="btn sm" id="btnNarrative">${S.narrative ? 'Rewrite client report' : 'Write client report'}</button>` : '<span class="hint" style="align-self:center">Save the consult to write the client report.</span>'}</div></div>`;
+  const nb = $('#btnNarrative');
+  if (nb) nb.onclick = async () => {
+    nb.disabled = true; nb.textContent = 'Writing… (about a minute)';
+    try { const d = await api('/api/luopan/consults/' + S.reference + '/narrative', { method: 'POST', body: JSON.stringify({ regenerate: !!S.narrative }) }); S.narrative = d.narrative; renderReport(); $('#narrative').scrollIntoView({ behavior: 'smooth' }); }
+    catch (e) { alert(e.message); nb.disabled = false; nb.textContent = 'Write client report'; }
+  };
   $('#btnNew').onclick = () => { if (!confirm('Start a new consult? Unsaved work is lost.')) return; sessionStorage.removeItem('lp_state'); location.reload(); };
 }
 
@@ -597,11 +606,24 @@ async function loadList() {
       const c = await api('/api/luopan/consults/' + el.dataset.ref);
       const p = c.payload; Object.assign(S, { clientName: p.clientName, address: p.address, houseType: p.houseType, topYear: p.topYear || '', renoYear: p.renoYear || '',
         people: p.people, rooms: p.rooms.map(r => ({ ...r, form: r.form || {}, occupants: r.occupants || [] })), readings: p.facing.readings || [{ id: uid(), bearing: p.facing.bearing, spread: p.facing.spread || 0, source: p.facing.source || 'manual' }],
-        plan: { ...S.plan, centre: p.plan && p.plan.centre, door: p.plan && p.plan.door, dataUrl: p.plan && p.plan.dataUrl }, report: c.report, reference: c.reference });
+        plan: { ...S.plan, centre: p.plan && p.plan.centre, door: p.plan && p.plan.door, dataUrl: p.plan && p.plan.dataUrl }, report: c.report, reference: c.reference, narrative: c.narrative || null });
       ['clientName','address','houseType','topYear','renoYear'].forEach(id => $('#' + id).value = S[id] || '');
       renderPeople(); renderRooms(); renderReadings(); loadPlanImg(); go(4); renderReport();
     });
   } catch (e) { $('#consultList').textContent = e.message; }
+}
+function narrativeHtml(n) {
+  return `<div class="card" style="border-color: rgba(184,146,58,0.45)">
+    <h2>${esc(n.title)}</h2>
+    ${n.flags && n.flags.length ? `<div class="err">${n.flags.map(esc).join('<br>')}</div>` : ''}
+    <p style="line-height:1.65; margin-bottom:12px">${esc(n.summary)}</p>
+    <h2 style="font-size:0.85rem">Priorities</h2>
+    <ol style="margin: 0 0 12px 18px; line-height:1.6">${(n.priorities || []).map(p => `<li>${esc(p)}</li>`).join('')}</ol>
+    <h2 style="font-size:0.85rem">Household</h2>
+    <p style="line-height:1.65; margin-bottom:12px">${esc(n.household)}</p>
+    ${(n.rooms || []).map(r => `<h2 style="font-size:0.85rem">${esc(r.name)}</h2><p style="line-height:1.65; margin-bottom:12px">${esc(r.text)}</p>`).join('')}
+    <p class="hint">${esc(n.closing)}</p>
+  </div>`;
 }
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 if (S.key) boot(); else showGate();
