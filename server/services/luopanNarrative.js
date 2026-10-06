@@ -27,7 +27,8 @@ Hard rules:
 - Structural and placement fixes always come before any object or item. Items are described as element carriers, exactly as the JSON lists them.
 - Lead with what matters most this year (the annual afflictions and any "hard" warnings), then the two or three highest-value changes, then room by room.
 - Where the JSON says a reading is borderline or confidence is low, say so once, plainly.
-- Address the client by name in the opening line. Keep each room's text to 2–5 sentences. Whole report 500–900 words.`;
+- Address the client by name in the opening line. Keep each room's text to 2–5 sentences. Whole report 500–900 words.
+- "classicalPassages" are numbered excerpts from classical texts and practitioner notes retrieved for this audit. When one genuinely supports a statement, mark it inline as [n] and list it in "citations". Cite only passages given; never invent a source. Passages of type "note" are modern commentary, say so if you lean on them.`;
 
 const SCHEMA = {
   type: 'object',
@@ -45,8 +46,9 @@ const SCHEMA = {
     },
     household: { type: 'string', description: 'One paragraph on who should use which room and which directions suit each person' },
     closing: { type: 'string', description: 'Two or three sentences: what to re-check after 立春 next year and the limits of this audit' },
+    citations: { type: 'array', items: { type: 'object', properties: { n: { type: 'integer' }, usedFor: { type: 'string' } }, required: ['n', 'usedFor'], additionalProperties: false }, description: 'Passages actually cited with [n] in the text' },
   },
-  required: ['title', 'summary', 'priorities', 'rooms', 'household', 'closing'],
+  required: ['title', 'summary', 'priorities', 'rooms', 'household', 'closing', 'citations'],
   additionalProperties: false,
 };
 
@@ -55,11 +57,12 @@ function isConfigured() { return !!process.env.ANTHROPIC_API_KEY; }
 /**
  * @returns {{narrative: object, model: string}|null}
  */
-async function generateNarrative({ clientName, address, houseType }, report) {
+async function generateNarrative({ clientName, address, houseType }, report, passages = []) {
   const c = getClient();
   if (!c) return null;
 
-  const payload = { clientName, address, houseType, audit: report };
+  const classicalPassages = passages.map((p, i) => ({ n: i + 1, source: p.source, section: p.section, type: p.type, text: p.text }));
+  const payload = { clientName, address, houseType, audit: report, classicalPassages };
   const response = await c.beta.messages.create({
     model: MODEL,
     max_tokens: 8000,
@@ -77,10 +80,43 @@ async function generateNarrative({ clientName, address, houseType }, report) {
   // Guardrail: every bearing or star number the model mentions must exist in the report.
   const allowed = new Set(JSON.stringify(report).match(/\d+(\.\d+)?/g) || []);
   const mentioned = JSON.stringify(narrative).match(/\d+(\.\d+)?/g) || [];
-  const foreign = mentioned.filter(n => !allowed.has(n) && !['1', '2', '3', '4', '5'].includes(n));
+  const cited = new Set((narrative.citations || []).map(x => String(x.n)));
+  const foreign = mentioned.filter(n => !allowed.has(n) && !cited.has(n) && Number(n) > classicalPassages.length);
   if (foreign.length) narrative.flags = [`Numbers not in the audit: ${[...new Set(foreign)].join(', ')} — check before sending.`];
+  narrative.citations = (narrative.citations || []).filter(x => classicalPassages[x.n - 1]).map(x => ({ ...x, ...classicalPassages[x.n - 1] }));
 
   return { narrative, model: response.model || MODEL };
 }
 
-module.exports = { isConfigured, generateNarrative };
+const ASK_SYSTEM = `You are the senior feng shui consultant behind Smart Luopan, answering a junior consultant's question about one specific house audit. You receive the audit as verified JSON plus numbered classical passages retrieved for the question.
+
+Answer in plain English, 80–200 words, teaching the reasoning. Use ONLY facts in the audit; do not recompute stars, bearings or gua. Cite passages inline as [n] only when they genuinely support the point; never invent sources; say when a passage is a modern note rather than a classical text. If the audit does not contain what is needed to answer, say so and name what reading or input would settle it. Never predict illness, death or specific money outcomes.`;
+
+const ASK_SCHEMA = {
+  type: 'object',
+  properties: {
+    answer: { type: 'string' },
+    citations: { type: 'array', items: { type: 'object', properties: { n: { type: 'integer' }, usedFor: { type: 'string' } }, required: ['n', 'usedFor'], additionalProperties: false } },
+  },
+  required: ['answer', 'citations'], additionalProperties: false,
+};
+
+async function ask(question, report, passages = []) {
+  const c = getClient();
+  if (!c) return null;
+  const classicalPassages = passages.map((p, i) => ({ n: i + 1, source: p.source, section: p.section, type: p.type, text: p.text }));
+  const response = await c.beta.messages.create({
+    model: MODEL, max_tokens: 2000,
+    betas: ['server-side-fallback-2026-06-01'], fallbacks: [{ model: FALLBACK }],
+    system: ASK_SYSTEM,
+    output_config: { format: { type: 'json_schema', schema: ASK_SCHEMA } },
+    messages: [{ role: 'user', content: JSON.stringify({ question, audit: report, classicalPassages }) }],
+  });
+  if (response.stop_reason === 'refusal') throw new Error('The model declined this question');
+  const text = response.content.filter(b => b.type === 'text').map(b => b.text).join('').trim();
+  const out = JSON.parse(text);
+  out.citations = (out.citations || []).filter(x => classicalPassages[x.n - 1]).map(x => ({ ...x, ...classicalPassages[x.n - 1] }));
+  return { ...out, model: response.model || MODEL };
+}
+
+module.exports = { isConfigured, generateNarrative, ask };

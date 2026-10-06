@@ -16,6 +16,7 @@ const PORT = process.env.PORT || 3000;
 
 // ─── Initialize database ────────────────────────────────────
 getDb();
+try { require('./services/corpus').ensureIngested(); } catch (e) { console.error('[CORPUS] ingest failed:', e.message); }
 
 // ─── Middleware ──────────────────────────────────────────────
 app.use(helmet({

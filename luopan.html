@@ -148,6 +148,12 @@
   .stars { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,0.7); border: 1px solid rgba(184,146,58,0.25); font-variant-numeric: tabular-nums; color: var(--ink); }
   .stars i { font-style: normal; color: var(--ink-3); font-weight: 500; }
   .warn-list li.boost::marker { color: var(--good); }
+  .refx { border-bottom: 1px solid var(--line); padding: 8px 0; }
+  .refx summary { cursor: pointer; font-size: 0.88rem; list-style: none; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .refx summary::-webkit-details-marker { display: none; }
+  .refx summary::before { content: '›'; color: var(--ink-3); transition: transform .25s var(--spring); display: inline-block; }
+  .refx[open] summary::before { transform: rotate(90deg); }
+  .refx p { font-size: 0.9rem; line-height: 1.7; color: var(--ink-2); margin: 8px 0 2px 14px; white-space: pre-wrap; font-family: 'Noto Serif SC', 'Songti SC', Georgia, serif; }
   .hidden { display: none !important; }
   @media print { .nav, header .btn, .steps, .bg { display: none; } body { background: #fff; } .card { box-shadow: none; border-color: #ddd; background: #fff; animation: none; } }
 </style>
@@ -586,8 +592,28 @@ function renderReport() {
       <div class="why">rules: ${room.why.join(' ')}</div>
     </div>`).join('')}
     <div id="narrative">${S.narrative ? narrativeHtml(S.narrative) : ''}</div>
+    ${r.references && r.references.length ? `<div class="card">
+      <h2>Classical references</h2>
+      <div class="hint" style="margin-bottom:8px">Passages matched to the rules that fired. Quotes are classical text; notes are modern commentary.</div>
+      ${r.references.map((p, i) => `<details class="refx"><summary><span class="badge ${p.type === 'quote' ? 'b-info' : 'b-warn'}">${p.type}</span> <b>${esc(p.source)}</b> · ${esc(p.section)}</summary><p>${esc(p.text)}</p></details>`).join('')}
+    </div>` : ''}
+    ${S.reference ? `<div class="card" id="askCard">
+      <h2>Ask about this house</h2>
+      <div style="display:flex; gap:8px"><input id="askQ" placeholder="e.g. Why should the desk not face south this year?"><button class="btn sm" id="askBtn">Ask</button></div>
+      <div id="askOut" style="margin-top:10px"></div>
+    </div>` : ''}
     <div class="card hint">Structural fixes come first; items are element carriers. Advice assumes the recorded facing.
       <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap"><button class="btn ghost sm" onclick="window.print()">Print / PDF</button><button class="btn ghost sm" id="btnNew">New consult</button>${S.reference ? `<button class="btn sm" id="btnNarrative">${S.narrative ? 'Rewrite client report' : 'Write client report'}</button>` : '<span class="hint" style="align-self:center">Save the consult to write the client report.</span>'}</div></div>`;
+  const ab = $('#askBtn');
+  if (ab) ab.onclick = async () => {
+    const q = $('#askQ').value.trim(); if (q.length < 3) return;
+    ab.disabled = true; ab.textContent = '…'; $('#askOut').innerHTML = '<div class="hint">Thinking…</div>';
+    try { const d = await api('/api/luopan/consults/' + S.reference + '/ask', { method: 'POST', body: JSON.stringify({ question: q }) });
+      $('#askOut').innerHTML = `<div class="who" style="margin-top:0"><b>Q:</b> ${esc(q)}<br><br>${esc(d.answer)}</div>${citationsHtml(d.citations)}`; }
+    catch (e) { $('#askOut').innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+    finally { ab.disabled = false; ab.textContent = 'Ask'; }
+  };
+  $('#askQ') && $('#askQ').addEventListener('keydown', e => { if (e.key === 'Enter') ab.click(); });
   const nb = $('#btnNarrative');
   if (nb) nb.onclick = async () => {
     nb.disabled = true; nb.textContent = 'Writing… (about a minute)';
@@ -623,7 +649,12 @@ function narrativeHtml(n) {
     <p style="line-height:1.65; margin-bottom:12px">${esc(n.household)}</p>
     ${(n.rooms || []).map(r => `<h2 style="font-size:0.85rem">${esc(r.name)}</h2><p style="line-height:1.65; margin-bottom:12px">${esc(r.text)}</p>`).join('')}
     <p class="hint">${esc(n.closing)}</p>
+    ${citationsHtml(n.citations)}
   </div>`;
+}
+function citationsHtml(cites) {
+  if (!cites || !cites.length) return '';
+  return `<div style="margin-top:10px"><div class="hint" style="font-weight:600; margin-bottom:4px">Sources</div>${cites.map(c => `<details class="refx"><summary>[${c.n}] <span class="badge ${c.type === 'quote' ? 'b-info' : 'b-warn'}">${c.type}</span> <b>${esc(c.source)}</b> · ${esc(c.section)}${c.usedFor ? ` <span class="hint">— ${esc(c.usedFor)}</span>` : ''}</summary><p>${esc(c.text)}</p></details>`).join('')}</div>`;
 }
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 if (S.key) boot(); else showGate();

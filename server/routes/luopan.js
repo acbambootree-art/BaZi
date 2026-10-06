@@ -9,6 +9,7 @@ const { adminLimiter } = require('../middleware/rateLimiter');
 const F = require('../engine/fengshui');
 const FS = require('../engine/flyingstar');
 const narrative = require('../services/luopanNarrative');
+const corpus = require('../services/corpus');
 
 // Floor-plan photos ride inside the consult JSON, so this router takes a
 // larger body than the global 10kb limit.
@@ -39,7 +40,10 @@ function validConsult(b) {
 function analyse(b) {
   const built = b.renoYear || b.topYear;
   const period = built ? FS.periodOf(built) : null;
-  return F.analyseConsult({ year: b.year, period, facing: b.facing, people: b.people, rooms: b.rooms });
+  const report = F.analyseConsult({ year: b.year, period, facing: b.facing, people: b.people, rooms: b.rooms });
+  // Classical references retrieved for the rules that fired (shown on the report, fed to the AI writer).
+  report.references = corpus.search(corpus.termsForReport(report), 10).map(({ score, ...r }) => r);
+  return report;
 }
 
 router.post('/luopan/analyse', (req, res) => {
@@ -90,11 +94,26 @@ router.post('/luopan/consults/:ref/narrative', async (req, res) => {
     if (row.narrative && !req.body?.regenerate) return res.json({ narrative: JSON.parse(row.narrative), model: row.narrative_model, cached: true });
     const payload = JSON.parse(row.payload);
     const report = analyse(payload); // always from the current engine
-    const out = await narrative.generateNarrative({ clientName: row.client_name, address: row.address, houseType: row.house_type }, report);
+    const { references, ...audit } = report;
+    const out = await narrative.generateNarrative({ clientName: row.client_name, address: row.address, houseType: row.house_type }, audit, references);
     db.prepare(`UPDATE luopan_consults SET narrative = ?, narrative_model = ?, report = ? WHERE reference = ?`)
       .run(JSON.stringify(out.narrative), out.model, JSON.stringify(report), req.params.ref);
     res.json({ narrative: out.narrative, model: out.model, cached: false });
   } catch (e) { console.error('[LUOPAN] narrative error:', e); res.status(500).json({ error: e.message || 'Could not write the narrative.' }); }
+});
+
+router.post('/luopan/consults/:ref/ask', async (req, res) => {
+  if (!narrative.isConfigured()) return res.status(503).json({ error: 'AI assistant is not configured (ANTHROPIC_API_KEY).' });
+  const question = String((req.body && req.body.question) || '').trim().slice(0, 500);
+  if (question.length < 3) return res.status(400).json({ error: 'Ask a question.' });
+  try {
+    const row = getDb().prepare('SELECT * FROM luopan_consults WHERE reference = ?').get(req.params.ref);
+    if (!row) return res.status(404).json({ error: 'Not found' });
+    const { references, ...audit } = analyse(JSON.parse(row.payload));
+    const passages = corpus.search([...corpus.termsForQuestion(question), ...corpus.termsForReport(audit)], 8);
+    const out = await narrative.ask(question, audit, passages);
+    res.json(out);
+  } catch (e) { console.error('[LUOPAN] ask error:', e); res.status(500).json({ error: e.message || 'Could not answer.' }); }
 });
 
 router.post('/luopan/consults/:ref/review', (req, res) => {

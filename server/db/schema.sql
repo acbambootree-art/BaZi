@@ -97,3 +97,20 @@ CREATE TABLE IF NOT EXISTS luopan_consults (
 );
 
 CREATE INDEX IF NOT EXISTS idx_luopan_reference ON luopan_consults(reference);
+
+-- Classical corpus passages for Smart Luopan citations (rebuilt from
+-- server/corpus/*.md when those files change; see services/corpus.js).
+CREATE TABLE IF NOT EXISTS corpus_chunks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source TEXT NOT NULL,
+  era TEXT,
+  section TEXT NOT NULL,
+  tags TEXT NOT NULL DEFAULT '',
+  type TEXT NOT NULL DEFAULT 'note',
+  text TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS corpus_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
