@@ -10,6 +10,7 @@
 // ============================================================
 
 const A = require('./astro');
+const FS = require('./flyingstar');
 
 const DIRS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 // Clockwise from 子 (centred on 0°). index = floor(((bearing + 7.5) % 360) / 15)
@@ -172,6 +173,7 @@ const USE_ORDER = {
  * @param {{bearing:number}} c.facing  main-door facing bearing (degrees, magnetic)
  * @param {Array<{id,name,birthYear,birthMonth,birthDay,gender}>} c.people
  * @param {Array<{id,name,use,sector,occupants:[],form:{}}>} c.rooms  sector in DIRS or 'C'
+ * @param {number} [c.period]  construction period 1..9 (from TOP / major renovation year); enables Flying Star
  */
 function analyseConsult(c) {
   const year = c.year || baziYearOf(...sgTodayParts());
@@ -179,6 +181,7 @@ function analyseConsult(c) {
   const sitting = mountainFor(c.facing.bearing + 180);
   const houseGua = eightMansions(SITTING_GUA[sitting.direction]);
   const ann = afflictions(year);
+  const fsChart = c.period ? FS.chart(c.period, facing.mountainIndex) : null;
 
   const people = (c.people || []).map(p => {
     const by = baziYearOf(p.birthYear, p.birthMonth, p.birthDay);
@@ -228,6 +231,16 @@ function analyseConsult(c) {
       why.push('AF-SUIPO');
     }
 
+    // Layer 3: Flying Star natal chart (sector palace, period + annual overlay)
+    let flyingStar = null;
+    if (fsChart) {
+      const pal = fsChart.palaces[sector || 'C'];
+      flyingStar = FS.assessPalace(pal, fsChart.period, star, r.use);
+      for (const w of flyingStar.warnings) warnings.push(w);
+      for (const cu of flyingStar.cures) cures.push({ id: cu.id, ...CURES[cu.element], reason: cu.reason });
+      why.push(...flyingStar.why);
+    }
+
     // Layer 2: form checklist
     for (const [k, v] of Object.entries(r.form || {})) {
       if (v && FORM_ISSUES[k]) { warnings.push({ id: FORM_ISSUES[k].id, severity: FORM_ISSUES[k].severity, text: FORM_ISSUES[k].text }); why.push(FORM_ISSUES[k].id); }
@@ -254,11 +267,11 @@ function analyseConsult(c) {
       return o;
     });
 
-    const verdictScore = warnings.reduce((s, w) => s + ({ hard: 3, medium: 2, low: 1, advise: 1 }[w.severity] || 0), 0);
-    const verdict = verdictScore === 0 ? 'good' : verdictScore <= 2 ? 'fair' : 'poor';
+    const verdictScore = warnings.reduce((s, w) => s + ({ hard: 3, medium: 2, low: 1, advise: 1, boost: -1 }[w.severity] || 0), 0);
+    const verdict = verdictScore <= 0 ? 'good' : verdictScore <= 2 ? 'fair' : 'poor';
     if (r.use === 'bedroom' && sector && bannedSleepSectors.has(sector)) why.push('AF-5Y-BED');
 
-    return { id: r.id, name: r.name, use: r.use, sector: sector || 'Centre', annualStar: star, verdict, occupants, warnings, cures: dedupe(cures), why: [...new Set(why)] };
+    return { id: r.id, name: r.name, use: r.use, sector: sector || 'Centre', annualStar: star, flyingStar, verdict, occupants, warnings, cures: dedupe(cures), why: [...new Set(why)] };
   });
 
   // Facing / house-level notes
@@ -271,11 +284,31 @@ function analyseConsult(c) {
     if (ann.offendingZodiacs.includes(ANIMALS[((p.baziYear - 4) % 12 + 12) % 12])) notes.push({ id: 'AF-ZODIAC', text: `${p.name} (${ANIMALS[((p.baziYear - 4) % 12 + 12) % 12]}) offends Tai Sui in ${year}: consider 安太歲 at a temple after 立春.` });
   }
 
+  let flyingStar = null;
+  if (fsChart) {
+    const grid = {};
+    for (const d of [...DIRS, 'C']) grid[d] = { ...fsChart.palaces[d], annual: d === 'C' ? ann.stars.centre : ann.stars[d], ...pick(FS.assessPalace(fsChart.palaces[d], fsChart.period, d === 'C' ? ann.stars.centre : ann.stars[d], null), ['verdict', 'bestUse']) };
+    const structureText = {
+      'prosperous-mountain-prosperous-water': 'Prosperous mountain and water: people and money both supported. Keep the sitting side solid and the facing side open.',
+      'double-facing': 'Both prosperous stars at the facing: good for money, weaker for health and people. Add a solid feature (hill, wall, tall furniture) at the facing side behind water, and keep the sitting side quiet.',
+      'double-sitting': 'Both prosperous stars at the sitting: good for health and people, weaker for wealth. Keep the sitting side solid and bring activity or water to the facing side if the layout allows.',
+      'reversed': 'Reversed chart (上山下水): mountain star at the facing, water star at the sitting. Needs careful placement: open space at the sitting, solid at the facing.',
+      'other': 'Mixed chart.',
+    }[fsChart.structure];
+    flyingStar = { period: fsChart.period, structure: fsChart.structure, structureZh: fsChart.structureZh, structureText, grid,
+      bestSectors: DIRS.filter(d => grid[d].verdict === 'good' && grid[d].annual !== 5 && d !== ann.taiSui.direction),
+      worstSectors: DIRS.filter(d => grid[d].verdict === 'poor'),
+      restThisYear: DIRS.filter(d => grid[d].verdict === 'good' && (grid[d].annual === 5 || d === ann.taiSui.direction)) };
+    if (facing.voidLine) notes.push({ id: 'FS-VOID', text: 'Facing is on a mountain boundary: the Flying Star chart could belong to either neighbouring mountain. Re-measure before relying on it.' });
+  }
+
   return {
     year, facing, sitting, houseGua: { gua: houseGua.gua, name: houseGua.name, group: houseGua.group },
-    annual: ann, people, rooms, notes,
+    annual: ann, flyingStar, people, rooms, notes,
   };
 }
+
+function pick(o, keys) { const r = {}; for (const k of keys) r[k] = o[k]; return r; }
 
 function dedupe(arr) {
   const seen = new Set();

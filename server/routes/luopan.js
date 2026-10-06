@@ -7,6 +7,7 @@ const { getDb } = require('../db/init');
 const { requireAdmin } = require('../middleware/adminAuth');
 const { adminLimiter } = require('../middleware/rateLimiter');
 const F = require('../engine/fengshui');
+const FS = require('../engine/flyingstar');
 
 // Floor-plan photos ride inside the consult JSON, so this router takes a
 // larger body than the global 10kb limit.
@@ -29,11 +30,14 @@ function validConsult(b) {
     if (r.sector !== 'C' && !F.DIRS.includes(r.sector)) return `Room ${r.name} has an invalid sector.`;
   }
   if (b.year != null && (!Number.isInteger(b.year) || b.year < 1900 || b.year > 2099)) return 'year is invalid.';
+  for (const k of ['topYear', 'renoYear']) if (b[k] != null && b[k] !== '' && (!Number.isInteger(b[k]) || b[k] < 1900 || b[k] > 2099)) return `${k} is invalid.`;
   return null;
 }
 
 function analyse(b) {
-  return F.analyseConsult({ year: b.year, facing: b.facing, people: b.people, rooms: b.rooms });
+  const built = b.renoYear || b.topYear;
+  const period = built ? FS.periodOf(built) : null;
+  return F.analyseConsult({ year: b.year, period, facing: b.facing, people: b.people, rooms: b.rooms });
 }
 
 router.post('/luopan/analyse', (req, res) => {

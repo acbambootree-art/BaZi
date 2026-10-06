@@ -1,6 +1,6 @@
 # Smart Luopan — research & product brief
 
-Date: 2026-10-06. Status: Phase 1 built 2026-10-07 (`luopan.html`, `server/engine/fengshui.js`, `server/routes/luopan.js`); Phases 2–3 and the AI layer not started.
+Date: 2026-10-06. Status: Phase 1 built 2026-10-07 (`luopan.html`, `server/engine/fengshui.js`, `server/routes/luopan.js`); Phase 2 (Flying Star) built 2026-10-07; Phase 3 and the AI layer not started.
 
 ## 0. Verdict in five lines
 

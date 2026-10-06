@@ -77,7 +77,7 @@ test('annual stars 2024–2027 and 2026 afflictions', () => {
 
 test('analyseConsult: 2026, south-facing flat, bedroom in S for a Gua 6 male', () => {
   const r = F.analyseConsult({
-    year: 2026,
+    year: 2026, period: 8,
     facing: { bearing: 180, spread: 1, confidence: 'high' },
     people: [{ id: 'p1', name: 'Tan', birthYear: 1975, birthMonth: 6, birthDay: 1, gender: 'male' }],
     rooms: [
@@ -100,4 +100,12 @@ test('analyseConsult: 2026, south-facing flat, bedroom in S for a Gua 6 male', (
   assert.equal(study.occupants[0].deskFacing.direction, 'NW');  // 生氣 for Gua 7
   assert.ok(!r.rooms.some(room => room.occupants.some(o => o.deskFacing && o.deskFacing.direction === 'S'))); // S banned in 2026
   assert.ok(r.notes.some(n => n.id === 'EM-DOOR'));             // door S is 五鬼 for Gua 7
+  // Flying Star layer: P8 子山午向, S palace 8-8 with annual 5 on top
+  assert.equal(r.flyingStar.structureZh, '雙星到向');
+  assert.deepEqual(master.flyingStar.stars, { mountain: 8, water: 8, period: 3, annual: 5 });
+  assert.ok(master.why.includes('FS-88'));
+  assert.deepEqual(study.flyingStar.stars, { mountain: 2, water: 5, period: 6, annual: 8 });  // E palace is 2-5
+  assert.ok(study.why.includes('FS-25'));
+  assert.equal(study.verdict, 'poor');
+  assert.equal(r.flyingStar.grid.N.mountain, 9);
 });

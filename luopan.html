@@ -134,6 +134,20 @@
   .list-item { display: flex; justify-content: space-between; padding: 12px 2px; border-bottom: 1px solid var(--line); font-size: 0.9rem; cursor: pointer; transition: background .2s; border-radius: 8px; }
   .list-item:hover { background: rgba(255,255,255,0.6); }
   .list-item b { color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+  .fsgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 0 6px; }
+  .pal { aspect-ratio: 1; border-radius: 14px; border: 1px solid rgba(184,146,58,0.22); background: rgba(255,255,255,0.55); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; position: relative; transition: transform .3s var(--spring); }
+  .pal:hover { transform: translateY(-2px); }
+  .pal .d { position: absolute; top: 6px; left: 8px; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.06em; color: var(--accent-ink); }
+  .pal .a { position: absolute; top: 6px; right: 8px; font-size: 0.66rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .pal .mw { font-size: 1.35rem; font-weight: 700; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .pal .mw span { display: inline-block; min-width: 1.1em; text-align: center; }
+  .pal .p { font-size: 0.72rem; color: var(--ink-3); }
+  .pal.good { background: rgba(46,156,93,0.10); border-color: rgba(46,156,93,0.3); }
+  .pal.poor { background: rgba(214,69,69,0.08); border-color: rgba(214,69,69,0.28); }
+  .pal.C { background: rgba(184,146,58,0.10); }
+  .stars { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,0.7); border: 1px solid rgba(184,146,58,0.25); font-variant-numeric: tabular-nums; color: var(--ink); }
+  .stars i { font-style: normal; color: var(--ink-3); font-weight: 500; }
+  .warn-list li.boost::marker { color: var(--good); }
   .hidden { display: none !important; }
   @media print { .nav, header .btn, .steps, .bg { display: none; } body { background: #fff; } .card { box-shadow: none; border-color: #ddd; background: #fff; animation: none; } }
 </style>
@@ -306,7 +320,7 @@ function periodHint() {
   const y = parseInt(S.renoYear || S.topYear, 10);
   if (!y) { $('#periodHint').textContent = ''; return; }
   const period = y >= 2024 ? 9 : y >= 2004 ? 8 : y >= 1984 ? 7 : y >= 1964 ? 6 : 5;
-  $('#periodHint').textContent = `Period ${period} house (${S.renoYear ? 'major renovation' : 'TOP'} ${y}). Flying Star chart arrives in Phase 2.`;
+  $('#periodHint').textContent = `Period ${period} house (${S.renoYear ? 'major renovation' : 'TOP'} ${y}). The Flying Star chart will use this.`;
 }
 periodHint();
 function renderPeople() {
@@ -528,7 +542,7 @@ async function saveConsult() {
 function renderReport() {
   const r = S.report; if (!r) return;
   const a = r.annual;
-  const sev = s => s === 'hard' ? 'hard' : s === 'medium' ? 'medium' : 'low';
+  const sev = s => s === 'hard' ? 'hard' : s === 'medium' ? 'medium' : s === 'boost' ? 'boost' : 'low';
   $('#report').innerHTML = `
     <div class="card">
       <div class="rv"><h3>${esc(S.clientName || 'Client')}</h3>${S.reference ? `<span class="badge b-info">${S.reference}</span>` : '<span class="badge b-warn">unsaved</span>'}</div>
@@ -542,6 +556,15 @@ function renderReport() {
       </div>
       ${r.notes.length ? `<ul class="note-list" style="margin-top:10px">${r.notes.map(n => `<li>${esc(n.text)}</li>`).join('')}</ul>` : ''}
     </div>
+    ${r.flyingStar ? `<div class="card">
+      <h2>Flying Star chart · Period ${r.flyingStar.period} · ${r.flyingStar.structureZh}</h2>
+      <p class="hint">${esc(r.flyingStar.structureText)}</p>
+      <div class="fsgrid">${[['NW','N','NE'],['W','C','E'],['SW','S','SE']].flat().map(d => { const g = r.flyingStar.grid[d]; return `<div class="pal ${g.verdict} ${d}"><span class="d">${d === 'C' ? '中' : d}</span><span class="a">${g.annual}</span><div class="mw"><span>${g.mountain}</span><span>${g.water}</span></div><span class="p">${g.period}</span></div>`; }).join('')}</div>
+      <div class="hint">Each palace: <b>mountain</b> star (left) governs health and people, <b>water</b> star (right) governs money and activity, small number is the period star, top-right is this year's star. North is up.</div>
+      ${r.flyingStar.bestSectors.length ? `<div class="who" style="margin-top:10px"><b>Best sectors:</b> ${r.flyingStar.bestSectors.join(', ')} — ${r.flyingStar.bestSectors.map(d => r.flyingStar.grid[d].bestUse).filter((v, i, a) => a.indexOf(v) === i).join('; ')}.</div>` : ''}
+      ${r.flyingStar.restThisYear.length ? `<div class="who"><b>Good natally but afflicted in ${r.year}:</b> ${r.flyingStar.restThisYear.join(', ')} — keep quiet this year, re-activate after 立春.</div>` : ''}
+      ${r.flyingStar.worstSectors.length ? `<div class="who"><b>Weakest sectors:</b> ${r.flyingStar.worstSectors.join(', ')} — keep for storage, toilets or low use; cure as listed per room.</div>` : ''}
+    </div>` : `<div class="card hint">Enter the TOP year (or major renovation year) in step 1 to add the Flying Star chart.</div>`}
     <div class="card">
       <h2>Household</h2>
       ${r.people.map(p => `<div class="who"><b>${esc(p.name)}</b> · Gua ${p.gua} ${p.guaName} · ${p.group} group · door is ${p.doorStar.zh} ${p.doorStar.name}<br>
@@ -549,7 +572,9 @@ function renderReport() {
     </div>
     ${r.rooms.map(room => `
     <div class="card">
-      <div class="rv"><h3>${esc(room.name)} <span class="sec">· ${room.use} · ${room.sector} · annual star ${room.annualStar}</span></h3><span class="badge b-${room.verdict}">${room.verdict}</span></div>
+      <div class="rv"><h3>${esc(room.name)} <span class="sec">· ${room.use} · ${room.sector}</span></h3><span class="badge b-${room.verdict}">${room.verdict}</span></div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px">${room.flyingStar ? `<span class="stars">${room.flyingStar.stars.mountain}<i>·</i>${room.flyingStar.stars.water} <i>natal</i></span><span class="stars">${room.flyingStar.stars.period} <i>period</i></span>` : ''}<span class="stars">${room.annualStar} <i>annual</i></span>${room.flyingStar && room.flyingStar.fit ? `<span class="badge b-${room.flyingStar.fit}">${room.use} fit: ${room.flyingStar.fit}</span>` : ''}</div>
+      ${room.flyingStar ? `<div class="hint" style="margin-bottom:6px">Mountain ${room.flyingStar.mountainStar.zh} (${room.flyingStar.mountainStar.timeliness}, ${esc(room.flyingStar.mountainStar.theme)}) · Water ${room.flyingStar.waterStar.zh} (${room.flyingStar.waterStar.timeliness}, ${esc(room.flyingStar.waterStar.theme)}). Best use: ${room.flyingStar.bestUse}.</div>` : ''}
       ${room.warnings.length ? `<ul class="warn-list">${room.warnings.map(w => `<li class="${sev(w.severity)}">${esc(w.text)}</li>`).join('')}</ul>` : '<div class="hint">No annual or form issues in this sector.</div>'}
       ${room.occupants.map(o => `<div class="who"><b>${esc(o.name)}</b> (Gua ${o.gua})${o.sectorStar ? ` · this sector is ${o.sectorStar.zh} ${o.sectorStar.name} for them` : ''}<br>
         ${o.bedHead ? `Sleep with head toward <b>${o.bedHead.direction}</b> (${o.bedHead.star} ${o.bedHead.name}: ${o.bedHead.meaning}). ` : ''}
@@ -558,7 +583,7 @@ function renderReport() {
       ${room.cures.length ? `<h2 style="margin-top:12px; font-size:0.85rem">Cures</h2><ul class="cure-list">${room.cures.map(c => `<li><b style="color:var(--text)">${c.element}</b>: ${esc(c.items)}. Place ${esc(c.placement)}. <i>(${esc(c.reason)}${c.person ? ', for ' + esc(c.person) : ''})</i></li>`).join('')}</ul>` : ''}
       <div class="why">rules: ${room.why.join(' ')}</div>
     </div>`).join('')}
-    <div class="card hint">Structural fixes come first; items are element carriers. Advice assumes the recorded facing. Flying Star room analysis and BaZi favourable elements arrive in Phases 2–3.
+    <div class="card hint">Structural fixes come first; items are element carriers. Advice assumes the recorded facing. BaZi favourable elements arrive in Phase 3.
       <div style="margin-top:10px; display:flex; gap:8px"><button class="btn ghost sm" onclick="window.print()">Print / PDF</button><button class="btn ghost sm" id="btnNew">New consult</button></div></div>`;
   $('#btnNew').onclick = () => { if (!confirm('Start a new consult? Unsaved work is lost.')) return; sessionStorage.removeItem('lp_state'); location.reload(); };
 }

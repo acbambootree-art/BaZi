@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test engine/test/engine.test.js engine/test/validation.test.js engine/test/fengshui.test.js",
+    "test": "node --test engine/test/engine.test.js engine/test/validation.test.js engine/test/fengshui.test.js engine/test/flyingstar.test.js",
     "gen:validation": "node engine/validation/generate.js",
     "gen:vsop": "node engine/validation/extract-vsop.js"
   },
