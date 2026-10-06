@@ -6,9 +6,11 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test engine/test/engine.test.js engine/test/validation.test.js engine/test/fengshui.test.js engine/test/flyingstar.test.js engine/test/yongshen.test.js engine/test/corpus.test.js engine/test/chat.test.js",
+    "test": "node --test engine/test/engine.test.js engine/test/validation.test.js engine/test/fengshui.test.js engine/test/flyingstar.test.js engine/test/yongshen.test.js engine/test/corpus.test.js engine/test/chat.test.js engine/test/yongshen-reference.test.js",
     "gen:validation": "node engine/validation/generate.js",
-    "gen:vsop": "node engine/validation/extract-vsop.js"
+    "gen:vsop": "node engine/validation/extract-vsop.js",
+    "validate:yongshen": "node engine/validation/yongshen-check.js -v",
+    "corpus:fetch": "node corpus/fetch.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.109.1",

@@ -127,7 +127,18 @@ Use: bed-head/desk-facing ranking (用神 direction first, 喜神 second, never 
 
 Effort: algorithm ~3 days; reference set ~2 days of collection.
 
-Implemented 2026-10-07 in `server/engine/yongshen.js` with one refinement: at season-start months (亥, 巳) the 调候 override applies only when the day master is not weak; at peak months (子丑午未) it applies regardless. The reference set is still to be collected.
+Implemented 2026-10-07 in `server/engine/yongshen.js`. **Reference sets built and measured 2026-10-07** (`server/engine/validation/`, run `npm run validate:yongshen`):
+
+| Set | Rows | Labelling | Agreement (text's liked element in engine's favourable set, no disliked element in it) | Strength sign |
+|---|---|---|---|---|
+| 神峰通考 worked examples | 69 | hand-labelled from the commentary | 57% | 58% |
+| 滴天髓闡微 worked examples (任鐵樵) | 45 | machine-extracted from "用神必在X / 以X為用" phrases, ~85% label accuracy on a 24-row sample | 47% | 69% |
+
+What this means: a points-based 扶抑 scorer agrees with the classical masters' explicit 用神 about half the time. The misses are mostly holistic judgements the score cannot see (合化 transformations, 進氣/退氣, 從格 by feel, 病藥 reasoning in 神峰通考). Weight sweeps moved the numbers by only a few points, so the ceiling is the method, not the tuning. The engine's `confidence` badge is weakly informative (high-confidence rows agree ~55–65%, low ~40%).
+
+Changes made from the measurement: 得令 bonus (+8 for a day master in its own season, halved for earth in 辰戌丑未), heavier weight for the day master's own seat root (坐祿), 兩氣成象 handling, stricter 调候 override (only when the element is entirely absent and the chart is not extreme), looser 從格 gate (roots inside a complete 三會/三合 frame of another element are absorbed), balanced charts drain into 食傷/財 instead of the lightest element. Regression floors are asserted in `engine/test/yongshen-reference.test.js`.
+
+Product consequence: BaZi stays the tie-break layer (A2 layer 5) and never overrides Eight Mansions or Flying Star. The report should keep saying "chart-based preference" rather than "your 用神 is X" until a master signs off, and the one-tap override stays.
 
 ---
 

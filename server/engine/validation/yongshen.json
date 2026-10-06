@@ -1,0 +1,1332 @@
+[
+ {
+  "id": "SFTK-01",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "辛丑",
+   "乙未",
+   "戊戌",
+   "庚申"
+  ],
+  "like": [
+   "wood"
+  ],
+  "dislike": [
+   "metal"
+  ],
+  "note": "貧夭女見夫受制格: 戊強土, 木夫被金破",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-02",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "壬戌",
+   "辛亥",
+   "甲子",
+   "丙寅"
+  ],
+  "like": [
+   "metal"
+  ],
+  "dislike": [
+   "fire"
+  ],
+  "note": "貴而早寡金輕火重: 運入西方夫登科甲, 南方火制辛太過",
+  "strengthText": "strong",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-03",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丁巳",
+   "戊申",
+   "丁巳",
+   "乙巳"
+  ],
+  "like": [],
+  "dislike": [
+   "earth"
+  ],
+  "note": "夭女官輕制重: 丁火身衰, 見土泄弱精英",
+  "strengthText": "weak",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-04",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丁酉",
+   "壬寅",
+   "辛巳",
+   "丙申"
+  ],
+  "like": [
+   "fire",
+   "wood"
+  ],
+  "dislike": [],
+  "note": "貴女命去留官格: 喜行甲乙丙丁旺夫之地",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-05",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丙午",
+   "辛丑",
+   "甲戌",
+   "己巳"
+  ],
+  "like": [],
+  "dislike": [
+   "metal"
+  ],
+  "note": "官殺太盛: 運入西方官殺重見死",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-06",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "癸丑",
+   "己未",
+   "戊辰",
+   "庚申"
+  ],
+  "like": [
+   "wood"
+  ],
+  "dislike": [
+   "metal"
+  ],
+  "note": "貧夭女命未輕制重: 運入西方損傷乙木夫星",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-07",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "庚午",
+   "戊寅",
+   "己酉",
+   "甲子"
+  ],
+  "like": [
+   "water",
+   "wood"
+  ],
+  "dislike": [
+   "metal"
+  ],
+  "note": "先富後孤貧夫弱被制格: 早行丙子乙亥甲運富足, 西方夫星受制",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-08",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丁巳",
+   "丁未",
+   "乙未",
+   "庚辰"
+  ],
+  "like": [
+   "metal",
+   "water"
+  ],
+  "dislike": [
+   "fire"
+  ],
+  "note": "布政妻命火重金輕: 運入西方相夫相子, 北方見水破火存夫",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-09",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丙戌",
+   "戊戌",
+   "辛未",
+   "壬辰"
+  ],
+  "like": [
+   "wood"
+  ],
+  "dislike": [
+   "metal"
+  ],
+  "note": "土厚埋金格: 東方寅卯甲乙破土生官殺位登台閣",
+  "strengthText": "weak",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-10",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "庚子",
+   "己卯",
+   "癸酉",
+   "辛酉"
+  ],
+  "like": [
+   "metal",
+   "fire"
+  ],
+  "dislike": [
+   "wood"
+  ],
+  "note": "去食存殺格: 西方金運制去病神位登宰相, 亥運會木而死",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-11",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丙子",
+   "庚子",
+   "丁丑",
+   "辛亥"
+  ],
+  "like": [
+   "fire",
+   "earth"
+  ],
+  "dislike": [
+   "water"
+  ],
+  "note": "水重土輕格: 巳午未衝去水神財發萬緡, 喜土來克水",
+  "strengthText": "weak",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-12",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丁丑",
+   "壬寅",
+   "庚子",
+   "乙酉"
+  ],
+  "like": [
+   "earth",
+   "wood"
+  ],
+  "dislike": [
+   "metal",
+   "water"
+  ],
+  "note": "制殺太過: 戊戌克去壬水財發, 大運入酉死",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-13",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丙戌",
+   "庚子",
+   "丁卯",
+   "丙午"
+  ],
+  "like": [
+   "wood"
+  ],
+  "dislike": [
+   "earth"
+  ],
+  "note": "制殺過富命: 東方木運克土財發千緡, 未運土重死",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-14",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "己酉",
+   "戊辰",
+   "癸酉",
+   "丙辰"
+  ],
+  "like": [
+   "water",
+   "metal"
+  ],
+  "dislike": [
+   "fire"
+  ],
+  "note": "殺多生印格: 北方見水去火存印一發如雷, 丙寅運傾家",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-15",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "庚午",
+   "己丑",
+   "壬辰",
+   "甲辰"
+  ],
+  "like": [
+   "wood",
+   "water"
+  ],
+  "dislike": [
+   "earth"
+  ],
+  "note": "土重水輕格: 喜甲木制殺, 寅卯壬運木神生旺, 戊土殺旺攻身死",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-16",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "甲午",
+   "丁丑",
+   "壬辰",
+   "甲辰"
+  ],
+  "like": [
+   "wood"
+  ],
+  "dislike": [
+   "earth",
+   "fire"
+  ],
+  "note": "殺重身輕: 東方木神制殺衣食頗給, 南方殺旺, 入未殺重死",
+  "strengthText": "weak",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-17",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "壬辰",
+   "丁未",
+   "辛丑",
+   "甲午"
+  ],
+  "like": [
+   "water"
+  ],
+  "dislike": [
+   "fire"
+  ],
+  "note": "火重水輕格: 制殺水輕宜水運, 運入亥擢顯官",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-18",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "壬辰",
+   "丁未",
+   "辛丑",
+   "壬辰"
+  ],
+  "like": [
+   "fire"
+  ],
+  "dislike": [
+   "water"
+  ],
+  "note": "水重火輕格: 七殺制過畏行北方",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-19",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "己未",
+   "己巳",
+   "庚子",
+   "甲申"
+  ],
+  "like": [
+   "fire",
+   "wood"
+  ],
+  "dislike": [
+   "water"
+  ],
+  "note": "制殺太過火不足格: 丙寅丁卯乙丑火木之地位登黃閣, 亥子水破殺死",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-20",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "乙酉",
+   "丁亥",
+   "丙午",
+   "己丑"
+  ],
+  "like": [
+   "wood",
+   "water"
+  ],
+  "dislike": [
+   "earth",
+   "fire"
+  ],
+  "note": "制殺太過格: 乙酉甲申破土生殺發財, 壬癸運美, 午未制殺太甚",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-21",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丁未",
+   "己酉",
+   "乙巳",
+   "丁亥"
+  ],
+  "like": [
+   "water",
+   "metal"
+  ],
+  "dislike": [
+   "fire"
+  ],
+  "note": "制殺太過: 去火存金是福田, 入辰坐壬癸財源大振",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-22",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "庚辰",
+   "甲申",
+   "丁未",
+   "丙午"
+  ],
+  "like": [
+   "water"
+  ],
+  "dislike": [],
+  "note": "身強殺淺格: 運行北方補其水用殺得權",
+  "strengthText": "strong",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-23",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "乙酉",
+   "辛巳",
+   "己酉",
+   "乙亥"
+  ],
+  "like": [
+   "metal",
+   "wood"
+  ],
+  "dislike": [
+   "fire",
+   "earth"
+  ],
+  "note": "身強殺淺格: 從金為用神, 宜行殺旺地及生殺地",
+  "strengthText": "strong",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-24",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丁卯",
+   "甲辰",
+   "戊午",
+   "癸亥"
+  ],
+  "like": [],
+  "dislike": [
+   "wood",
+   "water"
+  ],
+  "note": "乞丐命殺重無制: 財生七殺趕身衰, 亥運殺旺死",
+  "strengthText": "weak",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-25",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "壬辰",
+   "己酉",
+   "乙未",
+   "辛巳"
+  ],
+  "like": [
+   "fire"
+  ],
+  "dislike": [
+   "metal"
+  ],
+  "note": "尚書妻火少金多格: 去金宜入南方運",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-26",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "庚寅",
+   "甲申",
+   "戊辰",
+   "丁巳"
+  ],
+  "like": [],
+  "dislike": [
+   "metal"
+  ],
+  "note": "克損七夫金有餘: 行運不宜金再見",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-27",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "辛巳",
+   "乙未",
+   "乙酉",
+   "壬午"
+  ],
+  "like": [
+   "metal",
+   "water"
+  ],
+  "dislike": [
+   "fire"
+  ],
+  "note": "火重金輕: 丙丁運多災病, 金水重逢樂自然",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-28",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "乙卯",
+   "癸未",
+   "辛未",
+   "甲午"
+  ],
+  "like": [
+   "metal",
+   "water"
+  ],
+  "dislike": [
+   "fire"
+  ],
+  "note": "火重水輕格: 喜行金水福榮昌, 丙戌助夫攻身損子",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-29",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丙戌",
+   "丁酉",
+   "乙巳",
+   "戊寅"
+  ],
+  "like": [
+   "water"
+  ],
+  "dislike": [
+   "fire"
+  ],
+  "note": "北方運美南方否: 喜壬癸水破火而存金",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-30",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "甲戌",
+   "辛未",
+   "乙丑",
+   "乙酉"
+  ],
+  "like": [
+   "fire"
+  ],
+  "dislike": [
+   "earth",
+   "metal"
+  ],
+  "note": "先貧後富金多火少: 直須火運將金克, 己巳戊辰財生殺貧苦",
+  "strengthText": "weak",
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-31",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丙子",
+   "戊戌",
+   "壬午",
+   "戊申"
+  ],
+  "like": [
+   "earth",
+   "fire"
+  ],
+  "dislike": [],
+  "note": "尚書夫人水進氣: 水氣盈, 任殺為夫, 南方殺旺之地相夫貴",
+  "strengthText": "strong",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-32",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "癸巳",
+   "己未",
+   "己亥",
+   "己巳"
+  ],
+  "like": [],
+  "dislike": [
+   "metal"
+  ],
+  "note": "富夭女命制過夫星: 不宜運入庚申",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-33",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "辛亥",
+   "庚子",
+   "戊戌",
+   "己未"
+  ],
+  "like": [
+   "wood",
+   "water"
+  ],
+  "dislike": [
+   "metal"
+  ],
+  "note": "狀元妻衰夫行夫旺運格: 壬寅運相夫登第, 入巳庚金損夫死",
+  "strengthText": "strong",
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-34",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "乙丑",
+   "乙酉",
+   "辛巳",
+   "甲午"
+  ],
+  "like": [
+   "fire"
+  ],
+  "dislike": [],
+  "note": "金重火輕格: 金旺火輕宜火運, 行午運中鄉試",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-35",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丁亥",
+   "壬子",
+   "辛巳",
+   "丁酉"
+  ],
+  "like": [
+   "fire",
+   "earth"
+  ],
+  "dislike": [
+   "water",
+   "metal"
+  ],
+  "note": "金白水清水制火過格: 畏金水之鄉, 宜丙丁戊己之運",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-36",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "辛巳",
+   "丁酉",
+   "丙寅",
+   "己丑"
+  ],
+  "like": [
+   "fire"
+  ],
+  "dislike": [
+   "metal"
+  ],
+  "note": "身旺任財: 火少金多宜火地",
+  "strengthText": "strong",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-37",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "戊寅",
+   "乙丑",
+   "丙申",
+   "庚寅"
+  ],
+  "like": [
+   "metal"
+  ],
+  "dislike": [],
+  "note": "身旺用財格: 喜庚金透出財神明白",
+  "strengthText": "strong",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-38",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丙寅",
+   "甲午",
+   "丁酉",
+   "乙巳"
+  ],
+  "like": [
+   "metal",
+   "water"
+  ],
+  "dislike": [],
+  "note": "火長夏天金疊疊格: 身旺用財, 運行金水發轟天",
+  "strengthText": "strong",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-39",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "甲辰",
+   "丙子",
+   "己未",
+   "戊辰"
+  ],
+  "like": [
+   "wood"
+  ],
+  "dislike": [
+   "earth"
+  ],
+  "note": "土重木輕格: 戊己土多損財為病, 甲乙木為藥, 喜運東方",
+  "strengthText": "strong",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-40",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "己酉",
+   "丙子",
+   "壬寅",
+   "乙巳"
+  ],
+  "like": [
+   "fire",
+   "earth"
+  ],
+  "dislike": [
+   "metal",
+   "water"
+  ],
+  "note": "偏財類聚之格: 運至南方火土重逢福祿堅, 癸運酉運不遂",
+  "strengthText": "strong",
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-41",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丁丑",
+   "庚戌",
+   "乙巳",
+   "壬午"
+  ],
+  "like": [
+   "fire"
+  ],
+  "dislike": [
+   "metal",
+   "water"
+  ],
+  "note": "木火傷官庚金為病: 金水兩般為我病, 南方火運長精神",
+  "strengthText": "weak",
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-42",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "己巳",
+   "辛未",
+   "乙亥",
+   "丁丑"
+  ],
+  "like": [
+   "fire"
+  ],
+  "dislike": [
+   "metal"
+  ],
+  "note": "庚辛金為病神丙丁火為福神",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-43",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "己巳",
+   "癸酉",
+   "戊辰",
+   "丙辰"
+  ],
+  "like": [
+   "fire",
+   "earth"
+  ],
+  "dislike": [
+   "water"
+  ],
+  "note": "土金傷官用印: 伤官身弱用印, 癸水克印為病, 南方土運發非輕",
+  "strengthText": "weak",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-44",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "乙酉",
+   "己丑",
+   "庚子",
+   "壬午"
+  ],
+  "like": [
+   "metal"
+  ],
+  "dislike": [
+   "fire"
+  ],
+  "note": "真傷官用劫: 庚金見酉用劫為用神, 最畏丙丁能破劫",
+  "strengthText": "weak",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-45",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "戊午",
+   "己未",
+   "丙戌",
+   "己亥"
+  ],
+  "like": [
+   "wood",
+   "water"
+  ],
+  "dislike": [
+   "metal"
+  ],
+  "note": "火土傷官用印: 身衰用印, 早年最畏財傷印, 水資印氣興創",
+  "strengthText": "weak",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-46",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "戊子",
+   "乙卯",
+   "丁巳",
+   "丁未"
+  ],
+  "like": [
+   "earth",
+   "metal"
+  ],
+  "dislike": [
+   "wood"
+  ],
+  "note": "假傷官格: 土為用神, 畏木為克土之病, 庚申辛酉位入台閣",
+  "strengthText": "strong",
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-47",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "庚子",
+   "己丑",
+   "壬寅",
+   "辛亥"
+  ],
+  "like": [
+   "wood"
+  ],
+  "dislike": [
+   "metal"
+  ],
+  "note": "水木假傷官: 木衰最喜東方運, 一到金鄉便不宜",
+  "strengthText": "strong",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-48",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "甲午",
+   "丙寅",
+   "乙丑",
+   "癸未"
+  ],
+  "like": [
+   "fire",
+   "earth"
+  ],
+  "dislike": [
+   "water"
+  ],
+  "note": "木火通明之格: 癸水為病, 戊己去病存火, 壬申破損用神",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-49",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "壬子",
+   "丙午",
+   "乙亥",
+   "丁亥"
+  ],
+  "like": [
+   "earth"
+  ],
+  "dislike": [
+   "water"
+  ],
+  "note": "制過傷官之格: 水重火輕宜見土, 北方水運實難痊",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-50",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丙寅",
+   "庚子",
+   "壬子",
+   "辛亥"
+  ],
+  "like": [
+   "wood"
+  ],
+  "dislike": [
+   "metal"
+  ],
+  "note": "富貴假傷官格: 木衰貴有庚辛病, 運到東方大有餘",
+  "strengthText": "strong",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-51",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "乙巳",
+   "癸未",
+   "戊子",
+   "癸丑"
+  ],
+  "like": [
+   "metal"
+  ],
+  "dislike": [
+   "fire"
+  ],
+  "note": "假傷官格: 土厚見金多秀氣, 嫌火來發, 寅運火克衰金死",
+  "strengthText": "strong",
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-52",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "己酉",
+   "丙寅",
+   "甲子",
+   "乙丑"
+  ],
+  "like": [
+   "water"
+  ],
+  "dislike": [
+   "metal"
+  ],
+  "note": "木衰金旺格: 木嫩畏金欺, 北方水資木氣衣食佳, 西方金旺守茅庵",
+  "strengthText": "weak",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-53",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "辛卯",
+   "辛丑",
+   "丁卯",
+   "癸卯"
+  ],
+  "like": [
+   "earth",
+   "metal"
+  ],
+  "dislike": [
+   "wood"
+  ],
+  "note": "印制食神太過: 用己土為用神, 乙木為病, 三金克木為醫",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-54",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "乙卯",
+   "己丑",
+   "丁亥",
+   "壬寅"
+  ],
+  "like": [
+   "earth",
+   "fire"
+  ],
+  "dislike": [
+   "wood"
+  ],
+  "note": "土輕木重之格: 用土, 只畏木金來克土, 再行木運禍非輕",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-55",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "壬辰",
+   "辛亥",
+   "甲戌",
+   "丙寅"
+  ],
+  "like": [
+   "fire"
+  ],
+  "dislike": [
+   "water",
+   "metal"
+  ],
+  "note": "假傷官格: 丙火為用神, 壬水辛金為病",
+  "strengthText": "strong",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-56",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丁丑",
+   "辛亥",
+   "壬子",
+   "癸卯"
+  ],
+  "like": [
+   "wood"
+  ],
+  "dislike": [
+   "metal"
+  ],
+  "note": "假傷官嫌印: 西方金運極難當",
+  "strengthText": "strong",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-57",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "甲戌",
+   "辛未",
+   "己酉",
+   "己巳"
+  ],
+  "like": [
+   "metal",
+   "water"
+  ],
+  "dislike": [
+   "fire"
+  ],
+  "note": "假傷官金輕火重格: 丙丁為損金之神, 北方用水去火財富",
+  "strengthText": "strong",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-58",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "戊申",
+   "己未",
+   "戊午",
+   "辛酉"
+  ],
+  "like": [
+   "metal",
+   "water"
+  ],
+  "dislike": [
+   "fire"
+  ],
+  "note": "土見金格: 火為病, 水為福, 運行西北志凌雲",
+  "strengthText": "strong",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-59",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "癸卯",
+   "甲寅",
+   "丙午",
+   "戊戌"
+  ],
+  "like": [
+   "earth",
+   "metal"
+  ],
+  "dislike": [
+   "wood"
+  ],
+  "note": "假傷官土輕木重: 甲木病神, 庚戌運克木貴不可言",
+  "strengthText": "strong",
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-60",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丙寅",
+   "壬辰",
+   "甲辰",
+   "丁卯"
+  ],
+  "like": [
+   "fire",
+   "earth"
+  ],
+  "dislike": [
+   "water"
+  ],
+  "note": "木火假傷官: 壬水為病, 運行南方衰火得地, 畏北方水破用神",
+  "strengthText": "strong",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-61",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丙申",
+   "癸巳",
+   "辛卯",
+   "壬辰"
+  ],
+  "like": [
+   "metal"
+  ],
+  "dislike": [],
+  "note": "假傷官用地劫: 行申酉比劫得生安享其樂",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-62",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丁未",
+   "壬寅",
+   "乙丑",
+   "丁亥"
+  ],
+  "like": [
+   "metal",
+   "earth"
+  ],
+  "dislike": [
+   "water",
+   "fire"
+  ],
+  "note": "木火傷官官不足格: 財官之運重重喜, 水火逢來實可悲",
+  "strengthText": "strong",
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-63",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "辛丑",
+   "丙申",
+   "己丑",
+   "庚午"
+  ],
+  "like": [
+   "fire"
+  ],
+  "dislike": [
+   "water"
+  ],
+  "note": "金多用火: 傷官盜氣多者用印不用財, 北方見水身多疾",
+  "strengthText": "weak",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-64",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "己丑",
+   "己巳",
+   "丁丑",
+   "己酉"
+  ],
+  "like": [
+   "wood"
+  ],
+  "dislike": [
+   "earth",
+   "metal"
+  ],
+  "note": "孤貧女命土有餘: 食傷太多泄弱丁火, 東方甲乙克去子星存養丁火",
+  "strengthText": "weak",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-65",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "丁亥",
+   "辛亥",
+   "乙亥",
+   "丁亥"
+  ],
+  "like": [
+   "earth"
+  ],
+  "dislike": [
+   "water"
+  ],
+  "note": "水多漂木之格: 戊己運中發福, 再行水運壽年終",
+  "strengthText": null,
+  "method": "bingyao"
+ },
+ {
+  "id": "SFTK-66",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "壬寅",
+   "辛亥",
+   "丁巳",
+   "辛亥"
+  ],
+  "like": [
+   "wood",
+   "fire"
+  ],
+  "dislike": [
+   "metal"
+  ],
+  "note": "衰印畏財格: 木神類聚用神無疑, 金為病, 運入東方福祿全",
+  "strengthText": "weak",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-67",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "乙丑",
+   "辛巳",
+   "己巳",
+   "庚午"
+  ],
+  "like": [
+   "fire"
+  ],
+  "dislike": [
+   "water"
+  ],
+  "note": "旺變為弱用印格: 己土親火為印綬, 畏水傷火, 子運死",
+  "strengthText": "weak",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-68",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "壬戌",
+   "壬寅",
+   "丁卯",
+   "戊申"
+  ],
+  "like": [
+   "wood"
+  ],
+  "dislike": [
+   "metal"
+  ],
+  "note": "貪財壞印: 木嫩火衰, 身衰用印, 印受傷",
+  "strengthText": "weak",
+  "method": "strength"
+ },
+ {
+  "id": "SFTK-69",
+  "source": "神峰通考 (Ming, 張神峰), worked example",
+  "pillars": [
+   "乙亥",
+   "癸未",
+   "丁卯",
+   "甲辰"
+  ],
+  "like": [
+   "metal"
+  ],
+  "dislike": [
+   "wood"
+  ],
+  "note": "木無金之格: 大喜庚辛來損木, 再行木運本非宜",
+  "strengthText": "strong",
+  "method": "bingyao"
+ }
+]

@@ -29,6 +29,12 @@ const SOURCES = {
   ditiansuichanwei: { source: '滴天髓闡微', era: 'Qing·任鐵樵 commentary', pages: ['滴天髓闡微'], tags: 'BZ-RANK 命理' },
   yuanhaiziping: { source: '淵海子平', era: 'Song·徐大升 / Ming ed.', pages: ['淵海子平'], tags: 'BZ-RANK 命理' },
   shenfengtongkao: { source: '神峰通考', era: 'Ming·張神峰', pages: ['神峰通考'], tags: 'BZ-RANK 命理' },
+  qiongtongbaojian: { source: '窮通寶鑑', era: 'Qing compilation (調候 classic)', pages: ['穷通宝鉴'], tags: '調候 BZ-RANK 命理' },
+  dilibianzheng: { source: '地理辨正', era: 'Qing·蔣大鴻', pages: ['地理辨正'], tags: '玄空 FS-STRUCTURE' },
+  tianyuanwuge: { source: '天元五歌', era: 'Qing·蔣大鴻', pages: ['天元五歌'], tags: '玄空 陽宅 FS-STRUCTURE' },
+  qingnangjing: { source: '青囊經', era: 'attr. 黃石公 (Han)', pages: ['青囊經'], tags: '玄空 巒頭' },
+  hanlongjing: { source: '撼龍經 / 疑龍經', era: 'Tang·楊筠松 (attr.)', pages: ['撼龍經', '撼龍經/疑龍經/上篇', '撼龍經/疑龍經/中篇', '撼龍經/疑龍經/下篇', '撼龍經/疑龍經/疑龍十問', '撼龍經/疑龍經/變星篇', '撼龍經/疑龍經/衛龍篇', '撼龍經/葬法倒杖/倒杖十二法', '撼龍經/葬法倒杖/二十四砂葬法', '撼龍經/葬法倒杖/倍八卦'], tags: '巒頭 龍 FM-CORRIDOR' },
+  cuiguanpian: { source: '催官篇', era: 'Song·賴文俊 (賴布衣)', pages: ['催官篇 (四庫全書本)/卷1', '催官篇 (四庫全書本)/卷2'], tags: '理氣 巒頭 二十四山' },
   sanmingtonghui: { source: '三命通會', era: 'Ming·萬民英', pages: ['三命通會/卷一', '三命通會/卷二', '三命通會/卷三', '三命通會/卷四', '三命通會/卷五', '三命通會/卷六', '三命通會/卷七', '三命通會/卷八', '三命通會/卷九'], tags: 'BZ-RANK 命理' },
 };
 
@@ -114,7 +120,7 @@ function clean(wt) {
 function sections(text, fallbackTitle) {
   const out = []; let cur = { title: fallbackTitle, lines: [] };
   for (const line of text.split('\n')) {
-    const h = line.match(/^(={2,})\s*(.+?)\s*\1\s*$/);
+    const h = line.match(/^(=+)\s*(.+?)\s*\1\s*$/);
     if (h) { if (cur.lines.join('').trim()) out.push(cur); cur = { title: h[2].replace(/<[^>]+>/g, '').trim(), lines: [] }; continue; }
     cur.lines.push(line);
   }
@@ -124,7 +130,7 @@ function sections(text, fallbackTitle) {
 
 // Split a section's text into chunks of roughly <= 360 characters on paragraph / sentence boundaries.
 function chunk(text, max = 360) {
-  const paras = text.split(/\n\s*\n|\n/).map(p => p.replace(/\s+/g, ' ').trim()).filter(p => p.length >= 6);
+  const paras = text.split(/\n\s*\n|\n/).map(p => p.replace(/\s+/g, ' ').trim()).filter(p => p.length >= 2);
   const chunks = []; let buf = '';
   const push = () => { if (buf.trim()) chunks.push(buf.trim()); buf = ''; };
   for (let p of paras) {
