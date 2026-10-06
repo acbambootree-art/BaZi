@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#f4f3f1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Smart Luopan · Staff</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #f4f3f1; --ink: #1d1d1f; --ink-2: #6e6e73; --ink-3: #a1a1a6;
+    --accent: #b8923a; --accent-ink: #8a6a22; --accent-soft: rgba(184,146,58,0.14);
+    --glass: rgba(255,255,255,0.62); --glass-strong: rgba(255,255,255,0.82); --glass-border: rgba(255,255,255,0.75);
+    --line: rgba(29,29,31,0.08); --shadow: 0 10px 30px rgba(31,27,18,0.08), 0 1px 2px rgba(31,27,18,0.04);
+    --good: #2e9c5d; --warn: #c9850c; --bad: #d64545; --info: #2f7fd1;
+    --ease: cubic-bezier(.2,.8,.2,1); --spring: cubic-bezier(.34,1.4,.64,1);
+  }
+  html { background: var(--bg); }
+  body { color: var(--ink); min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
+    padding: 16px 16px calc(92px + env(safe-area-inset-bottom)); -webkit-font-smoothing: antialiased; position: relative; overflow-x: hidden; }
+  /* jade-and-gold landscape backdrop under a white veil */
+  .bg { position: fixed; inset: -6%; z-index: -1; pointer-events: none; background: url(/luopan-bg.jpg) center 30% / cover no-repeat;
+    animation: drift 40s ease-in-out infinite alternate; }
+  .bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(248,247,244,0.62) 0%, rgba(248,247,244,0.5) 40%, rgba(248,247,244,0.7) 100%); }
+  @keyframes drift { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(-1.5%, -1%, 0) scale(1.05); } }
+  .gold { background: linear-gradient(100deg, #8a6a22 0%, #d9b65a 35%, #f1dc9a 50%, #cfa64a 65%, #8a6a22 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+    background-size: 200% 100%; animation: shimmer 7s ease-in-out infinite; }
+  @keyframes shimmer { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-weight: 700; font-size: 1.45rem; letter-spacing: -0.02em; color: var(--ink); }
+  h1 small { display: block; font-size: 0.8rem; color: var(--ink-2); font-weight: 500; margin-top: 2px; letter-spacing: 0; }
+  h2 { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); margin-bottom: 10px; }
+  h3 { font-weight: 600; letter-spacing: -0.01em; }
+  header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px; }
+  .steps { display: flex; gap: 6px; margin-bottom: 18px; }
+  .steps div { flex: 1; height: 5px; border-radius: 3px; background: rgba(29,29,31,0.08); overflow: hidden; position: relative; }
+  .steps div::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #c9a44a, #e4c874); transform: scaleX(0); transform-origin: left; transition: transform .6s var(--ease); border-radius: 3px; }
+  .steps div.done::after { transform: scaleX(1); }
+  .steps div.cur::after { transform: scaleX(0.5); }
+
+  .card { background: rgba(255,255,255,0.66); -webkit-backdrop-filter: blur(26px) saturate(150%); backdrop-filter: blur(26px) saturate(150%);
+    border: 1px solid rgba(184,146,58,0.28); border-radius: 20px; padding: 20px; margin-bottom: 14px; position: relative;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 0 0 1px rgba(255,255,255,0.45), 0 12px 32px rgba(120,96,40,0.10), 0 1px 2px rgba(31,27,18,0.05);
+    animation: rise .55s var(--ease) both; }
+  .card::before { content: ''; position: absolute; left: 20px; right: 20px; top: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(217,182,90,0.9), transparent); }
+  h2 { color: var(--accent-ink); }
+  h2::after { content: ''; display: block; width: 28px; height: 2px; margin-top: 6px; border-radius: 2px; background: linear-gradient(90deg, #d9b65a, #f1dc9a); }
+  .card:nth-child(2) { animation-delay: .06s } .card:nth-child(3) { animation-delay: .12s } .card:nth-child(4) { animation-delay: .18s }
+  .card:nth-child(5) { animation-delay: .24s } .card:nth-child(6) { animation-delay: .30s } .card:nth-child(n+7) { animation-delay: .36s }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+  .step { animation: fade .4s var(--ease) both; }
+  @keyframes fade { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+
+  label { display: block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2); margin: 12px 0 6px; }
+  input, select, textarea { width: 100%; background: rgba(255,255,255,0.7); border: 1px solid var(--line); color: var(--ink);
+    padding: 12px 13px; border-radius: 12px; font-size: 1rem; font-family: inherit; transition: box-shadow .25s var(--ease), border-color .25s, background .25s; appearance: none; -webkit-appearance: none; }
+  select { background-image: linear-gradient(45deg, transparent 50%, var(--ink-3) 50%), linear-gradient(135deg, var(--ink-3) 50%, transparent 50%);
+    background-position: calc(100% - 18px) 55%, calc(100% - 13px) 55%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 34px; }
+  input:focus, select:focus { outline: none; border-color: rgba(184,146,58,0.5); box-shadow: 0 0 0 4px var(--accent-soft); background: #fff; }
+  input::placeholder { color: var(--ink-3); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  .btn { background: var(--ink); color: #fff; border: none; padding: 13px 20px; border-radius: 14px; font-weight: 600; font-size: 0.95rem;
+    cursor: pointer; letter-spacing: -0.01em; font-family: inherit; transition: transform .25s var(--spring), box-shadow .25s, opacity .2s, background .2s;
+    box-shadow: 0 6px 16px rgba(29,29,31,0.18); }
+  .btn:hover { transform: translateY(-1px); } .btn:active { transform: scale(.97); }
+  .btn.ghost { background: rgba(255,255,255,0.7); color: var(--ink); border: 1px solid var(--line); box-shadow: none; }
+  .btn.ghost:hover { background: #fff; }
+  .btn.sm { padding: 9px 13px; font-size: 0.82rem; border-radius: 11px; }
+  .btn.danger { background: rgba(214,69,69,0.08); border: 1px solid rgba(214,69,69,0.2); color: var(--bad); box-shadow: none; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; border-top: 1px solid rgba(184,146,58,0.25) !important; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); display: flex; gap: 10px; justify-content: space-between;
+    background: rgba(244,243,241,0.7); -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%); border-top: 1px solid rgba(255,255,255,0.7); }
+  .nav .btn { flex: 1; }
+  .nav .btn:not(.ghost) { background: linear-gradient(135deg, #cfa64a 0%, #e9cd7c 45%, #b8923a 100%); color: #2a1f08; text-shadow: 0 1px 0 rgba(255,255,255,0.35); box-shadow: 0 8px 20px rgba(184,146,58,0.35); }
+  .err { color: var(--bad); font-size: 0.85rem; margin-top: 10px; min-height: 18px; }
+  .hint { color: var(--ink-2); font-size: 0.86rem; line-height: 1.5; }
+  .gate { max-width: 380px; margin: 14vh auto 0; text-align: center; }
+  .gate .btn { width: 100%; margin-top: 10px; }
+
+  .person, .room { border: 1px solid rgba(184,146,58,0.18); border-radius: 16px; padding: 12px; margin-bottom: 10px; background: rgba(255,255,255,0.45); animation: rise .4s var(--ease) both; }
+  .person-top, .room-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { font-size: 0.8rem; font-weight: 500; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,0.6); color: var(--ink-2);
+    cursor: pointer; user-select: none; transition: transform .3s var(--spring), background .2s, color .2s, border-color .2s; }
+  .chip:active { transform: scale(.94); }
+  .chip.on { border-color: transparent; color: #fff; background: var(--ink); box-shadow: 0 4px 12px rgba(29,29,31,0.18); }
+
+  /* compass */
+  .dial { position: relative; width: 250px; height: 250px; margin: 14px auto 6px; border-radius: 50%;
+    background: radial-gradient(circle at 50% 35%, #ffffff, #f3f0e9 70%, #e9e4d9); box-shadow: inset 0 2px 8px rgba(255,255,255,.9), inset 0 -10px 24px rgba(120,96,40,.08), 0 14px 30px rgba(120,96,40,.14), 0 0 0 1px rgba(184,146,58,0.3); }
+  .dial::after { content: ''; position: absolute; inset: 7px; border-radius: 50%; border: 1px solid rgba(184,146,58,0.35); pointer-events: none; }
+  .dial canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .heading { text-align: center; font-variant-numeric: tabular-nums; font-size: 2.8rem; font-weight: 700; letter-spacing: -0.03em; color: var(--ink); line-height: 1; margin-top: 10px; }
+  .heading small { display: block; font-size: 1rem; font-weight: 500; color: var(--ink-2); margin-top: 8px; letter-spacing: 0; }
+  .status { text-align: center; font-size: 0.84rem; font-weight: 500; margin-top: 8px; min-height: 18px; color: var(--ink-2); transition: color .3s; }
+  .status.ok { color: var(--good); } .status.warn { color: var(--warn); } .status.bad { color: var(--bad); }
+  .readings { margin-top: 12px; }
+  .reading { display: flex; justify-content: space-between; align-items: center; padding: 10px 2px; border-bottom: 1px solid var(--line); font-size: 0.9rem; animation: rise .35s var(--ease) both; }
+  .reading b { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; }
+  .badge { font-size: 0.68rem; font-weight: 700; padding: 4px 9px; border-radius: 999px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .b-good { background: rgba(46,156,93,0.12); color: var(--good); }
+  .b-fair, .b-warn { background: rgba(201,133,12,0.13); color: var(--warn); }
+  .b-poor, .b-bad { background: rgba(214,69,69,0.12); color: var(--bad); }
+  .b-info { background: rgba(47,127,209,0.12); color: var(--info); }
+
+  /* plan */
+  .plan { position: relative; width: 100%; aspect-ratio: 1; background: #fbfaf8; border: 1px solid rgba(184,146,58,0.3); border-radius: 16px; overflow: hidden; touch-action: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 1px rgba(255,255,255,.5); }
+  .plan canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .plan-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; align-items: center; }
+  .plan-tools .hint { flex: 1 1 100%; }
+
+  /* report */
+  .rv { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .rv h3 { font-size: 1.05rem; }
+  .rv .sec { font-size: 0.8rem; color: var(--ink-2); font-weight: 500; }
+  .warn-list li, .cure-list li, .note-list li { font-size: 0.9rem; line-height: 1.55; margin: 7px 0 7px 18px; color: var(--ink); }
+  .warn-list li.hard::marker { color: var(--bad); } .warn-list li.medium::marker { color: var(--warn); } .warn-list li.low::marker { color: var(--ink-3); }
+  .cure-list li { color: var(--ink-2); }
+  .who { font-size: 0.9rem; margin-top: 10px; padding: 10px 12px; background: rgba(255,255,255,0.6); border: 1px solid rgba(184,146,58,0.18); border-radius: 12px; line-height: 1.55; }
+  .who b { color: var(--accent-ink); }
+  .why { font-size: 0.7rem; color: var(--ink-3); font-family: ui-monospace, SFMono-Regular, monospace; margin-top: 10px; }
+  .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 14px; font-size: 0.86rem; color: var(--ink-2); }
+  .kv b { color: var(--ink); font-weight: 600; }
+  .list-item { display: flex; justify-content: space-between; padding: 12px 2px; border-bottom: 1px solid var(--line); font-size: 0.9rem; cursor: pointer; transition: background .2s; border-radius: 8px; }
+  .list-item:hover { background: rgba(255,255,255,0.6); }
+  .list-item b { color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+  .hidden { display: none !important; }
+  @media print { .nav, header .btn, .steps, .bg { display: none; } body { background: #fff; } .card { box-shadow: none; border-color: #ddd; background: #fff; animation: none; } }
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<div class="wrap">
+
+<div id="gate" class="gate card hidden">
+  <h2><span class="gold">Smart Luopan</span> · Staff</h2>
+  <input id="gateKey" type="password" placeholder="Staff key" autocomplete="current-password">
+  <button class="btn" id="gateBtn">Enter</button>
+  <div class="err" id="gateErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <header>
+    <h1><span class="gold">Smart Luopan</span> <small id="stepTitle">1 · Client &amp; house</small></h1>
+    <button class="btn ghost sm" id="btnList">Saved</button>
+  </header>
+  <div class="steps" id="steps"></div>
+
+  <!-- STEP 1: client + house + people -->
+  <section id="s1" class="step">
+    <div class="card">
+      <h2>Client &amp; house</h2>
+      <label>Client name</label><input id="clientName" placeholder="e.g. Mr Tan">
+      <label>Address</label><input id="address" placeholder="Block, street, unit">
+      <div class="row3">
+        <div><label>Type</label><select id="houseType"><option>HDB</option><option>Condo</option><option>Landed</option><option>Office</option><option>Shop</option></select></div>
+        <div><label>TOP year</label><input id="topYear" type="number" inputmode="numeric" placeholder="2010"></div>
+        <div><label>Major reno year</label><input id="renoYear" type="number" inputmode="numeric" placeholder="optional"></div>
+      </div>
+      <div class="hint" id="periodHint" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <h2>Household</h2>
+      <div id="people"></div>
+      <button class="btn ghost sm" id="addPerson">+ Add person</button>
+      <div class="hint" style="margin-top:8px">Date of birth only. The Life Gua uses the solar (立春) year automatically.</div>
+    </div>
+  </section>
+
+  <!-- STEP 2: compass -->
+  <section id="s2" class="step hidden">
+    <div class="card">
+      <h2>Facing reading at the main door</h2>
+      <p class="hint">Stand inside, back to the door, 1–2 m away, phone flat at waist height. Remove magnetic cases, watches and keys. Take at least two readings: one inside, one on the threshold. They must agree within 3°.</p>
+      <div class="dial"><canvas id="dial" width="480" height="480"></canvas></div>
+      <div class="heading" id="hdg">—<small id="hdgLabel">compass off</small></div>
+      <div class="status" id="cstatus"></div>
+      <div style="display:flex; gap:8px; margin-top:12px">
+        <button class="btn ghost" id="btnCompass" style="flex:1">Start compass</button>
+        <button class="btn" id="btnTake" style="flex:1" disabled>Take reading</button>
+      </div>
+      <div class="readings" id="readings"></div>
+      <label>Or type the brass luopan bearing</label>
+      <div style="display:flex; gap:8px"><input id="manualBearing" type="number" inputmode="decimal" step="0.5" min="0" max="360" placeholder="e.g. 182.5"><button class="btn ghost sm" id="btnManual">Add</button></div>
+      <div class="hint" id="facingSummary" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <!-- STEP 3: floor plan + rooms -->
+  <section id="s3" class="step hidden">
+    <div class="card">
+      <h2>Floor plan</h2>
+      <div class="plan-tools">
+        <label class="btn ghost sm" style="margin:0; text-transform:none; letter-spacing:0; font-size:0.8rem">Upload plan <input id="planFile" type="file" accept="image/*" class="hidden"></label>
+        <button class="btn ghost sm" id="planBlank">No plan: use blank grid</button>
+        <button class="btn ghost sm" id="planReset">Reset marks</button>
+        <div class="hint" id="planHint">Upload the HDB/condo floor plan photo, then tap the <b>centre</b> of the unit, then the <b>main door</b>.</div>
+      </div>
+      <div class="plan"><canvas id="plan" width="900" height="900"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Rooms</h2>
+      <div class="hint">Add a room, then tap its location on the plan to set its sector. Tick any form problems you see.</div>
+      <div id="rooms"></div>
+      <button class="btn ghost sm" id="addRoom">+ Add room</button>
+    </div>
+  </section>
+
+  <!-- STEP 4: report -->
+  <section id="s4" class="step hidden">
+    <div id="report"></div>
+  </section>
+
+  <!-- Saved list -->
+  <section id="sList" class="step hidden">
+    <div class="card"><h2>Saved consults</h2><div id="consultList" class="hint">Loading…</div></div>
+  </section>
+</div>
+</div>
+
+<div class="nav" id="nav">
+  <button class="btn ghost" id="btnBack">Back</button>
+  <button class="btn" id="btnNext">Next</button>
+</div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2, 8);
+const DIRS = ['N','NE','E','SE','S','SW','W','NW'];
+const MOUNTAINS = ['子','癸','丑','艮','寅','甲','卯','乙','辰','巽','巳','丙','午','丁','未','坤','申','庚','酉','辛','戌','乾','亥','壬'];
+const norm = d => ((d % 360) + 360) % 360;
+const mountainOf = b => { const mi = Math.floor(norm(b + 7.5) / 15); const di = Math.floor(norm(b + 22.5) / 45); return { m: MOUNTAINS[mi], dir: DIRS[di], sub: (mi + 1) % 3 + 1, edge: 7.5 - Math.abs(((b - mi * 15 + 180) % 360 + 360) % 360 - 180) }; };
+
+// ---------- state ----------
+const S = {
+  step: 1, key: localStorage.getItem('bz_admin_key') || '',
+  people: [], rooms: [], readings: [],
+  plan: { img: null, centre: null, door: null, rotation: 0 },
+  report: null, reference: null,
+};
+try { Object.assign(S, JSON.parse(sessionStorage.getItem('lp_state') || '{}'), { plan: { ...S.plan, ...(JSON.parse(sessionStorage.getItem('lp_state') || '{}').plan || {}), img: null } }); } catch {}
+function persist() { try { const { plan, ...rest } = S; sessionStorage.setItem('lp_state', JSON.stringify({ ...rest, plan: { ...plan, img: null } })); } catch {} }
+
+async function api(path, opts = {}) {
+  opts.headers = Object.assign({ 'Content-Type': 'application/json', 'x-admin-key': S.key }, opts.headers || {});
+  const res = await fetch(path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) { localStorage.removeItem('bz_admin_key'); S.key = ''; showGate('Wrong key.'); throw new Error('unauthorized'); }
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+// ---------- gate ----------
+function showGate(msg) { $('#gate').classList.remove('hidden'); $('#app').classList.add('hidden'); $('#nav').classList.add('hidden'); $('#gateErr').textContent = msg || ''; }
+$('#gateBtn').onclick = async () => {
+  S.key = $('#gateKey').value.trim();
+  try { await api('/api/luopan/consults'); localStorage.setItem('bz_admin_key', S.key); boot(); }
+  catch (e) { if (e.message !== 'unauthorized') $('#gateErr').textContent = e.message; }
+};
+$('#gateKey').addEventListener('keydown', e => { if (e.key === 'Enter') $('#gateBtn').click(); });
+
+function boot() {
+  $('#gate').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#nav').classList.remove('hidden');
+  if (!S.people.length) S.people.push({ id: uid(), name: '', birthYear: '', birthMonth: '', birthDay: '', gender: 'male' });
+  renderPeople(); renderRooms(); renderReadings(); drawPlan(); go(S.step || 1);
+}
+
+// ---------- steps ----------
+const TITLES = { 1: '1 · Client & house', 2: '2 · Facing reading', 3: '3 · Floor plan & rooms', 4: '4 · Report', list: 'Saved consults' };
+function go(n) {
+  S.step = n; persist();
+  document.querySelectorAll('.step').forEach(s => s.classList.add('hidden'));
+  const sec = $(n === 'list' ? '#sList' : '#s' + n); sec.classList.remove('hidden'); sec.style.animation = 'none'; void sec.offsetWidth; sec.style.animation = '';
+  $('#stepTitle').textContent = TITLES[n];
+  $('#steps').innerHTML = [1,2,3,4].map(i => `<div class="${i < n ? 'done' : i === n ? 'cur' : ''}"></div>`).join('');
+  $('#btnBack').disabled = n === 1;
+  $('#btnNext').textContent = n === 3 ? 'Analyse' : n === 4 ? 'Save consult' : 'Next';
+  $('#btnNext').classList.toggle('hidden', n === 'list');
+  if (n === 4 && !S.report) runAnalysis();
+  if (n === 'list') loadList();
+  window.scrollTo(0, 0);
+}
+$('#btnBack').onclick = () => go(S.step === 'list' ? 1 : Math.max(1, S.step - 1));
+$('#btnNext').onclick = async () => {
+  if (S.step === 1) { const e = validateStep1(); if (e) return alert(e); go(2); }
+  else if (S.step === 2) { if (!facing()) return alert('Take or type a facing reading first.'); go(3); }
+  else if (S.step === 3) { if (!S.rooms.length) return alert('Add at least one room.'); if (S.rooms.some(r => !r.sector)) return alert('Every room needs a sector: tap its location on the plan.'); S.report = null; go(4); }
+  else if (S.step === 4) saveConsult();
+};
+$('#btnList').onclick = () => go('list');
+
+// ---------- step 1 ----------
+['clientName','address','houseType','topYear','renoYear'].forEach(id => { const el = $('#' + id); el.value = S[id] || ''; el.oninput = () => { S[id] = el.value; periodHint(); persist(); }; });
+function periodHint() {
+  const y = parseInt(S.renoYear || S.topYear, 10);
+  if (!y) { $('#periodHint').textContent = ''; return; }
+  const period = y >= 2024 ? 9 : y >= 2004 ? 8 : y >= 1984 ? 7 : y >= 1964 ? 6 : 5;
+  $('#periodHint').textContent = `Period ${period} house (${S.renoYear ? 'major renovation' : 'TOP'} ${y}). Flying Star chart arrives in Phase 2.`;
+}
+periodHint();
+function renderPeople() {
+  $('#people').innerHTML = S.people.map((p, i) => `
+    <div class="person" data-i="${i}">
+      <div class="person-top"><input data-f="name" placeholder="Name" value="${esc(p.name)}" style="flex:1"><button class="btn danger sm" data-del="${i}">✕</button></div>
+      <div class="row3" style="margin-top:8px">
+        <input data-f="birthYear" type="number" inputmode="numeric" placeholder="Year" value="${p.birthYear}">
+        <input data-f="birthMonth" type="number" inputmode="numeric" placeholder="Month" value="${p.birthMonth}">
+        <input data-f="birthDay" type="number" inputmode="numeric" placeholder="Day" value="${p.birthDay}">
+      </div>
+      <select data-f="gender" style="margin-top:8px"><option value="male" ${p.gender==='male'?'selected':''}>Male</option><option value="female" ${p.gender==='female'?'selected':''}>Female</option></select>
+    </div>`).join('');
+  $('#people').querySelectorAll('[data-f]').forEach(el => el.oninput = () => { S.people[+el.closest('.person').dataset.i][el.dataset.f] = el.value; persist(); });
+  $('#people').querySelectorAll('[data-del]').forEach(b => b.onclick = () => { S.people.splice(+b.dataset.del, 1); S.rooms.forEach(r => r.occupants = r.occupants.filter(id => S.people.some(p => p.id === id))); renderPeople(); persist(); });
+}
+$('#addPerson').onclick = () => { S.people.push({ id: uid(), name: '', birthYear: '', birthMonth: '', birthDay: '', gender: 'female' }); renderPeople(); };
+function validateStep1() {
+  if (!S.people.length) return 'Add at least one person.';
+  for (const p of S.people) {
+    if (!p.name) return 'Every person needs a name.';
+    const y = +p.birthYear, m = +p.birthMonth, d = +p.birthDay;
+    if (!(y >= 1900 && y <= 2099) || !(m >= 1 && m <= 12) || !(d >= 1 && d <= 31)) return `Check the date of birth for ${p.name}.`;
+  }
+  return null;
+}
+
+// ---------- step 2: compass ----------
+const C = { on: false, heading: null, shown: 0, accuracy: null, level: true, samples: null };
+(function spin() { if (C.heading != null) { let d = C.heading - C.shown; d = ((d + 540) % 360) - 180; if (Math.abs(d) > 0.05) { C.shown = norm(C.shown + d * 0.18); drawDial(); } } requestAnimationFrame(spin); })();
+const dial = $('#dial').getContext('2d');
+function drawDial() {
+  const w = 480, c = w / 2, r = c - 10;
+  dial.clearRect(0, 0, w, w);
+  dial.save(); dial.translate(c, c);
+  dial.rotate(-C.shown * Math.PI / 180);
+  for (let i = 0; i < 24; i++) {
+    const a = i * 15 * Math.PI / 180;
+    dial.save(); dial.rotate(a);
+    dial.strokeStyle = 'rgba(29,29,31,0.25)'; dial.lineWidth = 2;
+    dial.beginPath(); dial.moveTo(0, -r); dial.lineTo(0, -r + 14); dial.stroke();
+    dial.fillStyle = i % 3 === 0 ? '#8a6a22' : '#6e6e73'; dial.font = (i % 3 === 0 ? 'bold 26px' : '20px') + ' serif'; dial.textAlign = 'center';
+    dial.fillText(MOUNTAINS[i], 0, -r + 42);
+    dial.fillStyle = '#a1a1a6'; dial.font = '600 14px -apple-system, sans-serif';
+    if (i % 3 === 0) dial.fillText(DIRS[i / 3], 0, -r + 64);
+    dial.restore();
+  }
+  dial.restore();
+  // fixed pointer
+  dial.fillStyle = '#d64545'; dial.beginPath(); dial.moveTo(c, 4); dial.lineTo(c - 10, 28); dial.lineTo(c + 10, 28); dial.fill();
+  dial.fillStyle = C.level ? '#2e9c5d' : '#d64545'; dial.beginPath(); dial.arc(c, c, 8, 0, Math.PI * 2); dial.fill();
+}
+drawDial();
+function onOrient(e) {
+  let h = null;
+  if (typeof e.webkitCompassHeading === 'number') { h = e.webkitCompassHeading; C.accuracy = e.webkitCompassAccuracy; }
+  else if (e.absolute && typeof e.alpha === 'number') { h = norm(360 - e.alpha); C.accuracy = null; }
+  if (h == null) return;
+  const so = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+  h = norm(h + so);
+  C.heading = h; C.level = Math.abs(e.beta || 0) < 20 && Math.abs(e.gamma || 0) < 20;
+  if (C.samples) C.samples.push(h);
+  const m = mountainOf(h);
+  $('#hdg').firstChild.nodeValue = h.toFixed(1) + '°';
+  $('#hdgLabel').textContent = `${m.m} · ${m.dir}${m.sub}`;
+  let st = '', cls = 'ok';
+  if (!C.level) { st = 'Hold the phone flat'; cls = 'bad'; }
+  else if (C.accuracy != null && (C.accuracy < 0 || C.accuracy > 15)) { st = `Compass needs calibration (±${C.accuracy < 0 ? '?' : Math.round(C.accuracy)}°): wave the phone in a figure 8`; cls = 'warn'; }
+  else if (C.accuracy != null) st = `Sensor accuracy ±${Math.round(C.accuracy)}°`;
+  else st = 'Compass live';
+  $('#cstatus').textContent = st; $('#cstatus').className = 'status ' + cls;
+}
+$('#btnCompass').onclick = async () => {
+  if (C.on) return;
+  try {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      const p = await DeviceOrientationEvent.requestPermission();
+      if (p !== 'granted') throw new Error('Permission denied. Reload the page and allow Motion & Orientation.');
+    }
+    const ev = 'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
+    window.addEventListener(ev, onOrient, true);
+    C.on = true; $('#btnCompass').textContent = 'Compass on'; $('#btnTake').disabled = false;
+    $('#cstatus').textContent = 'Waiting for sensor… (needs HTTPS and a phone)'; $('#cstatus').className = 'status';
+  } catch (e) { $('#cstatus').textContent = e.message; $('#cstatus').className = 'status bad'; }
+};
+$('#btnTake').onclick = () => {
+  if (C.heading == null) { $('#cstatus').textContent = 'No heading yet. On desktop, type the bearing instead.'; $('#cstatus').className = 'status warn'; return; }
+  C.samples = []; $('#btnTake').disabled = true; let t = 4;
+  $('#btnTake').textContent = `Hold still… ${t}`;
+  const iv = setInterval(() => {
+    t--; $('#btnTake').textContent = `Hold still… ${t}`;
+    if (t <= 0) {
+      clearInterval(iv);
+      const s = C.samples.slice(); C.samples = null;
+      $('#btnTake').textContent = 'Take reading'; $('#btnTake').disabled = false;
+      if (s.length < 5) { $('#cstatus').textContent = 'Too few samples, try again.'; $('#cstatus').className = 'status bad'; return; }
+      // circular median via unwrapping around the first sample
+      const ref = s[0]; const un = s.map(v => { let d = v - ref; if (d > 180) d -= 360; if (d < -180) d += 360; return d; }).sort((a, b) => a - b);
+      const med = norm(ref + un[Math.floor(un.length / 2)]);
+      const spread = Math.round((un[un.length - 1] - un[0]) * 10) / 10;
+      addReading({ bearing: Math.round(med * 10) / 10, spread, accuracy: C.accuracy, source: 'phone', n: s.length });
+    }
+  }, 1000);
+};
+$('#btnManual').onclick = () => { const v = parseFloat($('#manualBearing').value); if (!(v >= 0 && v <= 360)) return; addReading({ bearing: norm(v), spread: 0, accuracy: null, source: 'manual' }); $('#manualBearing').value = ''; };
+function addReading(r) { r.id = uid(); r.at = new Date().toISOString(); S.readings.push(r); renderReadings(); persist(); }
+function facing() {
+  const rs = S.readings; if (!rs.length) return null;
+  const last = rs[rs.length - 1];
+  const prev = rs.length > 1 ? rs[rs.length - 2] : null;
+  const diff = prev ? Math.abs(((last.bearing - prev.bearing + 540) % 360) - 180) : null;
+  const m = mountainOf(last.bearing);
+  let confidence = 'high';
+  if (last.source === 'phone' && (last.spread > 4 || (last.accuracy != null && last.accuracy > 15))) confidence = 'low';
+  else if (!prev || diff > 3) confidence = 'medium';
+  if (m.edge < 3 && confidence === 'high') confidence = 'medium';
+  return { bearing: last.bearing, spread: last.spread, accuracy: last.accuracy, source: last.source, agree: diff, confidence, mountain: m };
+}
+function renderReadings() {
+  $('#readings').innerHTML = S.readings.map(r => { const m = mountainOf(r.bearing); const bad = r.spread > 4;
+    return `<div class="reading"><span>${r.source === 'manual' ? 'Luopan' : 'Phone'} · ${m.m} ${m.dir}${m.sub}${r.source === 'phone' ? ` · spread ${r.spread}°` : ''}</span><span><b>${r.bearing.toFixed(1)}°</b> <span class="badge ${bad ? 'b-bad' : 'b-good'}">${bad ? 'interference' : 'ok'}</span> <button class="btn danger sm" data-rm="${r.id}">✕</button></span></div>`; }).join('');
+  $('#readings').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { S.readings = S.readings.filter(r => r.id !== b.dataset.rm); renderReadings(); persist(); });
+  const f = facing();
+  $('#facingSummary').innerHTML = f ? `Facing <b>${f.bearing.toFixed(1)}° ${f.mountain.m} (${f.mountain.dir}${f.mountain.sub})</b> · sitting ${mountainOf(f.bearing + 180).m} · confidence <span class="badge b-${f.confidence === 'high' ? 'good' : f.confidence === 'medium' ? 'warn' : 'bad'}">${f.confidence}</span>${f.agree != null ? ` · last two readings differ by ${f.agree.toFixed(1)}°` : ' · take a second reading'}${f.mountain.edge < 3 ? ` · <span style="color:var(--warn)">only ${f.mountain.edge.toFixed(1)}° from a mountain boundary, re-measure</span>` : ''}` : '';
+  drawPlan();
+}
+
+// ---------- step 3: plan ----------
+const pc = $('#plan'), px = pc.getContext('2d'); const PW = 900;
+let planImg = null;
+$('#planFile').onchange = e => { const f = e.target.files[0]; if (!f) return; const img = new Image(); img.onload = () => {
+  const c = document.createElement('canvas'); const s = Math.min(1, 1200 / Math.max(img.width, img.height)); c.width = img.width * s; c.height = img.height * s;
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); S.plan.dataUrl = c.toDataURL('image/jpeg', 0.8); loadPlanImg(); }; img.src = URL.createObjectURL(f); };
+function loadPlanImg() { if (!S.plan.dataUrl) { planImg = null; drawPlan(); return; } const img = new Image(); img.onload = () => { planImg = img; drawPlan(); }; img.src = S.plan.dataUrl; }
+$('#planBlank').onclick = () => { S.plan.dataUrl = null; planImg = null; S.plan.centre = { x: 0.5, y: 0.5 }; S.plan.door = null; drawPlan(); persist(); };
+$('#planReset').onclick = () => { S.plan.centre = null; S.plan.door = null; S.rooms.forEach(r => { r.sector = null; r.pt = null; }); renderRooms(); drawPlan(); persist(); };
+let pendingRoom = null;
+pc.addEventListener('pointerdown', e => {
+  const b = pc.getBoundingClientRect(); const x = (e.clientX - b.left) / b.width, y = (e.clientY - b.top) / b.height;
+  if (!S.plan.centre) S.plan.centre = { x, y };
+  else if (!S.plan.door) S.plan.door = { x, y };
+  else if (pendingRoom) { const r = S.rooms.find(r => r.id === pendingRoom); if (r) { r.pt = { x, y }; r.sector = sectorAt(x, y); } pendingRoom = null; renderRooms(); }
+  else { // nearest room re-tap: move it
+    let best = null, bd = 0.04; S.rooms.forEach(r => { if (r.pt) { const d = Math.hypot(r.pt.x - x, r.pt.y - y); if (d < bd) { bd = d; best = r; } } });
+    if (best) pendingRoom = best.id;
+  }
+  drawPlan(); persist();
+});
+function planAngle(x, y) { const c = S.plan.centre; return norm(Math.atan2(x - c.x, -(y - c.y)) * 180 / Math.PI); } // 0 = up, clockwise
+function rotation() { const f = facing(); if (!f || !S.plan.centre || !S.plan.door) return 0; return norm(f.bearing - planAngle(S.plan.door.x, S.plan.door.y)); }
+function sectorAt(x, y) { const c = S.plan.centre; if (!c) return null; if (Math.hypot(x - c.x, y - c.y) < 0.08) return 'C'; return DIRS[Math.floor(norm(planAngle(x, y) + rotation() + 22.5) / 45)]; }
+function drawPlan() {
+  px.clearRect(0, 0, PW, PW); px.fillStyle = '#fbfaf8'; px.fillRect(0, 0, PW, PW);
+  if (planImg) { const s = Math.min(PW / planImg.width, PW / planImg.height); const w = planImg.width * s, h = planImg.height * s; px.globalAlpha = 0.85; px.drawImage(planImg, (PW - w) / 2, (PW - h) / 2, w, h); px.globalAlpha = 1; }
+  else { px.strokeStyle = 'rgba(29,29,31,0.06)'; for (let i = 1; i < 6; i++) { px.beginPath(); px.moveTo(i * PW / 6, 0); px.lineTo(i * PW / 6, PW); px.moveTo(0, i * PW / 6); px.lineTo(PW, i * PW / 6); px.stroke(); } }
+  const c = S.plan.centre; const hint = $('#planHint');
+  if (!c) { hint.innerHTML = (planImg ? '' : 'Upload the floor plan or use the blank grid. ') + 'Tap the <b>centre</b> of the unit.'; return; }
+  const cx = c.x * PW, cy = c.y * PW;
+  if (S.plan.door && facing()) {
+    const rot = rotation(); const R = PW;
+    for (let i = 0; i < 8; i++) {
+      const a0 = (i * 45 - 22.5 - rot) * Math.PI / 180, a1 = a0 + 45 * Math.PI / 180;
+      px.beginPath(); px.moveTo(cx, cy); px.arc(cx, cy, R, a0 - Math.PI / 2, a1 - Math.PI / 2); px.closePath();
+      px.fillStyle = i % 2 ? 'rgba(184,146,58,0.09)' : 'rgba(47,127,209,0.06)'; px.fill(); px.strokeStyle = 'rgba(29,29,31,0.12)'; px.stroke();
+      const am = (i * 45 - rot) * Math.PI / 180; const lx = cx + Math.sin(am) * PW * 0.42, ly = cy - Math.cos(am) * PW * 0.42;
+      px.fillStyle = '#8a6a22'; px.font = '700 28px -apple-system, sans-serif'; px.textAlign = 'center'; px.fillText(DIRS[i], lx, ly);
+    }
+    hint.innerHTML = 'Sectors set from the facing reading. Add rooms below and tap each one\'s location.';
+  } else if (!S.plan.door) hint.innerHTML = 'Now tap the <b>main door</b>.';
+  else hint.innerHTML = 'Take a facing reading in step 2 to orient the sectors.';
+  px.fillStyle = '#d64545'; px.beginPath(); px.arc(cx, cy, 10, 0, Math.PI * 2); px.fill();
+  if (S.plan.door) { const d = S.plan.door; px.fillStyle = '#2e9c5d'; px.beginPath(); px.arc(d.x * PW, d.y * PW, 12, 0, Math.PI * 2); px.fill(); px.fillStyle = '#1d1d1f'; px.font = '700 16px -apple-system, sans-serif'; px.textAlign = 'center'; px.fillText('DOOR', d.x * PW, d.y * PW - 18); }
+  S.rooms.forEach(r => { if (!r.pt) return; px.fillStyle = r.id === pendingRoom ? '#c9850c' : '#1d1d1f'; px.beginPath(); px.arc(r.pt.x * PW, r.pt.y * PW, 9, 0, Math.PI * 2); px.fill(); px.font = '600 18px -apple-system, sans-serif'; px.textAlign = 'center'; px.fillText(r.name || 'room', r.pt.x * PW, r.pt.y * PW + 28); });
+}
+const USES = ['bedroom','study','living','kitchen','dining','toilet','store','balcony','main door'];
+const FORM = { beamOverBed: 'Beam over bed/desk', mirrorFacesBed: 'Mirror faces bed', bedInLineWithDoor: 'Bed in line with door', doorFacesToilet: 'Door faces toilet', stoveFacesSink: 'Stove faces sink/fridge', sharpCorner: 'Sharp corner at bed/desk', longCorridor: 'Door to long corridor/window' };
+function renderRooms() {
+  $('#rooms').innerHTML = S.rooms.map(r => `
+    <div class="room" data-id="${r.id}">
+      <div class="room-top"><input data-f="name" placeholder="Room name" value="${esc(r.name)}" style="flex:1"><select data-f="use">${USES.map(u => `<option ${r.use===u?'selected':''}>${u}</option>`).join('')}</select><button class="btn danger sm" data-del>✕</button></div>
+      <div style="display:flex; gap:8px; align-items:center; margin-top:8px"><button class="btn ghost sm" data-locate>${r.sector ? 'Move on plan' : 'Tap location on plan'}</button><span class="hint">${r.sector ? 'Sector: <b style="color:var(--accent)">' + (r.sector === 'C' ? 'Centre' : r.sector) + '</b>' : 'no sector yet'}</span></div>
+      <div class="chips">${S.people.map(p => `<span class="chip ${r.occupants.includes(p.id)?'on':''}" data-occ="${p.id}">${esc(p.name || '?')}</span>`).join('')}</div>
+      <div class="chips">${Object.entries(FORM).map(([k, v]) => `<span class="chip ${r.form[k]?'on':''}" data-form="${k}">${v}</span>`).join('')}</div>
+    </div>`).join('');
+  $('#rooms').querySelectorAll('.room').forEach(el => {
+    const r = S.rooms.find(r => r.id === el.dataset.id);
+    el.querySelectorAll('[data-f]').forEach(i => i.oninput = () => { r[i.dataset.f] = i.value; drawPlan(); persist(); });
+    el.querySelector('[data-del]').onclick = () => { S.rooms = S.rooms.filter(x => x !== r); renderRooms(); drawPlan(); persist(); };
+    el.querySelector('[data-locate]').onclick = () => { pendingRoom = r.id; $('#planHint').innerHTML = `Tap where <b>${esc(r.name || 'this room')}</b> is on the plan.`; drawPlan(); window.scrollTo({ top: pc.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' }); };
+    el.querySelectorAll('[data-occ]').forEach(ch => ch.onclick = () => { const id = ch.dataset.occ; r.occupants = r.occupants.includes(id) ? r.occupants.filter(x => x !== id) : [...r.occupants, id]; renderRooms(); persist(); });
+    el.querySelectorAll('[data-form]').forEach(ch => ch.onclick = () => { r.form[ch.dataset.form] = !r.form[ch.dataset.form]; renderRooms(); persist(); });
+  });
+}
+$('#addRoom').onclick = () => { const r = { id: uid(), name: '', use: S.rooms.length ? 'bedroom' : 'bedroom', sector: null, pt: null, occupants: [], form: {} }; S.rooms.push(r); renderRooms(); pendingRoom = r.id; $('#planHint').innerHTML = 'Tap where the new room is on the plan.'; drawPlan(); };
+
+// ---------- step 4: report ----------
+function payload() {
+  const f = facing();
+  return {
+    clientName: S.clientName, address: S.address, houseType: S.houseType, topYear: +S.topYear || null, renoYear: +S.renoYear || null,
+    facing: { bearing: f.bearing, spread: f.spread, accuracy: f.accuracy, source: f.source, confidence: f.confidence, readings: S.readings },
+    people: S.people.map(p => ({ id: p.id, name: p.name, birthYear: +p.birthYear, birthMonth: +p.birthMonth, birthDay: +p.birthDay, gender: p.gender })),
+    rooms: S.rooms.map(r => ({ id: r.id, name: r.name, use: r.use, sector: r.sector, occupants: r.occupants, form: r.form, pt: r.pt })),
+    plan: { centre: S.plan.centre, door: S.plan.door, dataUrl: S.plan.dataUrl || null },
+  };
+}
+async function runAnalysis() {
+  $('#report').innerHTML = '<div class="card hint">Analysing…</div>';
+  try { const d = await api('/api/luopan/analyse', { method: 'POST', body: JSON.stringify(payload()) }); S.report = d.report; S.reference = null; renderReport(); }
+  catch (e) { $('#report').innerHTML = `<div class="card err">${esc(e.message)}</div>`; }
+}
+async function saveConsult() {
+  if (!S.report) return;
+  if (S.reference) return alert('Already saved as ' + S.reference);
+  $('#btnNext').disabled = true;
+  try { const d = await api('/api/luopan/consults', { method: 'POST', body: JSON.stringify(payload()) }); S.reference = d.reference; renderReport(); alert('Saved as ' + d.reference); }
+  catch (e) { alert(e.message); } finally { $('#btnNext').disabled = false; }
+}
+function renderReport() {
+  const r = S.report; if (!r) return;
+  const a = r.annual;
+  const sev = s => s === 'hard' ? 'hard' : s === 'medium' ? 'medium' : 'low';
+  $('#report').innerHTML = `
+    <div class="card">
+      <div class="rv"><h3>${esc(S.clientName || 'Client')}</h3>${S.reference ? `<span class="badge b-info">${S.reference}</span>` : '<span class="badge b-warn">unsaved</span>'}</div>
+      <div class="kv">
+        <div>Facing <b>${r.facing.bearing}° ${r.facing.mountain} (${r.facing.label})</b></div>
+        <div>Sitting <b>${r.sitting.mountain} (${r.sitting.label})</b></div>
+        <div>House Gua <b>${r.houseGua.name} · ${r.houseGua.group} group</b></div>
+        <div>Year <b>${r.year} ${a.animal} (${a.yearBranch})</b></div>
+        <div>5 Yellow <b>${a.fiveYellow}</b> · Tai Sui <b>${a.taiSui.direction} ${a.taiSui.mountain}</b></div>
+        <div>3 Killings <b>${a.sanSha.direction}</b> (do not face ${a.sanSha.doNotFace})</div>
+      </div>
+      ${r.notes.length ? `<ul class="note-list" style="margin-top:10px">${r.notes.map(n => `<li>${esc(n.text)}</li>`).join('')}</ul>` : ''}
+    </div>
+    <div class="card">
+      <h2>Household</h2>
+      ${r.people.map(p => `<div class="who"><b>${esc(p.name)}</b> · Gua ${p.gua} ${p.guaName} · ${p.group} group · door is ${p.doorStar.zh} ${p.doorStar.name}<br>
+        <span class="hint">Best: 生氣 ${p.directions.shengQi} · 天醫 ${p.directions.tianYi} · 延年 ${p.directions.yanNian} · 伏位 ${p.directions.fuWei} &nbsp;|&nbsp; Avoid: 禍害 ${p.directions.huoHai} · 五鬼 ${p.directions.wuGui} · 六煞 ${p.directions.liuSha} · 絕命 ${p.directions.jueMing}</span></div>`).join('')}
+    </div>
+    ${r.rooms.map(room => `
+    <div class="card">
+      <div class="rv"><h3>${esc(room.name)} <span class="sec">· ${room.use} · ${room.sector} · annual star ${room.annualStar}</span></h3><span class="badge b-${room.verdict}">${room.verdict}</span></div>
+      ${room.warnings.length ? `<ul class="warn-list">${room.warnings.map(w => `<li class="${sev(w.severity)}">${esc(w.text)}</li>`).join('')}</ul>` : '<div class="hint">No annual or form issues in this sector.</div>'}
+      ${room.occupants.map(o => `<div class="who"><b>${esc(o.name)}</b> (Gua ${o.gua})${o.sectorStar ? ` · this sector is ${o.sectorStar.zh} ${o.sectorStar.name} for them` : ''}<br>
+        ${o.bedHead ? `Sleep with head toward <b>${o.bedHead.direction}</b> (${o.bedHead.star} ${o.bedHead.name}: ${o.bedHead.meaning}). ` : ''}
+        ${o.deskFacing ? `Desk or seat facing <b>${o.deskFacing.direction}</b> (${o.deskFacing.star} ${o.deskFacing.name}).` : ''}
+        ${o.deskFacingBanned.length ? `<span class="hint"> Not ${o.deskFacingBanned.join('/')} this year (Tai Sui / Three Killings).</span>` : ''}</div>`).join('')}
+      ${room.cures.length ? `<h2 style="margin-top:12px; font-size:0.85rem">Cures</h2><ul class="cure-list">${room.cures.map(c => `<li><b style="color:var(--text)">${c.element}</b>: ${esc(c.items)}. Place ${esc(c.placement)}. <i>(${esc(c.reason)}${c.person ? ', for ' + esc(c.person) : ''})</i></li>`).join('')}</ul>` : ''}
+      <div class="why">rules: ${room.why.join(' ')}</div>
+    </div>`).join('')}
+    <div class="card hint">Structural fixes come first; items are element carriers. Advice assumes the recorded facing. Flying Star room analysis and BaZi favourable elements arrive in Phases 2–3.
+      <div style="margin-top:10px; display:flex; gap:8px"><button class="btn ghost sm" onclick="window.print()">Print / PDF</button><button class="btn ghost sm" id="btnNew">New consult</button></div></div>`;
+  $('#btnNew').onclick = () => { if (!confirm('Start a new consult? Unsaved work is lost.')) return; sessionStorage.removeItem('lp_state'); location.reload(); };
+}
+
+// ---------- saved list ----------
+async function loadList() {
+  try {
+    const d = await api('/api/luopan/consults');
+    $('#consultList').innerHTML = d.consults.length ? d.consults.map(c => `<div class="list-item" data-ref="${c.reference}"><span><b>${c.reference}</b> · ${esc(c.client_name || '—')} · ${esc(c.house_type || '')}</span><span>${c.created_at.slice(0, 10)}${c.reviewed_at ? ' ✓' : ''}</span></div>`).join('') : 'No consults saved yet.';
+    $('#consultList').querySelectorAll('[data-ref]').forEach(el => el.onclick = async () => {
+      const c = await api('/api/luopan/consults/' + el.dataset.ref);
+      const p = c.payload; Object.assign(S, { clientName: p.clientName, address: p.address, houseType: p.houseType, topYear: p.topYear || '', renoYear: p.renoYear || '',
+        people: p.people, rooms: p.rooms.map(r => ({ ...r, form: r.form || {}, occupants: r.occupants || [] })), readings: p.facing.readings || [{ id: uid(), bearing: p.facing.bearing, spread: p.facing.spread || 0, source: p.facing.source || 'manual' }],
+        plan: { ...S.plan, centre: p.plan && p.plan.centre, door: p.plan && p.plan.door, dataUrl: p.plan && p.plan.dataUrl }, report: c.report, reference: c.reference });
+      ['clientName','address','houseType','topYear','renoYear'].forEach(id => $('#' + id).value = S[id] || '');
+      renderPeople(); renderRooms(); renderReadings(); loadPlanImg(); go(4); renderReport();
+    });
+  } catch (e) { $('#consultList').textContent = e.message; }
+}
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+if (S.key) boot(); else showGate();
+loadPlanImg();
+</script>
+</body>
+</html>

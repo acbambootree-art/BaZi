@@ -5,6 +5,10 @@
       "destination": "https://bazi-calculator-oqnl.onrender.com/api/:path*"
     },
     {
+      "source": "/luopan",
+      "destination": "/luopan.html"
+    },
+    {
       "source": "/today",
       "destination": "/today.html"
     }

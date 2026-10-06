@@ -6,13 +6,13 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test engine/test/engine.test.js engine/test/validation.test.js",
+    "test": "node --test engine/test/engine.test.js engine/test/validation.test.js engine/test/fengshui.test.js",
     "gen:validation": "node engine/validation/generate.js",
     "gen:vsop": "node engine/validation/extract-vsop.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.109.1",
-    "better-sqlite3": "^11.0.0",
+    "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",
     "express": "^4.21.0",
@@ -28,5 +28,8 @@
     "astronomia": "^4.2.0",
     "lunar-javascript": "^1.7.7",
     "lunisolar": "^2.6.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

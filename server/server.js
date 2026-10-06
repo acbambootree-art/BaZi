@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const chartRoutes = require('./routes/charts');
 const { router: decisionRoutes, stripeWebhook } = require('./routes/decisionReading');
 const { router: forecastRoutes } = require('./routes/forecast');
+const { router: luopanRoutes } = require('./routes/luopan');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,6 +38,7 @@ app.use('/api', authRoutes);
 app.use('/api', chartRoutes);
 app.use('/api', decisionRoutes);
 app.use('/api', forecastRoutes);
+app.use('/api', luopanRoutes);
 
 // ─── Serve static frontend files ────────────────────────────
 // Serve from parent directory where index.html, hero.mp4, Background2.mp4 live

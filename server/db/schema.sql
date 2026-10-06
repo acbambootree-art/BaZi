@@ -78,3 +78,20 @@ CREATE TABLE IF NOT EXISTS daily_forecasts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_daily_forecasts_date ON daily_forecasts(date);
+
+-- Smart Luopan consults (staff tool). payload = full input incl. floor plan
+-- photo; report = engine output at save time, kept for senior review.
+CREATE TABLE IF NOT EXISTS luopan_consults (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reference TEXT NOT NULL UNIQUE,
+  client_name TEXT,
+  address TEXT,
+  house_type TEXT,
+  payload TEXT NOT NULL,
+  report TEXT NOT NULL,
+  review_note TEXT,
+  reviewed_at TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_luopan_reference ON luopan_consults(reference);
