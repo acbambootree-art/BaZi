@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#f4f3f1">
+<meta name="theme-color" content="#f6f3ed">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -13,237 +13,260 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   :root {
-    --bg: #f4f3f1; --ink: #1d1d1f; --ink-2: #6e6e73; --ink-3: #a1a1a6;
-    --accent: #b8923a; --accent-ink: #8a6a22; --accent-soft: rgba(184,146,58,0.14);
-    --glass: rgba(255,255,255,0.62); --glass-strong: rgba(255,255,255,0.82); --glass-border: rgba(255,255,255,0.75);
-    --line: rgba(29,29,31,0.08); --shadow: 0 10px 30px rgba(31,27,18,0.08), 0 1px 2px rgba(31,27,18,0.04);
-    --good: #2e9c5d; --warn: #c9850c; --bad: #d64545; --info: #2f7fd1;
-    --ease: cubic-bezier(.2,.8,.2,1); --spring: cubic-bezier(.34,1.4,.64,1);
+    --bg: oklch(0.965 0.008 85); --surface: oklch(0.993 0.004 85); --surface-2: oklch(0.975 0.007 85);
+    --ink: oklch(0.24 0.012 75); --ink-2: oklch(0.44 0.014 75); --ink-3: oklch(0.6 0.012 75);
+    --line: oklch(0.89 0.01 85); --field: oklch(0.64 0.012 80);
+    --accent: oklch(0.53 0.1 85); --accent-ink: oklch(0.46 0.095 78); --accent-soft: oklch(0.94 0.035 85); --on-accent: oklch(0.99 0.01 85);
+    --good: oklch(0.52 0.13 150); --warn: oklch(0.55 0.13 65); --bad: oklch(0.53 0.19 27); --info: oklch(0.52 0.14 250);
+    --good-soft: oklch(0.95 0.04 150); --warn-soft: oklch(0.95 0.045 75); --bad-soft: oklch(0.955 0.03 27); --info-soft: oklch(0.95 0.03 250);
+    --ease: cubic-bezier(.22,1,.36,1);
   }
-  html { background: var(--bg); }
-  body { color: var(--ink); min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
-    padding: 16px 16px calc(92px + env(safe-area-inset-bottom)); -webkit-font-smoothing: antialiased; position: relative; overflow-x: hidden; }
-  /* jade-and-gold landscape backdrop under a white veil */
-  .bg { position: fixed; inset: -6%; z-index: -1; pointer-events: none; background: url(/luopan-bg.jpg) center 30% / cover no-repeat;
-    animation: drift 40s ease-in-out infinite alternate; }
-  .bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(248,247,244,0.62) 0%, rgba(248,247,244,0.5) 40%, rgba(248,247,244,0.7) 100%); }
-  @keyframes drift { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(-1.5%, -1%, 0) scale(1.05); } }
-  .gold { background: linear-gradient(100deg, #8a6a22 0%, #d9b65a 35%, #f1dc9a 50%, #cfa64a 65%, #8a6a22 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
-    background-size: 200% 100%; animation: shimmer 7s ease-in-out infinite; }
-  @keyframes shimmer { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+  html { background: var(--bg); -webkit-text-size-adjust: 100%; }
+  body { background: var(--bg); color: var(--ink); min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', Roboto, 'Segoe UI', system-ui, 'PingFang SC', 'Noto Sans SC', sans-serif;
+    font-size: 1.0625rem; line-height: 1.5; padding: 0 16px calc(104px + env(safe-area-inset-bottom)); -webkit-font-smoothing: antialiased; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
 
   .wrap { max-width: 640px; margin: 0 auto; }
-  h1 { font-weight: 700; font-size: 1.45rem; letter-spacing: -0.02em; color: var(--ink); }
-  h1 small { display: block; font-size: 0.8rem; color: var(--ink-2); font-weight: 500; margin-top: 2px; letter-spacing: 0; }
-  h2 { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); margin-bottom: 10px; }
-  h3 { font-weight: 600; letter-spacing: -0.01em; }
-  header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px; }
-  .steps { display: flex; gap: 6px; margin-bottom: 18px; }
-  .steps div { flex: 1; height: 5px; border-radius: 3px; background: rgba(29,29,31,0.08); overflow: hidden; position: relative; }
-  .steps div::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #c9a44a, #e4c874); transform: scaleX(0); transform-origin: left; transition: transform .6s var(--ease); border-radius: 3px; }
-  .steps div.done::after { transform: scaleX(1); }
-  .steps div.cur::after { transform: scaleX(0.5); }
+  .zh { font-weight: 400; margin-left: 4px; }
+  h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; }
+  h2 { font-size: 1.125rem; font-weight: 650; letter-spacing: -0.01em; line-height: 1.3; margin-bottom: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 650; }
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0 6px; }
+  .brand { font-size: 0.9375rem; font-weight: 650; color: var(--accent-ink); }
+  .stepbar { padding: 4px 0 16px; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 12px; }
+  .steps div { height: 4px; border-radius: 2px; background: var(--line); transition: background .2s var(--ease); }
+  .steps div.done, .steps div.cur { background: var(--accent); }
+  .step-meta { font-size: 0.875rem; font-weight: 600; color: var(--ink-2); margin-bottom: 2px; }
+  .sec-title { margin: 24px 0 4px; }
+  .sec-hint { margin-bottom: 12px; }
 
-  .card { background: rgba(255,255,255,0.66); -webkit-backdrop-filter: blur(26px) saturate(150%); backdrop-filter: blur(26px) saturate(150%);
-    border: 1px solid rgba(184,146,58,0.28); border-radius: 20px; padding: 20px; margin-bottom: 14px; position: relative;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 0 0 1px rgba(255,255,255,0.45), 0 12px 32px rgba(120,96,40,0.10), 0 1px 2px rgba(31,27,18,0.05);
-    animation: rise .55s var(--ease) both; }
-  .card::before { content: ''; position: absolute; left: 20px; right: 20px; top: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(217,182,90,0.9), transparent); }
-  h2 { color: var(--accent-ink); }
-  h2::after { content: ''; display: block; width: 28px; height: 2px; margin-top: 6px; border-radius: 2px; background: linear-gradient(90deg, #d9b65a, #f1dc9a); }
-  .card:nth-child(2) { animation-delay: .06s } .card:nth-child(3) { animation-delay: .12s } .card:nth-child(4) { animation-delay: .18s }
-  .card:nth-child(5) { animation-delay: .24s } .card:nth-child(6) { animation-delay: .30s } .card:nth-child(n+7) { animation-delay: .36s }
-  @keyframes rise { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
-  .step { animation: fade .4s var(--ease) both; }
-  @keyframes fade { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .card-head { display: flex; justify-content: space-between; align-items: center; margin: -4px -4px 0 0; }
+  .card-kicker { font-size: 0.875rem; font-weight: 650; color: var(--ink-2); }
 
-  label { display: block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2); margin: 12px 0 6px; }
-  input, select, textarea { width: 100%; background: rgba(255,255,255,0.7); border: 1px solid var(--line); color: var(--ink);
-    padding: 12px 13px; border-radius: 12px; font-size: 1rem; font-family: inherit; transition: box-shadow .25s var(--ease), border-color .25s, background .25s; appearance: none; -webkit-appearance: none; }
-  select { background-image: linear-gradient(45deg, transparent 50%, var(--ink-3) 50%), linear-gradient(135deg, var(--ink-3) 50%, transparent 50%);
-    background-position: calc(100% - 18px) 55%, calc(100% - 13px) 55%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 34px; }
-  input:focus, select:focus { outline: none; border-color: rgba(184,146,58,0.5); box-shadow: 0 0 0 4px var(--accent-soft); background: #fff; }
+  label, .lbl { display: block; font-size: 0.875rem; font-weight: 600; color: var(--ink-2); margin: 16px 0 6px; }
+  .card > label:first-child, .card-head + label { margin-top: 4px; }
+  input, select, textarea { width: 100%; min-height: 48px; background: var(--surface); border: 1px solid var(--field); color: var(--ink);
+    padding: 0 14px; border-radius: 10px; font-size: 1.0625rem; font-family: inherit; appearance: none; -webkit-appearance: none; transition: border-color .15s, box-shadow .15s; }
+  select { background-image: linear-gradient(45deg, transparent 50%, var(--ink-2) 50%), linear-gradient(135deg, var(--ink-2) 50%, transparent 50%);
+    background-position: calc(100% - 19px) 52%, calc(100% - 13px) 52%; background-size: 6px 6px; background-repeat: no-repeat; padding-right: 34px; text-overflow: ellipsis; }
+  input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   input::placeholder { color: var(--ink-3); }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .dob { display: grid; grid-template-columns: 1.15fr 1.2fr 0.9fr; gap: 8px; }
+  .inline { display: flex; gap: 8px; } .inline input { flex: 1; } .inline .btn { flex: none; }
 
-  .btn { background: var(--ink); color: #fff; border: none; padding: 13px 20px; border-radius: 14px; font-weight: 600; font-size: 0.95rem;
-    cursor: pointer; letter-spacing: -0.01em; font-family: inherit; transition: transform .25s var(--spring), box-shadow .25s, opacity .2s, background .2s;
-    box-shadow: 0 6px 16px rgba(29,29,31,0.18); }
-  .btn:hover { transform: translateY(-1px); } .btn:active { transform: scale(.97); }
-  .btn.ghost { background: rgba(255,255,255,0.7); color: var(--ink); border: 1px solid var(--line); box-shadow: none; }
-  .btn.ghost:hover { background: #fff; }
-  .btn.sm { padding: 9px 13px; font-size: 0.82rem; border-radius: 11px; }
-  .btn.danger { background: rgba(214,69,69,0.08); border: 1px solid rgba(214,69,69,0.2); color: var(--bad); box-shadow: none; }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-  .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; border-top: 1px solid rgba(184,146,58,0.25) !important; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); display: flex; gap: 10px; justify-content: space-between;
-    background: rgba(244,243,241,0.7); -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%); border-top: 1px solid rgba(255,255,255,0.7); }
-  .nav .btn { flex: 1; }
-  .nav .btn:not(.ghost) { background: linear-gradient(135deg, #cfa64a 0%, #e9cd7c 45%, #b8923a 100%); color: #2a1f08; text-shadow: 0 1px 0 rgba(255,255,255,0.35); box-shadow: 0 8px 20px rgba(184,146,58,0.35); }
-  .err { color: var(--bad); font-size: 0.85rem; margin-top: 10px; min-height: 18px; }
-  .hint { color: var(--ink-2); font-size: 0.86rem; line-height: 1.5; }
-  .gate { max-width: 380px; margin: 14vh auto 0; text-align: center; }
-  .gate .btn { width: 100%; margin-top: 10px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid transparent;
+    background: var(--accent); color: var(--on-accent); font-family: inherit; font-size: 1rem; font-weight: 600; line-height: 1.2; cursor: pointer; transition: transform .12s var(--ease), background .15s, opacity .15s; }
+  .btn:active { transform: scale(.98); }
+  .btn.ghost { background: var(--surface); color: var(--ink); border-color: var(--field); }
+  .btn.sm { min-height: 44px; padding: 0 14px; font-size: 0.9375rem; border-radius: 10px; }
+  .btn.danger { background: var(--surface); color: var(--bad); border-color: var(--field); }
+  .btn.add { width: 100%; background: transparent; color: var(--accent-ink); border: 1.5px dashed var(--field); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+  label.btn { margin: 0; }
+  .icon-btn { width: 44px; height: 44px; border: none; background: transparent; color: var(--ink-2); font-size: 1.125rem; border-radius: 10px; cursor: pointer; }
+  .icon-btn:active { background: var(--bad-soft); color: var(--bad); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
 
-  .person, .room { border: 1px solid rgba(184,146,58,0.18); border-radius: 16px; padding: 12px; margin-bottom: 10px; background: rgba(255,255,255,0.45); animation: rise .4s var(--ease) both; }
-  .person-top, .room-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .chip { font-size: 0.8rem; font-weight: 500; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,0.6); color: var(--ink-2);
-    cursor: pointer; user-select: none; transition: transform .3s var(--spring), background .2s, color .2s, border-color .2s; }
-  .chip:active { transform: scale(.94); }
-  .chip.on { border-color: transparent; color: #fff; background: var(--ink); box-shadow: 0 4px 12px rgba(29,29,31,0.18); }
+  .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; gap: 10px; padding: 12px max(16px, calc((100% - 640px) / 2)) calc(12px + env(safe-area-inset-bottom));
+    background: var(--surface); border-top: 1px solid var(--line); }
+  .nav .btn { min-height: 52px; font-size: 1.0625rem; }
+  .nav #btnBack { flex: 0 0 34%; }
+  .nav #btnNext { flex: 1; }
+  .toast { position: fixed; left: 16px; right: 16px; bottom: calc(88px + env(safe-area-inset-bottom)); z-index: 6; max-width: 608px; margin: 0 auto;
+    background: var(--ink); color: var(--surface); padding: 14px 16px; border-radius: 12px; font-size: 1rem; font-weight: 500; transition: opacity .2s, transform .2s var(--ease); }
+  .toast.off { opacity: 0; transform: translateY(8px); pointer-events: none; }
+  .err { color: var(--bad); font-size: 0.9375rem; margin-top: 10px; min-height: 20px; }
+  .hint { color: var(--ink-2); font-size: 1rem; line-height: 1.55; }
+  .gate { max-width: 400px; margin: 16vh auto 0; }
+  .gate .btn { width: 100%; margin-top: 14px; }
+
+  /* toggles: chips (multi) and segmented (single) */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip, .seg button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 14px; border-radius: 999px; border: 1px solid var(--field);
+    background: var(--surface); color: var(--ink); font-family: inherit; font-size: 0.9375rem; font-weight: 500; line-height: 1.2; cursor: pointer; user-select: none; transition: background .15s, border-color .15s, color .15s; }
+  .chip.on, .seg button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); font-weight: 650; box-shadow: inset 0 0 0 1px var(--accent); }
+  .chip.on::before { content: '✓'; margin-right: 6px; }
+  .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+  .seg button { border-radius: 10px; padding: 0 8px; }
+  .seg.wrap { grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
 
   /* compass */
-  .dial { position: relative; width: 250px; height: 250px; margin: 14px auto 6px; border-radius: 50%;
-    background: radial-gradient(circle at 50% 35%, #ffffff, #f3f0e9 70%, #e9e4d9); box-shadow: inset 0 2px 8px rgba(255,255,255,.9), inset 0 -10px 24px rgba(120,96,40,.08), 0 14px 30px rgba(120,96,40,.14), 0 0 0 1px rgba(184,146,58,0.3); }
-  .dial::after { content: ''; position: absolute; inset: 7px; border-radius: 50%; border: 1px solid rgba(184,146,58,0.35); pointer-events: none; }
+  .howto { margin: 0 0 4px 20px; color: var(--ink-2); font-size: 1rem; line-height: 1.5; }
+  .howto li + li { margin-top: 6px; }
+  .dial { position: relative; width: min(74vw, 280px); aspect-ratio: 1; margin: 4px auto 0; border-radius: 50%; background: var(--surface-2); box-shadow: 0 0 0 1px var(--field); }
+  .dial::after { content: ''; position: absolute; inset: 7px; border-radius: 50%; border: 1px solid var(--line); pointer-events: none; }
   .dial canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .heading { text-align: center; font-variant-numeric: tabular-nums; font-size: 2.8rem; font-weight: 700; letter-spacing: -0.03em; color: var(--ink); line-height: 1; margin-top: 10px; }
+  .heading { text-align: center; font-variant-numeric: tabular-nums; font-size: 2.75rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1; margin-top: 16px; }
   .heading small { display: block; font-size: 1rem; font-weight: 500; color: var(--ink-2); margin-top: 8px; letter-spacing: 0; }
-  .status { text-align: center; font-size: 0.84rem; font-weight: 500; margin-top: 8px; min-height: 18px; color: var(--ink-2); transition: color .3s; }
+  .status { text-align: center; font-size: 0.9375rem; font-weight: 600; margin-top: 8px; min-height: 22px; color: var(--ink-2); }
   .status.ok { color: var(--good); } .status.warn { color: var(--warn); } .status.bad { color: var(--bad); }
-  .readings { margin-top: 12px; }
-  .reading { display: flex; justify-content: space-between; align-items: center; padding: 10px 2px; border-bottom: 1px solid var(--line); font-size: 0.9rem; animation: rise .35s var(--ease) both; }
-  .reading b { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; }
-  .badge { font-size: 0.68rem; font-weight: 700; padding: 4px 9px; border-radius: 999px; letter-spacing: 0.05em; text-transform: uppercase; }
-  .b-good { background: rgba(46,156,93,0.12); color: var(--good); }
-  .b-fair, .b-warn { background: rgba(201,133,12,0.13); color: var(--warn); }
-  .b-poor, .b-bad { background: rgba(214,69,69,0.12); color: var(--bad); }
-  .b-info { background: rgba(47,127,209,0.12); color: var(--info); }
+  .facing-result { padding-bottom: 4px; }
+  .facing-result .big { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--accent-ink); line-height: 1.2; }
+  .facing-result .sub { color: var(--ink-2); font-size: 1rem; margin-top: 4px; }
+  .facing-result .alert { color: var(--warn); font-weight: 600; font-size: 1rem; margin-top: 6px; }
+  .readings { margin-top: 8px; }
+  .reading { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 52px; border-top: 1px solid var(--line); font-size: 1rem; }
+  .reading b { font-variant-numeric: tabular-nums; font-weight: 650; }
+  .reading .r-end { display: flex; align-items: center; gap: 6px; }
+  .badge { display: inline-block; font-size: 0.8125rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; letter-spacing: 0.03em; text-transform: uppercase; }
+  .b-good { background: var(--good-soft); color: var(--good); }
+  .b-fair, .b-warn { background: var(--warn-soft); color: var(--warn); }
+  .b-poor, .b-bad { background: var(--bad-soft); color: var(--bad); }
+  .b-info { background: var(--info-soft); color: var(--info); }
 
   /* plan */
-  .plan { position: relative; width: 100%; aspect-ratio: 1; background: #fbfaf8; border: 1px solid rgba(184,146,58,0.3); border-radius: 16px; overflow: hidden; touch-action: none;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 1px rgba(255,255,255,.5); }
+  .plan { position: relative; width: 100%; aspect-ratio: 1; background: var(--surface-2); border: 1px solid var(--field); border-radius: 12px; overflow: hidden; touch-action: none; margin-top: 12px; }
   .plan canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .plan-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; align-items: center; }
-  .plan-tools .hint { flex: 1 1 100%; }
+  .plan-tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .plan-tools .btn { padding: 0 6px; }
+  #planHint { font-size: 1rem; color: var(--ink); }
+  .locate { display: flex; gap: 12px; align-items: center; margin-top: 16px; }
+  .locate .sector { font-size: 1rem; color: var(--ink-2); }
+  .locate .sector b { color: var(--accent-ink); font-size: 1.125rem; }
+  .form-x { margin-top: 16px; border-top: 1px solid var(--line); }
+  .form-x summary { min-height: 52px; display: flex; align-items: center; gap: 6px; font-size: 1rem; font-weight: 600; color: var(--ink); cursor: pointer; list-style: none; }
+  .form-x summary::-webkit-details-marker { display: none; }
+  .form-x summary::after { content: ''; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); transform: rotate(45deg); transition: transform .2s var(--ease); }
+  .form-x[open] summary::after { transform: rotate(-135deg); }
+  .form-x .count { color: var(--accent-ink); }
 
   /* report */
   .rv { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
-  .rv h3 { font-size: 1.05rem; }
-  .rv .sec { font-size: 0.8rem; color: var(--ink-2); font-weight: 500; }
-  .warn-list li, .cure-list li, .note-list li { font-size: 0.9rem; line-height: 1.55; margin: 7px 0 7px 18px; color: var(--ink); }
+  .rv h3 { font-size: 1.125rem; }
+  .rv .sec { font-size: 0.9375rem; color: var(--ink-2); font-weight: 500; }
+  .warn-list li, .cure-list li, .note-list li { font-size: 1rem; line-height: 1.55; margin: 8px 0 8px 20px; }
   .warn-list li.hard::marker { color: var(--bad); } .warn-list li.medium::marker { color: var(--warn); } .warn-list li.low::marker { color: var(--ink-3); }
-  .cure-list li { color: var(--ink-2); }
-  .who { font-size: 0.9rem; margin-top: 10px; padding: 10px 12px; background: rgba(255,255,255,0.6); border: 1px solid rgba(184,146,58,0.18); border-radius: 12px; line-height: 1.55; }
-  .who b { color: var(--accent-ink); }
-  .why { font-size: 0.7rem; color: var(--ink-3); font-family: ui-monospace, SFMono-Regular, monospace; margin-top: 10px; }
-  .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 14px; font-size: 0.86rem; color: var(--ink-2); }
-  .kv b { color: var(--ink); font-weight: 600; }
-  .list-item { display: flex; justify-content: space-between; padding: 12px 2px; border-bottom: 1px solid var(--line); font-size: 0.9rem; cursor: pointer; transition: background .2s; border-radius: 8px; }
-  .list-item:hover { background: rgba(255,255,255,0.6); }
-  .list-item b { color: var(--accent-ink); font-variant-numeric: tabular-nums; }
-  .fsgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 0 6px; }
-  .pal { aspect-ratio: 1; border-radius: 14px; border: 1px solid rgba(184,146,58,0.22); background: rgba(255,255,255,0.55); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; position: relative; transition: transform .3s var(--spring); }
-  .pal:hover { transform: translateY(-2px); }
-  .pal .d { position: absolute; top: 6px; left: 8px; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.06em; color: var(--accent-ink); }
-  .pal .a { position: absolute; top: 6px; right: 8px; font-size: 0.66rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-  .pal .mw { font-size: 1.35rem; font-weight: 700; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; color: var(--ink); }
-  .pal .mw span { display: inline-block; min-width: 1.1em; text-align: center; }
-  .pal .p { font-size: 0.72rem; color: var(--ink-3); }
-  .pal.good { background: rgba(46,156,93,0.10); border-color: rgba(46,156,93,0.3); }
-  .pal.poor { background: rgba(214,69,69,0.08); border-color: rgba(214,69,69,0.28); }
-  .pal.C { background: rgba(184,146,58,0.10); }
-  .stars { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,0.7); border: 1px solid rgba(184,146,58,0.25); font-variant-numeric: tabular-nums; color: var(--ink); }
-  .stars i { font-style: normal; color: var(--ink-3); font-weight: 500; }
   .warn-list li.boost::marker { color: var(--good); }
-  .refx { border-bottom: 1px solid var(--line); padding: 8px 0; }
-  .refx summary { cursor: pointer; font-size: 0.88rem; list-style: none; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .cure-list li { color: var(--ink-2); }
+  .who { font-size: 1rem; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); line-height: 1.55; }
+  .who b { color: var(--accent-ink); }
+  .why { font-size: 0.75rem; color: var(--ink-3); font-family: ui-monospace, SFMono-Regular, monospace; margin-top: 12px; overflow-wrap: anywhere; }
+  .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px 16px; font-size: 1rem; color: var(--ink-2); }
+  .kv b { color: var(--ink); font-weight: 650; }
+  .list-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 56px; border-top: 1px solid var(--line); font-size: 1rem; cursor: pointer; }
+  .list-item:first-child { border-top: none; }
+  .list-item > span:last-child { flex: none; white-space: nowrap; color: var(--ink-2); }
+  .list-item b { color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+  .fsgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 0 8px; }
+  .pal { aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; position: relative; }
+  .pal .d { position: absolute; top: 6px; left: 8px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; color: var(--accent-ink); }
+  .pal .a { position: absolute; top: 6px; right: 8px; font-size: 0.75rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .pal .mw { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pal .mw span { display: inline-block; min-width: 1.1em; text-align: center; }
+  .pal .p { font-size: 0.8125rem; color: var(--ink-2); }
+  .pal.good { background: var(--good-soft); border-color: var(--good); }
+  .pal.poor { background: var(--bad-soft); border-color: var(--bad); }
+  .pal.C { background: var(--accent-soft); }
+  .stars { display: inline-flex; align-items: center; gap: 4px; font-size: 0.875rem; font-weight: 650; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .stars i { font-style: normal; color: var(--ink-2); font-weight: 500; }
+  .refx { border-top: 1px solid var(--line); padding: 10px 0; }
+  .refx summary { cursor: pointer; font-size: 0.9375rem; list-style: none; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-height: 32px; }
   .refx summary::-webkit-details-marker { display: none; }
-  .refx summary::before { content: '›'; color: var(--ink-3); transition: transform .25s var(--spring); display: inline-block; }
+  .refx summary::before { content: '›'; color: var(--ink-2); transition: transform .2s var(--ease); display: inline-block; }
   .refx[open] summary::before { transform: rotate(90deg); }
-  .refx p { font-size: 0.9rem; line-height: 1.7; color: var(--ink-2); margin: 8px 0 2px 14px; white-space: pre-wrap; font-family: 'Noto Serif SC', 'Songti SC', Georgia, serif; }
-  .chatlog { max-height: 420px; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; padding: 2px; }
-  .msg { display: flex; animation: rise .35s var(--ease) both; }
+  .refx p { font-size: 1rem; line-height: 1.7; color: var(--ink-2); margin: 8px 0 2px 14px; white-space: pre-wrap; font-family: 'Noto Serif SC', 'Songti SC', Georgia, serif; }
+  .chatlog { max-height: 60vh; overflow-y: auto; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .msg { display: flex; }
   .msg.user { justify-content: flex-end; }
-  .bub { max-width: 86%; padding: 10px 13px; border-radius: 16px; font-size: 0.92rem; line-height: 1.55; white-space: pre-wrap; }
-  .msg.user .bub { background: var(--ink); color: #fff; border-bottom-right-radius: 5px; }
-  .msg.assistant .bub { background: rgba(255,255,255,0.75); border: 1px solid rgba(184,146,58,0.22); border-bottom-left-radius: 5px; }
+  .bub { max-width: 88%; padding: 10px 14px; border-radius: 16px; font-size: 1rem; line-height: 1.55; white-space: pre-wrap; }
+  .msg.user .bub { background: var(--ink); color: var(--surface); border-bottom-right-radius: 4px; }
+  .msg.assistant .bub { background: var(--surface-2); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
   .bub.typing { display: flex; gap: 4px; padding: 14px 16px; }
   .bub.typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); animation: blink 1.2s infinite ease-in-out; }
   .bub.typing span:nth-child(2) { animation-delay: .2s } .bub.typing span:nth-child(3) { animation-delay: .4s }
-  @keyframes blink { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+  @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
   .hidden { display: none !important; }
-  @media print { .nav, header .btn, .steps, .bg { display: none; } body { background: #fff; } .card { box-shadow: none; border-color: #ddd; background: #fff; animation: none; } }
+  @media print { .nav, .top .btn, .steps, .toast { display: none; } body { background: #fff; padding: 0; } .card { border-color: #ddd; break-inside: avoid; } }
 </style>
 </head>
 <body>
-<div class="bg" aria-hidden="true"></div>
 <div class="wrap">
 
 <div id="gate" class="gate card hidden">
-  <h2><span class="gold">Smart Luopan</span> · Staff</h2>
-  <input id="gateKey" type="password" placeholder="Staff key" autocomplete="current-password">
+  <h1>Smart Luopan<span class="zh">智能罗盘</span></h1>
+  <p class="hint" style="margin-top:6px">Staff only.</p>
+  <label for="gateKey">Staff key</label>
+  <input id="gateKey" type="password" autocomplete="current-password">
   <button class="btn" id="gateBtn">Enter</button>
   <div class="err" id="gateErr"></div>
 </div>
 
 <div id="app" class="hidden">
-  <header>
-    <h1><span class="gold">Smart Luopan</span> <small id="stepTitle">1 · Client &amp; house</small></h1>
+  <header class="top">
+    <div class="brand">Smart Luopan<span class="zh">智能罗盘</span></div>
     <button class="btn ghost sm" id="btnList">Saved</button>
   </header>
-  <div class="steps" id="steps"></div>
+  <div class="stepbar">
+    <div class="steps" id="steps"></div>
+    <div class="step-meta" id="stepMeta"></div>
+    <h1 id="stepTitle"></h1>
+  </div>
 
   <!-- STEP 1: client + house + people -->
   <section id="s1" class="step">
     <div class="card">
-      <h2>Client &amp; house</h2>
-      <label>Client name</label><input id="clientName" placeholder="e.g. Mr Tan">
-      <label>Address</label><input id="address" placeholder="Block, street, unit">
-      <div class="row3">
-        <div><label>Type</label><select id="houseType"><option>HDB</option><option>Condo</option><option>Landed</option><option>Office</option><option>Shop</option></select></div>
-        <div><label>TOP year</label><input id="topYear" type="number" inputmode="numeric" placeholder="2010"></div>
-        <div><label>Major reno year</label><input id="renoYear" type="number" inputmode="numeric" placeholder="optional"></div>
+      <label for="clientName">Client name<span class="zh">客户</span></label>
+      <input id="clientName" placeholder="e.g. Mr Tan" autocomplete="off">
+      <label for="address">Address<span class="zh">地址</span></label>
+      <input id="address" placeholder="Block, street, unit" autocomplete="off">
+      <div class="lbl">Property type<span class="zh">房型</span></div>
+      <div class="seg wrap" id="houseType" role="radiogroup" aria-label="Property type"></div>
+      <div class="row">
+        <div><label for="topYear">TOP year<span class="zh">入伙</span></label><input id="topYear" type="number" inputmode="numeric" placeholder="e.g. 2010"></div>
+        <div><label for="renoYear">Renovated<span class="zh">装修</span></label><input id="renoYear" type="number" inputmode="numeric" placeholder="Optional"></div>
       </div>
-      <div class="hint" id="periodHint" style="margin-top:8px"></div>
+      <div class="hint" id="periodHint" style="margin-top:10px"></div>
     </div>
-    <div class="card">
-      <h2>Household</h2>
-      <div id="people"></div>
-      <button class="btn ghost sm" id="addPerson">+ Add person</button>
-      <div class="hint" style="margin-top:8px">Date of birth only. The Life Gua uses the solar (立春) year automatically.</div>
-    </div>
+    <h2 class="sec-title">Household<span class="zh">家人</span></h2>
+    <p class="hint sec-hint">Everyone who lives here. The Life Gua uses the solar (立春) year automatically.</p>
+    <div id="people"></div>
+    <button class="btn add" id="addPerson">+ Add person</button>
   </section>
 
   <!-- STEP 2: compass -->
   <section id="s2" class="step hidden">
     <div class="card">
-      <h2>Facing reading at the main door</h2>
-      <p class="hint">Stand inside, back to the door, 1–2 m away, phone flat at waist height. Remove magnetic cases, watches and keys. Take at least two readings: one inside, one on the threshold. They must agree within 3°.</p>
+      <ol class="howto">
+        <li>Stand inside, back to the main door, 1 to 2 m in.</li>
+        <li>Hold the phone flat at waist height. Remove magnetic cases, watches and keys.</li>
+        <li>Take two readings, one inside and one on the threshold. They must agree within 3°.</li>
+      </ol>
+    </div>
+    <div class="card">
       <div class="dial"><canvas id="dial" width="480" height="480"></canvas></div>
       <div class="heading" id="hdg">—<small id="hdgLabel">compass off</small></div>
       <div class="status" id="cstatus"></div>
-      <div style="display:flex; gap:8px; margin-top:12px">
-        <button class="btn ghost" id="btnCompass" style="flex:1">Start compass</button>
-        <button class="btn" id="btnTake" style="flex:1" disabled>Take reading</button>
+      <div class="btn-row">
+        <button class="btn ghost" id="btnCompass">Start compass</button>
+        <button class="btn" id="btnTake" disabled>Take reading</button>
       </div>
+    </div>
+    <div class="card">
+      <div class="facing-result" id="facingSummary"></div>
       <div class="readings" id="readings"></div>
-      <label>Or type the brass luopan bearing</label>
-      <div style="display:flex; gap:8px"><input id="manualBearing" type="number" inputmode="decimal" step="0.5" min="0" max="360" placeholder="e.g. 182.5"><button class="btn ghost sm" id="btnManual">Add</button></div>
-      <div class="hint" id="facingSummary" style="margin-top:10px"></div>
+      <label for="manualBearing">Or type the brass luopan bearing<span class="zh">罗盘度数</span></label>
+      <div class="inline"><input id="manualBearing" type="number" inputmode="decimal" step="0.5" min="0" max="360" placeholder="e.g. 182.5"><button class="btn ghost" id="btnManual">Add</button></div>
     </div>
   </section>
 
   <!-- STEP 3: floor plan + rooms -->
   <section id="s3" class="step hidden">
     <div class="card">
-      <h2>Floor plan</h2>
-      <div class="plan-tools">
-        <label class="btn ghost sm" style="margin:0; text-transform:none; letter-spacing:0; font-size:0.8rem">Upload plan <input id="planFile" type="file" accept="image/*" class="hidden"></label>
-        <button class="btn ghost sm" id="planBlank">No plan: use blank grid</button>
-        <button class="btn ghost sm" id="planReset">Reset marks</button>
-        <div class="hint" id="planHint">Upload the HDB/condo floor plan photo, then tap the <b>centre</b> of the unit, then the <b>main door</b>.</div>
-      </div>
+      <div id="planHint">Upload the HDB or condo floor plan photo, then tap the <b>centre</b> of the unit, then the <b>main door</b>.</div>
       <div class="plan"><canvas id="plan" width="900" height="900"></canvas></div>
+      <div class="plan-tools">
+        <label class="btn ghost sm">Upload<input id="planFile" type="file" accept="image/*" class="hidden"></label>
+        <button class="btn ghost sm" id="planBlank">Blank grid</button>
+        <button class="btn ghost sm" id="planReset">Reset</button>
+      </div>
     </div>
-    <div class="card">
-      <h2>Rooms</h2>
-      <div class="hint">Add a room, then tap its location on the plan to set its sector. Tick any form problems you see.</div>
-      <div id="rooms"></div>
-      <button class="btn ghost sm" id="addRoom">+ Add room</button>
-    </div>
+    <h2 class="sec-title">Rooms<span class="zh">房间</span></h2>
+    <p class="hint sec-hint">Add a room, then tap its spot on the plan. Tick any form problems you see.</p>
+    <div id="rooms"></div>
+    <button class="btn add" id="addRoom">+ Add room</button>
   </section>
 
   <!-- STEP 4: report -->
@@ -253,7 +276,7 @@
 
   <!-- Saved list -->
   <section id="sList" class="step hidden">
-    <div class="card"><h2>Saved consults</h2><div id="consultList" class="hint">Loading…</div></div>
+    <div class="card"><div id="consultList" class="hint">Loading…</div></div>
   </section>
 </div>
 </div>
@@ -262,6 +285,7 @@
   <button class="btn ghost" id="btnBack">Back</button>
   <button class="btn" id="btnNext">Next</button>
 </div>
+<div class="toast off" id="toast" role="alert"></div>
 
 <script>
 'use strict';
@@ -307,31 +331,42 @@ function boot() {
 }
 
 // ---------- steps ----------
-const TITLES = { 1: '1 · Client & house', 2: '2 · Facing reading', 3: '3 · Floor plan & rooms', 4: '4 · Report', list: 'Saved consults' };
+const TITLES = { 1: ['Client & house', '客户与房屋'], 2: ['Facing reading', '立向'], 3: ['Floor plan & rooms', '平面与房间'], 4: ['Report', '报告'], list: ['Saved consults', '已存档'] };
+let toastTimer = null;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.remove('off'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('off'), 4000); }
 function go(n) {
   S.step = n; persist();
   document.querySelectorAll('.step').forEach(s => s.classList.add('hidden'));
   const sec = $(n === 'list' ? '#sList' : '#s' + n); sec.classList.remove('hidden'); sec.style.animation = 'none'; void sec.offsetWidth; sec.style.animation = '';
-  $('#stepTitle').textContent = TITLES[n];
+  $('#stepTitle').innerHTML = `${TITLES[n][0]}<span class="zh">${TITLES[n][1]}</span>`;
+  $('#stepMeta').textContent = n === 'list' ? '' : `Step ${n} of 4`;
   $('#steps').innerHTML = [1,2,3,4].map(i => `<div class="${i < n ? 'done' : i === n ? 'cur' : ''}"></div>`).join('');
   $('#btnBack').disabled = n === 1;
   $('#btnNext').textContent = n === 3 ? 'Analyse' : n === 4 ? 'Save consult' : 'Next';
   $('#btnNext').classList.toggle('hidden', n === 'list');
+  if (n === 3) renderRooms();
   if (n === 4 && !S.report) runAnalysis();
   if (n === 'list') loadList();
   window.scrollTo(0, 0);
 }
 $('#btnBack').onclick = () => go(S.step === 'list' ? 1 : Math.max(1, S.step - 1));
 $('#btnNext').onclick = async () => {
-  if (S.step === 1) { const e = validateStep1(); if (e) return alert(e); go(2); }
-  else if (S.step === 2) { if (!facing()) return alert('Take or type a facing reading first.'); go(3); }
-  else if (S.step === 3) { if (!S.rooms.length) return alert('Add at least one room.'); if (S.rooms.some(r => !r.sector)) return alert('Every room needs a sector: tap its location on the plan.'); S.report = null; go(4); }
+  if (S.step === 1) { const e = validateStep1(); if (e) return toast(e); go(2); }
+  else if (S.step === 2) { if (!facing()) return toast('Take or type a facing reading first.'); go(3); }
+  else if (S.step === 3) { if (!S.rooms.length) return toast('Add at least one room.'); if (S.rooms.some(r => !r.sector)) return toast('Every room needs a sector: tap Place on plan, then its spot.'); S.report = null; go(4); }
   else if (S.step === 4) saveConsult();
 };
 $('#btnList').onclick = () => go('list');
 
 // ---------- step 1 ----------
-['clientName','address','houseType','topYear','renoYear'].forEach(id => { const el = $('#' + id); el.value = S[id] || ''; el.oninput = () => { S[id] = el.value; periodHint(); persist(); }; });
+['clientName','address','topYear','renoYear'].forEach(id => { const el = $('#' + id); el.value = S[id] || ''; el.oninput = () => { S[id] = el.value; periodHint(); persist(); }; });
+const HOUSE_TYPES = ['HDB', 'Condo', 'Landed', 'Office', 'Shop'];
+if (!S.houseType) S.houseType = 'HDB';
+function renderHouseType() {
+  $('#houseType').innerHTML = HOUSE_TYPES.map(t => `<button type="button" role="radio" aria-checked="${S.houseType === t}" class="${S.houseType === t ? 'on' : ''}" data-v="${t}">${t}</button>`).join('');
+  $('#houseType').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { S.houseType = b.dataset.v; renderHouseType(); persist(); });
+}
+renderHouseType();
 function periodHint() {
   const y = parseInt(S.renoYear || S.topYear, 10);
   if (!y) { $('#periodHint').textContent = ''; return; }
@@ -339,27 +374,60 @@ function periodHint() {
   $('#periodHint').textContent = `Period ${period} house (${S.renoYear ? 'major renovation' : 'TOP'} ${y}). The Flying Star chart will use this.`;
 }
 periodHint();
+// Birth hour as 时辰, like mingpan. Each option stores a clock hour inside that branch; 子 is split
+// because the engine treats 23:xx (late 子, next day's pillar) differently from 00:xx.
+const HOURS = [['', 'Unknown 不详'], [0, '子时 Zi (early) · 00:00–00:59'], [2, '丑时 Chou · 01:00–02:59'], [4, '寅时 Yin · 03:00–04:59'],
+  [6, '卯时 Mao · 05:00–06:59'], [8, '辰时 Chen · 07:00–08:59'], [10, '巳时 Si · 09:00–10:59'], [12, '午时 Wu · 11:00–12:59'],
+  [14, '未时 Wei · 13:00–14:59'], [16, '申时 Shen · 15:00–16:59'], [18, '酉时 You · 17:00–18:59'], [20, '戌时 Xu · 19:00–20:59'],
+  [22, '亥时 Hai · 21:00–22:59'], [23, '子时 Zi (late) · 23:00–23:59']];
+const hourOption = h => h === '' || h == null ? '' : +h === 0 || +h === 23 ? +h : 2 * Math.floor((+h + 1) / 2);
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const THIS_YEAR = new Date().getFullYear();
+const opt = (v, label, cur) => `<option value="${v}" ${String(cur ?? '') === String(v) ? 'selected' : ''}>${label}</option>`;
+function dayOptions(p) {
+  const max = new Date(+p.birthYear || 2000, +p.birthMonth || 1, 0).getDate();
+  if (+p.birthDay > max) p.birthDay = String(max);
+  return opt('', 'Day', p.birthDay) + Array.from({ length: max }, (_, i) => opt(i + 1, i + 1, p.birthDay)).join('');
+}
 function renderPeople() {
   $('#people').innerHTML = S.people.map((p, i) => `
-    <div class="person" data-i="${i}">
-      <div class="person-top"><input data-f="name" placeholder="Name" value="${esc(p.name)}" style="flex:1"><button class="btn danger sm" data-del="${i}">✕</button></div>
-      <div class="row3" style="margin-top:8px">
-        <input data-f="birthYear" type="number" inputmode="numeric" placeholder="Year" value="${p.birthYear}">
-        <input data-f="birthMonth" type="number" inputmode="numeric" placeholder="Month" value="${p.birthMonth}">
-        <input data-f="birthDay" type="number" inputmode="numeric" placeholder="Day" value="${p.birthDay}">
+    <div class="card person" data-i="${i}">
+      <div class="card-head"><span class="card-kicker">Person ${i + 1}</span><button class="icon-btn" data-del="${i}" aria-label="Remove ${esc(p.name || 'person ' + (i + 1))}">✕</button></div>
+      <label for="pn-${p.id}">Name<span class="zh">姓名</span></label>
+      <input id="pn-${p.id}" data-f="name" placeholder="Full name" value="${esc(p.name)}" autocomplete="off">
+      <div class="lbl">Gender<span class="zh">性别</span></div>
+      <div class="seg" role="radiogroup" aria-label="Gender">${[['male', 'Male 男'], ['female', 'Female 女']].map(([v, t]) => `<button type="button" role="radio" aria-checked="${p.gender === v}" class="${p.gender === v ? 'on' : ''}" data-gender="${v}">${t}</button>`).join('')}</div>
+      <div class="lbl">Date of birth<span class="zh">出生日期</span></div>
+      <div class="dob" role="group" aria-label="Date of birth">
+        <select data-f="birthYear" aria-label="Year">${opt('', 'Year', p.birthYear)}${Array.from({ length: THIS_YEAR - 1919 }, (_, k) => opt(THIS_YEAR - k, THIS_YEAR - k, p.birthYear)).join('')}</select>
+        <select data-f="birthMonth" aria-label="Month">${opt('', 'Month', p.birthMonth)}${MONTHS.map((m, k) => opt(k + 1, `${k + 1} · ${m}`, p.birthMonth)).join('')}</select>
+        <select data-f="birthDay" aria-label="Day">${dayOptions(p)}</select>
       </div>
-      <div class="row" style="margin-top:8px"><select data-f="gender"><option value="male" ${p.gender==='male'?'selected':''}>Male</option><option value="female" ${p.gender==='female'?'selected':''}>Female</option></select><input data-f="birthHour" type="number" inputmode="numeric" min="0" max="23" placeholder="Hour 0–23 (optional)" value="${p.birthHour ?? ''}"></div>
+      <label for="ph-${p.id}">Birth hour<span class="zh">时辰</span></label>
+      <select id="ph-${p.id}" data-f="birthHour">${HOURS.map(([v, t]) => opt(v, t, hourOption(p.birthHour))).join('')}</select>
     </div>`).join('');
-  $('#people').querySelectorAll('[data-f]').forEach(el => el.oninput = () => { S.people[+el.closest('.person').dataset.i][el.dataset.f] = el.value; persist(); });
+  $('#people').querySelectorAll('.person').forEach(el => {
+    const p = S.people[+el.dataset.i];
+    el.querySelectorAll('[data-f]').forEach(f => f.addEventListener(f.tagName === 'SELECT' ? 'change' : 'input', () => {
+      p[f.dataset.f] = f.value;
+      if (f.dataset.f === 'birthYear' || f.dataset.f === 'birthMonth') el.querySelector('[data-f=birthDay]').innerHTML = dayOptions(p);
+      persist();
+    }));
+    el.querySelectorAll('[data-gender]').forEach(b => b.onclick = () => {
+      p.gender = b.dataset.gender;
+      el.querySelectorAll('[data-gender]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); });
+      persist();
+    });
+  });
   $('#people').querySelectorAll('[data-del]').forEach(b => b.onclick = () => { S.people.splice(+b.dataset.del, 1); S.rooms.forEach(r => r.occupants = r.occupants.filter(id => S.people.some(p => p.id === id))); renderPeople(); persist(); });
 }
-$('#addPerson').onclick = () => { S.people.push({ id: uid(), name: '', birthYear: '', birthMonth: '', birthDay: '', gender: 'female' }); renderPeople(); };
+$('#addPerson').onclick = () => { S.people.push({ id: uid(), name: '', birthYear: '', birthMonth: '', birthDay: '', birthHour: '', gender: 'female' }); renderPeople(); persist(); };
 function validateStep1() {
   if (!S.people.length) return 'Add at least one person.';
   for (const p of S.people) {
     if (!p.name) return 'Every person needs a name.';
     const y = +p.birthYear, m = +p.birthMonth, d = +p.birthDay;
-    if (!(y >= 1900 && y <= 2099) || !(m >= 1 && m <= 12) || !(d >= 1 && d <= 31)) return `Check the date of birth for ${p.name}.`;
+    if (!(y >= 1900 && y <= 2099) || !(m >= 1 && m <= 12) || !(d >= 1 && d <= 31)) return `Pick the full date of birth for ${p.name}.`;
   }
   return null;
 }
@@ -378,10 +446,10 @@ function drawDial() {
     dial.save(); dial.rotate(a);
     dial.strokeStyle = 'rgba(29,29,31,0.25)'; dial.lineWidth = 2;
     dial.beginPath(); dial.moveTo(0, -r); dial.lineTo(0, -r + 14); dial.stroke();
-    dial.fillStyle = i % 3 === 0 ? '#8a6a22' : '#6e6e73'; dial.font = (i % 3 === 0 ? 'bold 26px' : '20px') + ' serif'; dial.textAlign = 'center';
-    dial.fillText(MOUNTAINS[i], 0, -r + 42);
-    dial.fillStyle = '#a1a1a6'; dial.font = '600 14px -apple-system, sans-serif';
-    if (i % 3 === 0) dial.fillText(DIRS[i / 3], 0, -r + 64);
+    dial.fillStyle = i % 3 === 0 ? '#8a6a22' : '#6e6e73'; dial.font = (i % 3 === 0 ? 'bold 30px' : '23px') + ' serif'; dial.textAlign = 'center';
+    dial.fillText(MOUNTAINS[i], 0, -r + 47);
+    dial.fillStyle = '#57524a'; dial.font = '700 19px -apple-system, sans-serif';
+    if (i % 3 === 0) dial.fillText(DIRS[i / 3], 0, -r + 70);
     dial.restore();
   }
   dial.restore();
@@ -457,10 +525,13 @@ function facing() {
 }
 function renderReadings() {
   $('#readings').innerHTML = S.readings.map(r => { const m = mountainOf(r.bearing); const bad = r.spread > 4;
-    return `<div class="reading"><span>${r.source === 'manual' ? 'Luopan' : 'Phone'} · ${m.m} ${m.dir}${m.sub}${r.source === 'phone' ? ` · spread ${r.spread}°` : ''}</span><span><b>${r.bearing.toFixed(1)}°</b> <span class="badge ${bad ? 'b-bad' : 'b-good'}">${bad ? 'interference' : 'ok'}</span> <button class="btn danger sm" data-rm="${r.id}">✕</button></span></div>`; }).join('');
+    return `<div class="reading"><span>${r.source === 'manual' ? 'Luopan' : 'Phone'} · ${m.m} ${m.dir}${m.sub}${r.source === 'phone' ? ` · spread ${r.spread}°` : ''}</span><span class="r-end"><b>${r.bearing.toFixed(1)}°</b> <span class="badge ${bad ? 'b-bad' : 'b-good'}">${bad ? 'interference' : 'ok'}</span><button class="icon-btn" data-rm="${r.id}" aria-label="Remove reading">✕</button></span></div>`; }).join('');
   $('#readings').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { S.readings = S.readings.filter(r => r.id !== b.dataset.rm); renderReadings(); persist(); });
   const f = facing();
-  $('#facingSummary').innerHTML = f ? `Facing <b>${f.bearing.toFixed(1)}° ${f.mountain.m} (${f.mountain.dir}${f.mountain.sub})</b> · sitting ${mountainOf(f.bearing + 180).m} · confidence <span class="badge b-${f.confidence === 'high' ? 'good' : f.confidence === 'medium' ? 'warn' : 'bad'}">${f.confidence}</span>${f.agree != null ? ` · last two readings differ by ${f.agree.toFixed(1)}°` : ' · take a second reading'}${f.mountain.edge < 3 ? ` · <span style="color:var(--warn)">only ${f.mountain.edge.toFixed(1)}° from a mountain boundary, re-measure</span>` : ''}` : '';
+  $('#facingSummary').innerHTML = f ? `<div class="lbl" style="margin-top:0">Facing<span class="zh">向</span></div>
+    <div class="big">${f.bearing.toFixed(1)}° ${f.mountain.m} ${f.mountain.dir}${f.mountain.sub}</div>
+    <div class="sub">Sitting ${mountainOf(f.bearing + 180).m} · confidence <span class="badge b-${f.confidence === 'high' ? 'good' : f.confidence === 'medium' ? 'warn' : 'bad'}">${f.confidence}</span>${f.agree != null ? ` · last two differ by ${f.agree.toFixed(1)}°` : ''}</div>
+    ${f.agree == null ? '<div class="alert">Take a second reading to confirm.</div>' : ''}${f.mountain.edge < 3 ? `<div class="alert">Only ${f.mountain.edge.toFixed(1)}° from a mountain boundary: re-measure.</div>` : ''}` : '<div class="hint">No reading yet. Use the compass above or type the luopan bearing.</div>';
   drawPlan();
 }
 
@@ -502,35 +573,46 @@ function drawPlan() {
       px.beginPath(); px.moveTo(cx, cy); px.arc(cx, cy, R, a0 - Math.PI / 2, a1 - Math.PI / 2); px.closePath();
       px.fillStyle = i % 2 ? 'rgba(184,146,58,0.09)' : 'rgba(47,127,209,0.06)'; px.fill(); px.strokeStyle = 'rgba(29,29,31,0.12)'; px.stroke();
       const am = (i * 45 - rot) * Math.PI / 180; const lx = cx + Math.sin(am) * PW * 0.42, ly = cy - Math.cos(am) * PW * 0.42;
-      px.fillStyle = '#8a6a22'; px.font = '700 28px -apple-system, sans-serif'; px.textAlign = 'center'; px.fillText(DIRS[i], lx, ly);
+      px.fillStyle = '#7a5a12'; px.font = '700 40px -apple-system, sans-serif'; px.textAlign = 'center'; px.textBaseline = 'middle'; px.fillText(DIRS[i], lx, ly); px.textBaseline = 'alphabetic';
     }
     hint.innerHTML = 'Sectors set from the facing reading. Add rooms below and tap each one\'s location.';
   } else if (!S.plan.door) hint.innerHTML = 'Now tap the <b>main door</b>.';
   else hint.innerHTML = 'Take a facing reading in step 2 to orient the sectors.';
-  px.fillStyle = '#d64545'; px.beginPath(); px.arc(cx, cy, 10, 0, Math.PI * 2); px.fill();
-  if (S.plan.door) { const d = S.plan.door; px.fillStyle = '#2e9c5d'; px.beginPath(); px.arc(d.x * PW, d.y * PW, 12, 0, Math.PI * 2); px.fill(); px.fillStyle = '#1d1d1f'; px.font = '700 16px -apple-system, sans-serif'; px.textAlign = 'center'; px.fillText('DOOR', d.x * PW, d.y * PW - 18); }
-  S.rooms.forEach(r => { if (!r.pt) return; px.fillStyle = r.id === pendingRoom ? '#c9850c' : '#1d1d1f'; px.beginPath(); px.arc(r.pt.x * PW, r.pt.y * PW, 9, 0, Math.PI * 2); px.fill(); px.font = '600 18px -apple-system, sans-serif'; px.textAlign = 'center'; px.fillText(r.name || 'room', r.pt.x * PW, r.pt.y * PW + 28); });
+  px.fillStyle = '#c22826'; px.beginPath(); px.arc(cx, cy, 13, 0, Math.PI * 2); px.fill();
+  if (S.plan.door) { const d = S.plan.door; px.fillStyle = '#1d7d3e'; px.beginPath(); px.arc(d.x * PW, d.y * PW, 16, 0, Math.PI * 2); px.fill(); px.fillStyle = '#231f19'; px.font = '700 28px -apple-system, sans-serif'; px.textAlign = 'center'; px.fillText('DOOR', d.x * PW, d.y * PW - 26); }
+  S.rooms.forEach(r => { if (!r.pt) return; px.fillStyle = r.id === pendingRoom ? '#ae6700' : '#231f19'; px.beginPath(); px.arc(r.pt.x * PW, r.pt.y * PW, 13, 0, Math.PI * 2); px.fill(); px.font = '650 30px -apple-system, sans-serif'; px.textAlign = 'center'; px.fillText(r.name || 'room', r.pt.x * PW, r.pt.y * PW + 44); });
 }
-const USES = ['bedroom','study','living','kitchen','dining','toilet','store','balcony','main door'];
+const USES = { bedroom: 'Bedroom 卧室', study: 'Study 书房', living: 'Living room 客厅', kitchen: 'Kitchen 厨房', dining: 'Dining 饭厅', toilet: 'Toilet 厕所', store: 'Store 储藏室', balcony: 'Balcony 阳台', 'main door': 'Main door 大门' };
 const FORM = { beamOverBed: 'Beam over bed/desk', mirrorFacesBed: 'Mirror faces bed', bedInLineWithDoor: 'Bed in line with door', doorFacesToilet: 'Door faces toilet', stoveFacesSink: 'Stove faces sink/fridge', sharpCorner: 'Sharp corner at bed/desk', longCorridor: 'Door to long corridor/window' };
+const openForms = new Set();
+const formCount = r => Object.values(r.form).filter(Boolean).length;
 function renderRooms() {
-  $('#rooms').innerHTML = S.rooms.map(r => `
-    <div class="room" data-id="${r.id}">
-      <div class="room-top"><input data-f="name" placeholder="Room name" value="${esc(r.name)}" style="flex:1"><select data-f="use">${USES.map(u => `<option ${r.use===u?'selected':''}>${u}</option>`).join('')}</select><button class="btn danger sm" data-del>✕</button></div>
-      <div style="display:flex; gap:8px; align-items:center; margin-top:8px"><button class="btn ghost sm" data-locate>${r.sector ? 'Move on plan' : 'Tap location on plan'}</button><span class="hint">${r.sector ? 'Sector: <b style="color:var(--accent)">' + (r.sector === 'C' ? 'Centre' : r.sector) + '</b>' : 'no sector yet'}</span></div>
-      <div class="chips">${S.people.map(p => `<span class="chip ${r.occupants.includes(p.id)?'on':''}" data-occ="${p.id}">${esc(p.name || '?')}</span>`).join('')}</div>
-      <div class="chips">${Object.entries(FORM).map(([k, v]) => `<span class="chip ${r.form[k]?'on':''}" data-form="${k}">${v}</span>`).join('')}</div>
+  $('#rooms').innerHTML = S.rooms.map((r, i) => `
+    <div class="card room" data-id="${r.id}">
+      <div class="card-head"><span class="card-kicker">Room ${i + 1}</span><button class="icon-btn" data-del aria-label="Remove ${esc(r.name || 'room ' + (i + 1))}">✕</button></div>
+      <label for="rn-${r.id}">Name<span class="zh">名称</span></label>
+      <input id="rn-${r.id}" data-f="name" placeholder="e.g. Master bedroom" value="${esc(r.name)}" autocomplete="off">
+      <label for="ru-${r.id}">Use<span class="zh">用途</span></label>
+      <select id="ru-${r.id}" data-f="use">${Object.entries(USES).map(([v, t]) => `<option value="${v}" ${r.use === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
+      <div class="locate"><button class="btn ${r.sector ? 'ghost' : ''} sm" data-locate>${r.sector ? 'Move on plan' : 'Place on plan'}</button><span class="sector">${r.sector ? 'Sector <b>' + (r.sector === 'C' ? 'Centre' : r.sector) + '</b>' : 'Not placed yet'}</span></div>
+      ${S.people.length ? `<div class="lbl">Who uses it<span class="zh">住者</span></div>
+      <div class="chips">${S.people.map(p => `<button type="button" class="chip ${r.occupants.includes(p.id) ? 'on' : ''}" aria-pressed="${r.occupants.includes(p.id)}" data-occ="${p.id}">${esc(p.name || '?')}</button>`).join('')}</div>` : ''}
+      <details class="form-x" ${openForms.has(r.id) || formCount(r) ? 'open' : ''}><summary>Form problems<span class="zh">形煞</span><span class="count">${formCount(r) ? `(${formCount(r)})` : ''}</span></summary>
+        <div class="chips" style="padding-bottom:4px">${Object.entries(FORM).map(([k, v]) => `<button type="button" class="chip ${r.form[k] ? 'on' : ''}" aria-pressed="${!!r.form[k]}" data-form="${k}">${v}</button>`).join('')}</div>
+      </details>
     </div>`).join('');
   $('#rooms').querySelectorAll('.room').forEach(el => {
     const r = S.rooms.find(r => r.id === el.dataset.id);
-    el.querySelectorAll('[data-f]').forEach(i => i.oninput = () => { r[i.dataset.f] = i.value; drawPlan(); persist(); });
+    el.querySelectorAll('[data-f]').forEach(i => i.addEventListener(i.tagName === 'SELECT' ? 'change' : 'input', () => { r[i.dataset.f] = i.value; drawPlan(); persist(); }));
     el.querySelector('[data-del]').onclick = () => { S.rooms = S.rooms.filter(x => x !== r); renderRooms(); drawPlan(); persist(); };
-    el.querySelector('[data-locate]').onclick = () => { pendingRoom = r.id; $('#planHint').innerHTML = `Tap where <b>${esc(r.name || 'this room')}</b> is on the plan.`; drawPlan(); window.scrollTo({ top: pc.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' }); };
-    el.querySelectorAll('[data-occ]').forEach(ch => ch.onclick = () => { const id = ch.dataset.occ; r.occupants = r.occupants.includes(id) ? r.occupants.filter(x => x !== id) : [...r.occupants, id]; renderRooms(); persist(); });
-    el.querySelectorAll('[data-form]').forEach(ch => ch.onclick = () => { r.form[ch.dataset.form] = !r.form[ch.dataset.form]; renderRooms(); persist(); });
+    el.querySelector('[data-locate]').onclick = () => { pendingRoom = r.id; $('#planHint').innerHTML = `Tap where <b>${esc(r.name || 'this room')}</b> is on the plan.`; drawPlan(); window.scrollTo({ top: pc.closest('.card').getBoundingClientRect().top + window.scrollY - 12, behavior: 'smooth' }); };
+    const toggle = (ch, on) => { ch.classList.toggle('on', on); ch.setAttribute('aria-pressed', on); persist(); };
+    el.querySelectorAll('[data-occ]').forEach(ch => ch.onclick = () => { const id = ch.dataset.occ; const on = !r.occupants.includes(id); r.occupants = on ? [...r.occupants, id] : r.occupants.filter(x => x !== id); toggle(ch, on); });
+    el.querySelectorAll('[data-form]').forEach(ch => ch.onclick = () => { const on = !r.form[ch.dataset.form]; r.form[ch.dataset.form] = on; toggle(ch, on); el.querySelector('.form-x .count').textContent = formCount(r) ? `(${formCount(r)})` : ''; });
+    const det = el.querySelector('.form-x'); det.ontoggle = () => det.open ? openForms.add(r.id) : openForms.delete(r.id);
   });
 }
-$('#addRoom').onclick = () => { const r = { id: uid(), name: '', use: S.rooms.length ? 'bedroom' : 'bedroom', sector: null, pt: null, occupants: [], form: {} }; S.rooms.push(r); renderRooms(); pendingRoom = r.id; $('#planHint').innerHTML = 'Tap where the new room is on the plan.'; drawPlan(); };
+$('#addRoom').onclick = () => { const r = { id: uid(), name: '', use: 'bedroom', sector: null, pt: null, occupants: [], form: {} }; S.rooms.push(r); renderRooms(); pendingRoom = r.id; $('#planHint').innerHTML = 'Name the room, then tap <b>Place on plan</b>.'; drawPlan(); persist(); $('#rn-' + r.id).focus(); };
 
 // ---------- step 4: report ----------
 function payload() {
@@ -550,10 +632,10 @@ async function runAnalysis() {
 }
 async function saveConsult() {
   if (!S.report) return;
-  if (S.reference) return alert('Already saved as ' + S.reference);
+  if (S.reference) return toast('Already saved as ' + S.reference);
   $('#btnNext').disabled = true;
-  try { const d = await api('/api/luopan/consults', { method: 'POST', body: JSON.stringify(payload()) }); S.reference = d.reference; renderReport(); alert('Saved as ' + d.reference); }
-  catch (e) { alert(e.message); } finally { $('#btnNext').disabled = false; }
+  try { const d = await api('/api/luopan/consults', { method: 'POST', body: JSON.stringify(payload()) }); S.reference = d.reference; renderReport(); toast('Saved as ' + d.reference); }
+  catch (e) { toast(e.message); } finally { $('#btnNext').disabled = false; }
 }
 function renderReport() {
   const r = S.report; if (!r) return;
@@ -577,16 +659,16 @@ function renderReport() {
       <p class="hint">${esc(r.flyingStar.structureText)}</p>
       <div class="fsgrid">${[['NW','N','NE'],['W','C','E'],['SW','S','SE']].flat().map(d => { const g = r.flyingStar.grid[d]; return `<div class="pal ${g.verdict} ${d}"><span class="d">${d === 'C' ? '中' : d}</span><span class="a">${g.annual}</span><div class="mw"><span>${g.mountain}</span><span>${g.water}</span></div><span class="p">${g.period}</span></div>`; }).join('')}</div>
       <div class="hint">Each palace: <b>mountain</b> star (left) governs health and people, <b>water</b> star (right) governs money and activity, small number is the period star, top-right is this year's star. North is up.</div>
-      ${r.flyingStar.bestSectors.length ? `<div class="who" style="margin-top:10px"><b>Best sectors:</b> ${r.flyingStar.bestSectors.join(', ')} — ${r.flyingStar.bestSectors.map(d => r.flyingStar.grid[d].bestUse).filter((v, i, a) => a.indexOf(v) === i).join('; ')}.</div>` : ''}
-      ${r.flyingStar.restThisYear.length ? `<div class="who"><b>Good natally but afflicted in ${r.year}:</b> ${r.flyingStar.restThisYear.join(', ')} — keep quiet this year, re-activate after 立春.</div>` : ''}
-      ${r.flyingStar.worstSectors.length ? `<div class="who"><b>Weakest sectors:</b> ${r.flyingStar.worstSectors.join(', ')} — keep for storage, toilets or low use; cure as listed per room.</div>` : ''}
+      ${r.flyingStar.bestSectors.length ? `<div class="who" style="margin-top:10px"><b>Best sectors:</b> ${r.flyingStar.bestSectors.join(', ')}: ${r.flyingStar.bestSectors.map(d => r.flyingStar.grid[d].bestUse).filter((v, i, a) => a.indexOf(v) === i).join('; ')}.</div>` : ''}
+      ${r.flyingStar.restThisYear.length ? `<div class="who"><b>Good natally but afflicted in ${r.year}:</b> ${r.flyingStar.restThisYear.join(', ')}. Keep quiet this year and re-activate after 立春.</div>` : ''}
+      ${r.flyingStar.worstSectors.length ? `<div class="who"><b>Weakest sectors:</b> ${r.flyingStar.worstSectors.join(', ')}. Keep for storage, toilets or low use; cure as listed per room.</div>` : ''}
     </div>` : `<div class="card hint">Enter the TOP year (or major renovation year) in step 1 to add the Flying Star chart.</div>`}
     <div class="card">
       <h2>Household</h2>
       ${r.people.map(p => `<div class="who"><b>${esc(p.name)}</b> · Gua ${p.gua} ${p.guaName} · ${p.group} group · door is ${p.doorStar.zh} ${p.doorStar.name}<br>
         <span class="hint">Best: 生氣 ${p.directions.shengQi} · 天醫 ${p.directions.tianYi} · 延年 ${p.directions.yanNian} · 伏位 ${p.directions.fuWei} &nbsp;|&nbsp; Avoid: 禍害 ${p.directions.huoHai} · 五鬼 ${p.directions.wuGui} · 六煞 ${p.directions.liuSha} · 絕命 ${p.directions.jueMing}</span>
         ${p.bazi ? `<div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap; align-items:center"><span class="stars">${p.bazi.pillars.filter(Boolean).join(' ')}${p.bazi.hourKnown ? '' : ' <i>(no hour)</i>'}</span><span class="stars">${p.bazi.dayMaster.stem} ${p.bazi.dayMaster.zh} <i>${p.bazi.strength.label}</i></span><span class="badge b-${p.bazi.confidence === 'high' ? 'good' : p.bazi.confidence === 'medium' ? 'warn' : 'bad'}">${p.bazi.confidence} confidence</span></div>
-        <span class="hint">用神 <b style="color:var(--accent-ink)">${p.bazi.zh.yongShen} ${p.bazi.yongShen}</b> · 喜神 ${p.bazi.zh.xiShen} ${p.bazi.xiShen} · 忌神 ${p.bazi.zh.jiShen} ${p.bazi.jiShen.join(', ')}${p.bazi.tiaoHou ? ` · 调候 ${p.bazi.tiaoHou}` : ''}<br>Favourable directions ${p.bazi.directions.favourable.join(', ')}; colours ${esc(p.bazi.colours.favourable)}. Avoid ${p.bazi.directions.avoid.join(', ') || '—'}; ${esc(p.bazi.colours.avoid)}.${p.bazi.confidence === 'low' ? ' <span style="color:var(--warn)">Borderline chart: a senior should confirm the 用神.</span>' : ''}</span>` : ''}</div>`).join('')}
+        <span class="hint">用神 <b style="color:var(--accent-ink)">${p.bazi.zh.yongShen} ${p.bazi.yongShen}</b> · 喜神 ${p.bazi.zh.xiShen} ${p.bazi.xiShen} · 忌神 ${p.bazi.zh.jiShen} ${p.bazi.jiShen.join(', ')}${p.bazi.tiaoHou ? ` · 调候 ${p.bazi.tiaoHou}` : ''}<br>Favourable directions ${p.bazi.directions.favourable.join(', ')}; colours ${esc(p.bazi.colours.favourable)}. Avoid ${p.bazi.directions.avoid.join(', ') || 'none'}; ${esc(p.bazi.colours.avoid)}.${p.bazi.confidence === 'low' ? ' <span style="color:var(--warn)">Borderline chart: a senior should confirm the 用神.</span>' : ''}</span>` : ''}</div>`).join('')}
     </div>
     ${r.rooms.map(room => `
     <div class="card">
@@ -621,7 +703,7 @@ function renderReport() {
   if (nb) nb.onclick = async () => {
     nb.disabled = true; nb.textContent = 'Writing… (about a minute)';
     try { const d = await api('/api/luopan/consults/' + S.reference + '/narrative', { method: 'POST', body: JSON.stringify({ regenerate: !!S.narrative }) }); S.narrative = d.narrative; renderReport(); $('#narrative').scrollIntoView({ behavior: 'smooth' }); }
-    catch (e) { alert(e.message); nb.disabled = false; nb.textContent = 'Write client report'; }
+    catch (e) { toast(e.message); nb.disabled = false; nb.textContent = 'Write client report'; }
   };
   $('#btnNew').onclick = () => { if (!confirm('Start a new consult? Unsaved work is lost.')) return; sessionStorage.removeItem('lp_state'); location.reload(); };
 }
@@ -630,13 +712,13 @@ function renderReport() {
 async function loadList() {
   try {
     const d = await api('/api/luopan/consults');
-    $('#consultList').innerHTML = d.consults.length ? d.consults.map(c => `<div class="list-item" data-ref="${c.reference}"><span><b>${c.reference}</b> · ${esc(c.client_name || '—')} · ${esc(c.house_type || '')}</span><span>${c.created_at.slice(0, 10)}${c.reviewed_at ? ' ✓' : ''}</span></div>`).join('') : 'No consults saved yet.';
+    $('#consultList').innerHTML = d.consults.length ? d.consults.map(c => `<div class="list-item" data-ref="${c.reference}"><span><b>${c.reference}</b> · ${esc(c.client_name || 'No name')} · ${esc(c.house_type || '')}</span><span>${c.created_at.slice(0, 10)}${c.reviewed_at ? ' ✓' : ''}</span></div>`).join('') : 'No consults saved yet.';
     $('#consultList').querySelectorAll('[data-ref]').forEach(el => el.onclick = async () => {
       const c = await api('/api/luopan/consults/' + el.dataset.ref);
       const p = c.payload; Object.assign(S, { clientName: p.clientName, address: p.address, houseType: p.houseType, topYear: p.topYear || '', renoYear: p.renoYear || '',
         people: p.people, rooms: p.rooms.map(r => ({ ...r, form: r.form || {}, occupants: r.occupants || [] })), readings: p.facing.readings || [{ id: uid(), bearing: p.facing.bearing, spread: p.facing.spread || 0, source: p.facing.source || 'manual' }],
         plan: { ...S.plan, centre: p.plan && p.plan.centre, door: p.plan && p.plan.door, dataUrl: p.plan && p.plan.dataUrl }, report: c.report, reference: c.reference, narrative: c.narrative || null });
-      ['clientName','address','houseType','topYear','renoYear'].forEach(id => $('#' + id).value = S[id] || '');
+      ['clientName','address','topYear','renoYear'].forEach(id => $('#' + id).value = S[id] || ''); renderHouseType(); periodHint();
       renderPeople(); renderRooms(); renderReadings(); loadPlanImg(); go(4); renderReport();
     });
   } catch (e) { $('#consultList').textContent = e.message; }
@@ -682,7 +764,7 @@ async function initChat() {
 }
 function citationsHtml(cites) {
   if (!cites || !cites.length) return '';
-  return `<div style="margin-top:10px"><div class="hint" style="font-weight:600; margin-bottom:4px">Sources</div>${cites.map(c => `<details class="refx"><summary>[${c.n}] <span class="badge ${c.type === 'quote' ? 'b-info' : 'b-warn'}">${c.type}</span> <b>${esc(c.source)}</b> · ${esc(c.section)}${c.usedFor ? ` <span class="hint">— ${esc(c.usedFor)}</span>` : ''}</summary><p>${esc(c.text)}</p></details>`).join('')}</div>`;
+  return `<div style="margin-top:10px"><div class="hint" style="font-weight:600; margin-bottom:4px">Sources</div>${cites.map(c => `<details class="refx"><summary>[${c.n}] <span class="badge ${c.type === 'quote' ? 'b-info' : 'b-warn'}">${c.type}</span> <b>${esc(c.source)}</b> · ${esc(c.section)}${c.usedFor ? ` <span class="hint">· ${esc(c.usedFor)}</span>` : ''}</summary><p>${esc(c.text)}</p></details>`).join('')}</div>`;
 }
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 if (S.key) boot(); else showGate();
