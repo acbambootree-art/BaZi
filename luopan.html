@@ -92,6 +92,7 @@
   .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
   .seg button { border-radius: 10px; padding: 0 8px; }
   .seg.wrap { grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+  .seg.people { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 
   /* compass */
   .howto { margin: 0 0 4px 20px; color: var(--ink-2); font-size: 1rem; line-height: 1.5; }
@@ -107,6 +108,14 @@
   .facing-result .big { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--accent-ink); line-height: 1.2; }
   .facing-result .sub { color: var(--ink-2); font-size: 1rem; margin-top: 4px; }
   .facing-result .alert { color: var(--warn); font-weight: 600; font-size: 1rem; margin-top: 6px; }
+  .finder-verdict { text-align: center; min-height: 76px; margin-top: 10px; }
+  .finder-verdict .v { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; }
+  .finder-verdict .v.good { color: var(--good); } .finder-verdict .v.bad { color: var(--bad); }
+  .finder-verdict .sub { color: var(--ink-2); font-size: 1rem; margin-top: 4px; }
+  .finder-list { margin-top: 16px; }
+  .fl-row { display: flex; align-items: center; gap: 12px; min-height: 48px; border-top: 1px solid var(--line); font-size: 1rem; }
+  .fl-row > b { width: 32px; color: var(--good); font-size: 1.0625rem; }
+  .fl-row > span:nth-child(2) { flex: 1; }
   .readings { margin-top: 8px; }
   .reading { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 52px; border-top: 1px solid var(--line); font-size: 1rem; }
   .reading b { font-variant-numeric: tabular-nums; font-weight: 650; }
@@ -434,28 +443,36 @@ function validateStep1() {
 
 // ---------- step 2: compass ----------
 const C = { on: false, heading: null, shown: 0, accuracy: null, level: true, samples: null };
-(function spin() { if (C.heading != null) { let d = C.heading - C.shown; d = ((d + 540) % 360) - 180; if (Math.abs(d) > 0.05) { C.shown = norm(C.shown + d * 0.18); drawDial(); } } requestAnimationFrame(spin); })();
+(function spin() {
+  if (C.heading != null) { let d = C.heading - C.shown; d = ((d + 540) % 360) - 180; if (Math.abs(d) > 0.05) { C.shown = norm(C.shown + d * 0.18); drawDial(); drawFinderDial(); } }
+  requestAnimationFrame(spin);
+})();
 const dial = $('#dial').getContext('2d');
-function drawDial() {
+// wedges: optional [{ dir: 0..7, fill }] painted under the ticks, in compass space (they turn with the dial)
+function drawDial(ctx = dial, wedges = null) {
   const w = 480, c = w / 2, r = c - 10;
-  dial.clearRect(0, 0, w, w);
-  dial.save(); dial.translate(c, c);
-  dial.rotate(-C.shown * Math.PI / 180);
+  ctx.clearRect(0, 0, w, w);
+  ctx.save(); ctx.translate(c, c);
+  ctx.rotate(-C.shown * Math.PI / 180);
+  (wedges || []).forEach(({ dir, fill }) => {
+    const a0 = (dir * 45 - 22.5 - 90) * Math.PI / 180, a1 = a0 + Math.PI / 4;
+    ctx.fillStyle = fill; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r - 2, a0, a1); ctx.closePath(); ctx.fill();
+  });
   for (let i = 0; i < 24; i++) {
     const a = i * 15 * Math.PI / 180;
-    dial.save(); dial.rotate(a);
-    dial.strokeStyle = 'rgba(29,29,31,0.25)'; dial.lineWidth = 2;
-    dial.beginPath(); dial.moveTo(0, -r); dial.lineTo(0, -r + 14); dial.stroke();
-    dial.fillStyle = i % 3 === 0 ? '#8a6a22' : '#6e6e73'; dial.font = (i % 3 === 0 ? 'bold 30px' : '23px') + ' serif'; dial.textAlign = 'center';
-    dial.fillText(MOUNTAINS[i], 0, -r + 47);
-    dial.fillStyle = '#57524a'; dial.font = '700 19px -apple-system, sans-serif';
-    if (i % 3 === 0) dial.fillText(DIRS[i / 3], 0, -r + 70);
-    dial.restore();
+    ctx.save(); ctx.rotate(a);
+    ctx.strokeStyle = 'rgba(29,29,31,0.25)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(0, -r + 14); ctx.stroke();
+    ctx.fillStyle = i % 3 === 0 ? '#8a6a22' : '#6e6e73'; ctx.font = (i % 3 === 0 ? 'bold 30px' : '23px') + ' serif'; ctx.textAlign = 'center';
+    ctx.fillText(MOUNTAINS[i], 0, -r + 47);
+    ctx.fillStyle = '#57524a'; ctx.font = '700 19px -apple-system, sans-serif';
+    if (i % 3 === 0) ctx.fillText(DIRS[i / 3], 0, -r + 70);
+    ctx.restore();
   }
-  dial.restore();
+  ctx.restore();
   // fixed pointer
-  dial.fillStyle = '#d64545'; dial.beginPath(); dial.moveTo(c, 4); dial.lineTo(c - 10, 28); dial.lineTo(c + 10, 28); dial.fill();
-  dial.fillStyle = C.level ? '#2e9c5d' : '#d64545'; dial.beginPath(); dial.arc(c, c, 8, 0, Math.PI * 2); dial.fill();
+  ctx.fillStyle = '#d64545'; ctx.beginPath(); ctx.moveTo(c, 4); ctx.lineTo(c - 10, 28); ctx.lineTo(c + 10, 28); ctx.fill();
+  ctx.fillStyle = C.level ? '#2e9c5d' : '#d64545'; ctx.beginPath(); ctx.arc(c, c, 8, 0, Math.PI * 2); ctx.fill();
 }
 drawDial();
 function onOrient(e) {
@@ -476,20 +493,123 @@ function onOrient(e) {
   else if (C.accuracy != null) st = `Sensor accuracy ±${Math.round(C.accuracy)}°`;
   else st = 'Compass live';
   $('#cstatus').textContent = st; $('#cstatus').className = 'status ' + cls;
+  finderTick();
+}
+async function startCompass() {
+  if (C.on) return;
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    const p = await DeviceOrientationEvent.requestPermission();
+    if (p !== 'granted') throw new Error('Permission denied. Reload the page and allow Motion & Orientation.');
+  }
+  const ev = 'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
+  window.addEventListener(ev, onOrient, true);
+  C.on = true; $('#btnCompass').textContent = 'Compass on'; $('#btnTake').disabled = false;
 }
 $('#btnCompass').onclick = async () => {
   if (C.on) return;
-  try {
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      const p = await DeviceOrientationEvent.requestPermission();
-      if (p !== 'granted') throw new Error('Permission denied. Reload the page and allow Motion & Orientation.');
-    }
-    const ev = 'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
-    window.addEventListener(ev, onOrient, true);
-    C.on = true; $('#btnCompass').textContent = 'Compass on'; $('#btnTake').disabled = false;
-    $('#cstatus').textContent = 'Waiting for sensor… (needs HTTPS and a phone)'; $('#cstatus').className = 'status';
-  } catch (e) { $('#cstatus').textContent = e.message; $('#cstatus').className = 'status bad'; }
+  try { await startCompass(); $('#cstatus').textContent = 'Waiting for sensor… (needs HTTPS and a phone)'; $('#cstatus').className = 'status'; }
+  catch (e) { $('#cstatus').textContent = e.message; $('#cstatus').className = 'status bad'; }
 };
+
+// ---------- direction finder (report): chimes on a person's good directions ----------
+const STAR_INFO = {
+  shengQi: { zh: '生氣', name: 'Sheng Qi', good: true, meaning: 'vitality, wealth, career' },
+  tianYi: { zh: '天醫', name: 'Tian Yi', good: true, meaning: 'health, recovery' },
+  yanNian: { zh: '延年', name: 'Yan Nian', good: true, meaning: 'relationships, longevity' },
+  fuWei: { zh: '伏位', name: 'Fu Wei', good: true, meaning: 'stability, self' },
+  huoHai: { zh: '禍害', name: 'Huo Hai', good: false, meaning: 'mishaps, small losses' },
+  wuGui: { zh: '五鬼', name: 'Wu Gui', good: false, meaning: 'disputes, betrayal, fire' },
+  liuSha: { zh: '六煞', name: 'Liu Sha', good: false, meaning: 'scandal, legal trouble' },
+  jueMing: { zh: '絕命', name: 'Jue Ming', good: false, meaning: 'severe loss, illness' },
+};
+const DIR_ELEMENT = { N: 'water', NE: 'earth', E: 'wood', SE: 'wood', S: 'fire', SW: 'earth', W: 'metal', NW: 'metal' };
+const ELEMENT_ZH = { wood: '木', fire: '火', earth: '土', metal: '金', water: '水' };
+let F = { personId: null, dir: null, flat: false, ctx: null, sound: true, audio: null };
+try { F.sound = localStorage.getItem('lp_sound') !== 'off'; } catch {}
+const finderPerson = () => S.report && S.report.people.find(p => p.id === F.personId);
+// What the given direction means for a person: their Gua star, plus whether BaZi agrees.
+function dirVerdict(p, d) {
+  const key = Object.keys(p.directions).find(k => p.directions[k] === d);
+  const star = STAR_INFO[key];
+  const bz = p.bazi ? (p.bazi.directions.favourable.includes(d) ? 'favourable' : p.bazi.directions.avoid.includes(d) ? 'avoid' : 'neutral') : null;
+  return { star, bz, best: star.good && bz === 'favourable' };
+}
+function finderWedges() {
+  const p = finderPerson(); if (!p) return null;
+  return DIRS.map((d, i) => { const v = dirVerdict(p, d); return { dir: i, fill: v.best ? 'rgba(29,125,62,0.30)' : v.star.good ? 'rgba(29,125,62,0.13)' : 'rgba(194,40,38,0.07)' }; });
+}
+function drawFinderDial() { if (F.ctx && F.ctx.canvas.isConnected) drawDial(F.ctx, finderWedges()); }
+// Snap to one of the 8 directions, holding the previous one until the needle is 3° past a boundary.
+function stableDir(h, prev) {
+  const idx = Math.floor(norm(h + 22.5) / 45) % 8;
+  if (prev == null || idx === prev) return idx;
+  const lo = Math.floor(norm(h + 22.5 - 3) / 45) % 8, hi = Math.floor(norm(h + 22.5 + 3) / 45) % 8;
+  return lo === hi ? idx : prev;
+}
+function audioCtx() {
+  if (!F.audio) { const A = window.AudioContext || window.webkitAudioContext; if (!A) return null; F.audio = new A(); }
+  if (F.audio.state === 'suspended') F.audio.resume();
+  return F.audio;
+}
+// Soft bell: inharmonic partials with an exponential decay. Two notes when BaZi agrees too.
+function chime(rich) {
+  if (navigator.vibrate) navigator.vibrate(rich ? [30, 70, 30] : 30);
+  if (!F.sound) return;
+  const ctx = audioCtx(); if (!ctx) return;
+  const out = ctx.createGain(); out.gain.value = 0.32; out.connect(ctx.destination);
+  (rich ? [[1318.5, 0], [1760, 0.16]] : [[1318.5, 0]]).forEach(([f, delay]) => {
+    const t = ctx.currentTime + delay;
+    [[1, 0.6], [2.76, 0.18], [5.4, 0.07]].forEach(([mult, amp]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f * mult;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(amp, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.8 / mult ** 0.3);
+      o.connect(g); g.connect(out); o.start(t); o.stop(t + 2);
+    });
+  });
+}
+function finderTick() {
+  const p = finderPerson(); if (!p || C.heading == null || !$('#fVerdict')) return;
+  const h = C.heading, m = mountainOf(h);
+  $('#fHdg').firstChild.nodeValue = h.toFixed(1) + '°';
+  $('#fLabel').textContent = `${m.m} · ${m.dir}${m.sub}`;
+  if (!C.level) { $('#fVerdict').innerHTML = '<div class="v bad">Hold the phone flat</div>'; F.flat = false; return; }
+  const prev = F.dir; F.dir = stableDir(h, prev);
+  const changed = F.dir !== prev;
+  if (!changed && F.flat) return;
+  F.flat = true;
+  const d = DIRS[F.dir], v = dirVerdict(p, d), el = DIR_ELEMENT[d];
+  $('#fVerdict').innerHTML = `<div class="v ${v.star.good ? 'good' : 'bad'}">${d} · ${v.star.zh} ${v.star.name}</div>
+    <div class="sub">${v.star.good ? 'Good' : 'Avoid'} for ${esc(p.name)}: ${v.star.meaning}.${v.bz ? ` BaZi: ${el} ${ELEMENT_ZH[el]} is ${v.bz === 'avoid' ? 'unfavourable' : v.bz} for them.` : ''}</div>`;
+  if (changed && v.star.good) chime(v.best);
+}
+function finderCardHtml() {
+  const people = S.report.people; if (!people.length) return '';
+  if (!people.some(p => p.id === F.personId)) F.personId = people[0].id;
+  const p = finderPerson();
+  const good = Object.keys(STAR_INFO).filter(k => STAR_INFO[k].good).map(k => ({ k, d: p.directions[k], v: dirVerdict(p, p.directions[k]) }));
+  return `<div class="card" id="finderCard">
+      <h2>Find direction<span class="zh">寻向</span></h2>
+      <p class="hint">Pick a person and turn slowly with the phone flat. One chime marks a good Gua direction; a double chime means their BaZi agrees too.</p>
+      ${people.length > 1 ? `<div class="seg wrap people" id="fPeople" style="margin-top:12px">${people.map(x => `<button type="button" class="${x.id === F.personId ? 'on' : ''}" data-pid="${x.id}">${esc(x.name)}</button>`).join('')}</div>` : ''}
+      <div class="dial" style="margin-top:16px"><canvas id="fDial" width="480" height="480"></canvas></div>
+      <div class="heading" id="fHdg">—<small id="fLabel">${C.on ? 'waiting for sensor' : 'compass off'}</small></div>
+      <div class="finder-verdict" id="fVerdict"></div>
+      <div class="btn-row"><button class="btn" id="fStart">${C.on ? 'Compass on' : 'Start compass'}</button><button class="btn ghost" id="fSound" aria-pressed="${F.sound}">${F.sound ? 'Sound on' : 'Sound off'}</button></div>
+      <div class="finder-list">${good.map(g => `<div class="fl-row ${g.v.best ? 'best' : ''}"><b>${g.d}</b><span>${STAR_INFO[g.k].zh} ${STAR_INFO[g.k].name}<span class="hint"> · ${STAR_INFO[g.k].meaning}</span></span>${g.v.best ? '<span class="badge b-good">BaZi ✓</span>' : g.v.bz === 'avoid' ? '<span class="badge b-warn">BaZi ✗</span>' : ''}</div>`).join('')}</div>
+    </div>`;
+}
+function initFinder() {
+  const cv = $('#fDial'); if (!cv) { F.ctx = null; return; }
+  F.ctx = cv.getContext('2d'); F.dir = null; F.flat = false; drawFinderDial(); finderTick();
+  $('#fStart').onclick = async () => {
+    audioCtx(); // unlock audio inside the tap
+    if (C.on) return;
+    try { await startCompass(); $('#fStart').textContent = 'Compass on'; $('#fLabel').textContent = 'waiting for sensor (needs HTTPS and a phone)'; }
+    catch (e) { $('#fVerdict').innerHTML = `<div class="v bad">${esc(e.message)}</div>`; }
+  };
+  $('#fSound').onclick = () => { F.sound = !F.sound; try { localStorage.setItem('lp_sound', F.sound ? 'on' : 'off'); } catch {} $('#fSound').textContent = F.sound ? 'Sound on' : 'Sound off'; $('#fSound').setAttribute('aria-pressed', F.sound); if (F.sound) chime(false); };
+  document.querySelectorAll('#fPeople [data-pid]').forEach(b => b.onclick = () => { F.personId = b.dataset.pid; $('#finderCard').outerHTML = finderCardHtml(); initFinder(); });
+}
 $('#btnTake').onclick = () => {
   if (C.heading == null) { $('#cstatus').textContent = 'No heading yet. On desktop, type the bearing instead.'; $('#cstatus').className = 'status warn'; return; }
   C.samples = []; $('#btnTake').disabled = true; let t = 4;
@@ -670,6 +790,7 @@ function renderReport() {
         ${p.bazi ? `<div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap; align-items:center"><span class="stars">${p.bazi.pillars.filter(Boolean).join(' ')}${p.bazi.hourKnown ? '' : ' <i>(no hour)</i>'}</span><span class="stars">${p.bazi.dayMaster.stem} ${p.bazi.dayMaster.zh} <i>${p.bazi.strength.label}</i></span><span class="badge b-${p.bazi.confidence === 'high' ? 'good' : p.bazi.confidence === 'medium' ? 'warn' : 'bad'}">${p.bazi.confidence} confidence</span></div>
         <span class="hint">用神 <b style="color:var(--accent-ink)">${p.bazi.zh.yongShen} ${p.bazi.yongShen}</b> · 喜神 ${p.bazi.zh.xiShen} ${p.bazi.xiShen} · 忌神 ${p.bazi.zh.jiShen} ${p.bazi.jiShen.join(', ')}${p.bazi.tiaoHou ? ` · 调候 ${p.bazi.tiaoHou}` : ''}<br>Favourable directions ${p.bazi.directions.favourable.join(', ')}; colours ${esc(p.bazi.colours.favourable)}. Avoid ${p.bazi.directions.avoid.join(', ') || 'none'}; ${esc(p.bazi.colours.avoid)}.${p.bazi.confidence === 'low' ? ' <span style="color:var(--warn)">Borderline chart: a senior should confirm the 用神.</span>' : ''}</span>` : ''}</div>`).join('')}
     </div>
+    ${finderCardHtml()}
     ${r.rooms.map(room => `
     <div class="card">
       <div class="rv"><h3>${esc(room.name)} <span class="sec">· ${room.use} · ${room.sector}</span></h3><span class="badge b-${room.verdict}">${room.verdict}</span></div>
@@ -698,6 +819,7 @@ function renderReport() {
     </div>` : ''}
     <div class="card hint">Structural fixes come first; items are element carriers. Advice assumes the recorded facing.
       <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap"><button class="btn ghost sm" onclick="window.print()">Print / PDF</button><button class="btn ghost sm" id="btnNew">New consult</button>${S.reference ? `<button class="btn sm" id="btnNarrative">${S.narrative ? 'Rewrite client report' : 'Write client report'}</button>` : '<span class="hint" style="align-self:center">Save the consult to write the client report.</span>'}</div></div>`;
+  initFinder();
   if ($('#chatCard')) initChat();
   const nb = $('#btnNarrative');
   if (nb) nb.onclick = async () => {
