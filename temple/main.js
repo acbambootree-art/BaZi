@@ -536,7 +536,7 @@ const ease = (k) => 1 - Math.pow(1 - k, 3);
 
 // ---------------- sound (synthesized, no files) ----------------
 // All sounds are real recordings (CC0, Freesound — see assets/CREDITS.md). Nothing is synthesized.
-const SFX_FILES = { muyu: 'muyu', bowl: 'bowl', clack1: 'clack1', clack2: 'clack2', sticks: 'sticks', birds: 'birds_alishan' };
+const SFX_FILES = { muyu: 'muyu', bowl: 'bowl', clack1: 'clack1', clack2: 'clack2', sticks: 'sticks', birds: 'birds_stream' };
 const sfx = {
   ctx: null, on: store.get('sound', true), buf: {},
   init() {
@@ -570,7 +570,7 @@ const sfx = {
   muyu(g = 1) { this.play('muyu', { gain: 0.9 * g, rate: 0.93 + Math.random() * 0.08 }); },
   rattle() { this.play('sticks', { gain: 0.9, rate: 0.95 + Math.random() * 0.1 }); },
   ambient() {
-    // Alishan dawn chorus, looped by overlapping copies with a slow crossfade (no gap, no click)
+    // forest birdsong by a stream (checked: no voices), looped by overlapping copies with a slow crossfade (no gap, no click)
     const b = this.buf.birds, X = 3;
     const next = (at) => {
       const s = this.ctx.createBufferSource(), g = this.ctx.createGain();
@@ -884,6 +884,8 @@ function clampWalk(p) {
 function groundY(x, z) {
   if (Math.abs(x) > 17) return 0;
   if (z <= HALL.front) return F;
+  // the gate stands on a 0.3 m granite platform (x ±12, z 18.5–25.5); ease up its edge instead of popping
+  if (z > 18) return 0.3 * THREE.MathUtils.clamp(Math.min(z - 18.3, 25.7 - z, 12.2 - Math.abs(x)) / 0.4, 0, 1);
   if (z >= -4.5) return 0;
   return F * (-4.5 - z) / 2;
 }
@@ -992,7 +994,7 @@ function locomotion(dt) {
         if (Math.hypot(c.x - want.x, c.z - want.z) < 0.6 * Math.hypot(ax, az)) { pos.x = c.x; pos.z = c.z; break; }
       }
     } else { pos.x += sx; pos.z += sz; clampWalk(pos); }
-    if (!manual && loco.speed > 0.15) me.root.rotation.y += angDiff(Math.atan2(loco.vx, loco.vz), me.root.rotation.y) * (1 - Math.exp(-dt * 9));
+    if (!manual && path.length && loco.speed > 0.15) me.root.rotation.y   // face the way tap-to-walk goes; never spin round after backing up += angDiff(Math.atan2(loco.vx, loco.vz), me.root.rotation.y) * (1 - Math.exp(-dt * 9));
   }
   me.speed = loco.speed;
   me.walking = loco.speed > 0.25;

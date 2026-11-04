@@ -6,7 +6,7 @@
 - `mural1.webp` — Heavenly King Virudhaka, Ming, Cleveland Museum of Art 1918.544 (CC0).
 - `mural2.webp` — Amitābha Triad, Ming, Cleveland Museum of Art 1961.135 (CC0).
 - `tex/*`, `sky.hdr`, `sky.jpg` — Poly Haven (CC0). https://polyhaven.com
-- `sfx/birds_alishan.mp3` — "260623_055825_Taiwan Chiayi Alishan Ogasawara Lookout – June Early Morning" by BayTsai, Freesound #860231 (CC0), looped. https://freesound.org/s/860231/
+- `sfx/birds_stream.mp3` — "Birds singing at stream", Freesound #517913 (CC0), looped. https://freesound.org/s/517913/
 - `sfx/bowl.mp3` — "Singing Bowl – Single Strike with Fade-Out" by Fumbananana420, Freesound #697529 (CC0). https://freesound.org/s/697529/
 - `sfx/clack1.mp3`, `sfx/clack2.mp3`, `sfx/sticks.mp3` — cut from "Wooden Blocks falling, close aspect, fast" by rylandbrooks, Freesound #746613 (CC0). https://freesound.org/s/746613/
 - `sfx/muyu.mp3` — "Mokugyo.wav" by jonopodmore, Freesound #607215 (CC0). https://freesound.org/s/607215/
