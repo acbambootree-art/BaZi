@@ -535,7 +535,7 @@ const wait = (s) => animate(s, () => {});
 const ease = (k) => 1 - Math.pow(1 - k, 3);
 
 // ---------------- sound (synthesized, no files) ----------------
-// All sounds are real recordings (CC0, Freesound — see assets/CREDITS.md). Nothing is synthesized.
+// All sounds are real recordings (Freesound, CC0 / CC BY — see assets/CREDITS.md). Nothing is synthesized.
 const SFX_FILES = { muyu: 'muyu', bowl: 'bowl', clack1: 'clack1', clack2: 'clack2', sticks: 'sticks', birds: 'birds_stream' };
 const sfx = {
   ctx: null, on: store.get('sound', true), buf: {},
@@ -586,7 +586,7 @@ const sfx = {
   update(inside, dt) {
     if (!this.ctx) return;
     const k = 1 - Math.exp(-dt * 1.5);
-    this.ambGain.gain.value += ((inside ? 0.22 : 0.6) - this.ambGain.gain.value) * k;
+    this.ambGain.gain.value += ((inside ? 0.07 : 0.18) - this.ambGain.gain.value) * k;   // a quiet bed under everything, not a soundtrack
     this.ambLP.frequency.value += ((inside ? 1400 : 18000) - this.ambLP.frequency.value) * k;
   },
 };
@@ -1496,6 +1496,7 @@ $('#credits').onclick = () => modal(`
   <p class="muted">${EN ? 'Statues, paintings and textures are public-domain (CC0) works from' : '佛像、畫作與材質為公共領域（CC0）作品，來自'} Minneapolis Institute of Art, Cleveland Museum of Art, Poly Haven.</p>
   <p class="muted">${EN ? 'Stone lions, dragon pillars and drum stones' : '石獅、龍柱、抱鼓石'}: "Stone Big Lion 01", "Stone Dragon Pillar 02", "Stone Old Sculpture Drum 01" by zhengzhangxun (Sketchfab), CC BY 4.0.</p>
   <p class="muted">${EN ? 'Offerings' : '供品'}: "Mandarin Scan", "Pineapple Scan" by Franco Pizzani; "White Orchid" by gottalovehana; "Chrystanthemum flower" by Lassi Kaukonen (recoloured) — Sketchfab, CC BY 4.0.</p>
+  <p class="muted">${EN ? 'Wooden fish sound' : '木魚聲'}: "Mokugyo drum sounds" by George_Papargyris (Freesound), CC BY 4.0.</p>
   <div class="row"><button class="btn ghost" data-v="ok">${t('ok')}</button></div>`);
 
 document.querySelector('#bar').addEventListener('click', async (e) => {
