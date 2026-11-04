@@ -1,0 +1,662 @@
+[
+  {
+    "n": 1,
+    "grade": "Good",
+    "poem": [
+      "The sun rises, and wind and cloud disperse",
+      "Bright and pure, its light shines on the world",
+      "The road ahead opens onto the great highway",
+      "All things clear and blessed, kept safe and well"
+    ],
+    "meaning": "The dark clouds will clear, and the road ahead grows wider the farther you go. Keep a bright, open heart, and all will go peacefully and smoothly."
+  },
+  {
+    "n": 2,
+    "grade": "Good",
+    "poem": [
+      "This moment has come at just the right time",
+      "The finest of a hundred flowers is about to bloom",
+      "When the colors of spring arrive",
+      "One rinsing, and the dust of care is gone"
+    ],
+    "meaning": "The bud is waiting to open, and the moment is very near. Hold on a little longer — when spring comes, your troubles will wash away on their own."
+  },
+  {
+    "n": 3,
+    "grade": "Good",
+    "poem": [
+      "Hold your heart steady; do not let it waver",
+      "Heaven has set aside food and fortune to spare",
+      "Harmony upon harmony brings lasting joy",
+      "When the time comes, you will find the bright pearl"
+    ],
+    "meaning": "Settle your mind instead of letting it drift; the blessings meant for you will not pass you by. Treat others kindly, and the right opportunity will come in time."
+  },
+  {
+    "n": 4,
+    "grade": "Good",
+    "poem": [
+      "Wind gentle, waves still — the boat may sail",
+      "Like the full moon on the night of Mid-Autumn",
+      "In all things there is no need for worry",
+      "Blessings and fortune will gladden your home"
+    ],
+    "meaning": "The wind is calm and the water still — a good time to set out. There is no need to worry too much; your household is full of blessings."
+  },
+  {
+    "n": 5,
+    "grade": "Fair",
+    "poem": [
+      "I fear your fortune ahead may change",
+      "Act quickly — it is best to move first",
+      "Keep to your steady course and no harm will come",
+      "A guardian star keeps watch at your side"
+    ],
+    "meaning": "Changes may lie ahead, so take care of what needs doing early. Hold steadily to your path, and unseen helpers will quietly protect you."
+  },
+  {
+    "n": 6,
+    "grade": "Poor",
+    "poem": [
+      "Wind and cloud bring rain in heavy sheets",
+      "Storms and the season's ills will surely do harm",
+      "This matter is hard to bring into harmony",
+      "Worse still to set out far from home"
+    ],
+    "meaning": "The storm outside is strong, so do not force a journey or a confrontation now. Look after your health and your home first, and wait for this season to pass."
+  },
+  {
+    "n": 7,
+    "grade": "Good",
+    "poem": [
+      "The clouds part and the moon shines clear",
+      "No need to ask whether to go forward or back",
+      "Marriage is a bond decided by Heaven",
+      "In harmony and blessing, all things are fulfilled"
+    ],
+    "meaning": "The clouds have parted and the answer is clear, so there is no need to hesitate. What is meant to be will come together; meet it with kindness and all will end well."
+  },
+  {
+    "n": 8,
+    "grade": "Good",
+    "poem": [
+      "The rice in the fields is nearly ripe",
+      "This matter will be fulfilled on both sides",
+      "Go home and sit at ease",
+      "Wife and children rejoice, the family together"
+    ],
+    "meaning": "Your hard work is finally bearing a harvest, and both sides can be taken care of. Go home with an easy heart and enjoy time with your family."
+  },
+  {
+    "n": 9,
+    "grade": "Poor",
+    "poem": [
+      "Dragon and tiger roam together deep in the hills",
+      "Why must you keep looking over your shoulder?",
+      "Who knows if the road ahead holds love and joy",
+      "In days to come, it will no longer concern me"
+    ],
+    "meaning": "It is all right to go separate ways; stop looking back. This relationship or matter cannot be forced, and letting go will bring you relief."
+  },
+  {
+    "n": 10,
+    "grade": "Poor",
+    "poem": [
+      "Flowers bloom and set fruit, yet half have withered",
+      "What a pity this year has slipped by in vain",
+      "Slowly the sun sinks behind the western hills",
+      "I urge you not to press on ahead"
+    ],
+    "meaning": "Some things this year stalled halfway, like the sun slowly setting. Do not rush forward now; rest, reflect, and save your strength."
+  },
+  {
+    "n": 11,
+    "grade": "Good",
+    "poem": [
+      "The sacred rooster's call makes things clear",
+      "In all matters, watch the hours from midnight to dawn",
+      "The clouds part and moonlight fills the world",
+      "You will soon see peace"
+    ],
+    "meaning": "Things will gradually become clear; watch for the turning point in the hours between late night and early morning. As the clouds part, peace will come into view."
+  },
+  {
+    "n": 12,
+    "grade": "Good",
+    "poem": [
+      "The wind and waves of the great river slowly calm",
+      "Now you may go forward in peace",
+      "A kind helper will surely lend support",
+      "You will escape misfortune and find peace"
+    ],
+    "meaning": "The storm is settling, and you can move forward with confidence now. Someone will come to help you, and even bad situations can be resolved."
+  },
+  {
+    "n": 13,
+    "grade": "Poor",
+    "poem": [
+      "Your fate now meets a barrier of ill-omened stars",
+      "You spend every scheme and still find no rest",
+      "Offerings and prayers can hardly carry you through",
+      "Like rowing a boat up onto a high shoal"
+    ],
+    "meaning": "Your fortunes are blocked for now, and no amount of effort will break through — like rowing against the current. Pause, keep steady, and do not take risks."
+  },
+  {
+    "n": 14,
+    "grade": "Good",
+    "poem": [
+      "In matters of wealth, things slowly grow clear",
+      "Flowers bloom and fall, and the fruit is formed",
+      "Be at ease and watch the moon's cassia tree, sign of success",
+      "You will soon see peace"
+    ],
+    "meaning": "Your financial picture is becoming clearer, and your efforts will bear fruit. Wait with an easy heart; good news is not far away."
+  },
+  {
+    "n": 15,
+    "grade": "Fair",
+    "poem": [
+      "The sage Jiang Taigong was still waiting at eighty",
+      "Late in life he met the king who made him minister",
+      "Do not press your urgent matter for now",
+      "Hold steady and wait for your luck to turn"
+    ],
+    "meaning": "Great things can come late, as the sage Jiang Taigong found his true calling at eighty. Do not force the urgent matter now; keep to your path and wait for your luck to improve."
+  },
+  {
+    "n": 16,
+    "grade": "Poor",
+    "poem": [
+      "No use in offerings, no use in pleading",
+      "You spend every scheme and still find no rest",
+      "The living cannot see the workings of the unseen",
+      "The law burns like a furnace; you are not free"
+    ],
+    "meaning": "Pleading or rushing will not help, and now is not the time to fight. Stay within the rules and your proper place, and avoid clashing with authority or lawsuits."
+  },
+  {
+    "n": 17,
+    "grade": "Fair",
+    "poem": [
+      "Old grievances, layer upon layer, not yet mended",
+      "Yet no disaster will fall upon your home",
+      "Be careful, and do good to earn blessings",
+      "When dragon and snake meet, harmony will come"
+    ],
+    "meaning": "Old hurts have not yet healed, but no great misfortune will reach your household. Do good, act with care, and reconciliation will come in time."
+  },
+  {
+    "n": 18,
+    "grade": "Good",
+    "poem": [
+      "You ask about the cause of this matter",
+      "See — rank and fortune gather on your road ahead",
+      "With a patron's help, you will gain much",
+      "Harmony will be clear to both sides"
+    ],
+    "meaning": "What you asked about has already taken a turn for the better, and your prospects look good. With a helping hand it will go even better, and the outcome will be clear."
+  },
+  {
+    "n": 19,
+    "grade": "Fair",
+    "poem": [
+      "Wealth and rank are set by Heaven's decree",
+      "A heart that reaches too high will miss its moment",
+      "If not, go back along the old road",
+      "The clouds part, the moon appears, all grows clear"
+    ],
+    "meaning": "Fortune has its own measure, and aiming too high can make you miss your chance. Consider returning to the familiar path, and things will become clear."
+  },
+  {
+    "n": 20,
+    "grade": "Poor",
+    "poem": [
+      "Your hopes of success are not yet fulfilled",
+      "I fear tangled troubles lie in your fate",
+      "Both families must guard against loss",
+      "Better to step back, and do not lament"
+    ],
+    "meaning": "Recognition and success are not going your way for now, and things feel tangled. Both sides should guard against loss; take a step back rather than sighing over it."
+  },
+  {
+    "n": 21,
+    "grade": "Good",
+    "poem": [
+      "The Buddha's teaching reaches all directions with power",
+      "Great disasters and troubles will turn aside",
+      "The red sun shines high in the sky",
+      "And a kind helper will come to your home"
+    ],
+    "meaning": "The divine is watching over you, and great troubles will become small ones. Your luck shines like the noonday sun, and someone helpful will come to your door."
+  },
+  {
+    "n": 22,
+    "grade": "Good",
+    "poem": [
+      "The old sage Jiang Taigong prospered at eighty",
+      "The rising moon shines bright across the four seas",
+      "Great good fortune will come to you by fate",
+      "Even in a thatched hut, all things go well"
+    ],
+    "meaning": "Like the sage who found success late in life, your good fortune will come in time. Even in humble circumstances, everything can go smoothly."
+  },
+  {
+    "n": 23,
+    "grade": "Poor",
+    "poem": [
+      "You wish to sail the river, its waters vast and hazy",
+      "The road ahead is unfinished; your luck not yet open",
+      "Though the fishing line is always in your hand",
+      "I fear the fish and the water will not meet"
+    ],
+    "meaning": "You want to set out, but the timing is not right; you have what you need, but the right opportunity has not appeared. Wait a while and do not rush your decision."
+  },
+  {
+    "n": 24,
+    "grade": "Good",
+    "poem": [
+      "The rising moon shines bright across the four seas",
+      "Ahead lie rank and fortune, and peace",
+      "The drifting clouds are swept away; all is well",
+      "You will be kept safe from harm"
+    ],
+    "meaning": "Moonlight shines in every direction, and a peaceful future is within reach. Your worries will drift away like clouds, and misfortune will not touch you."
+  },
+  {
+    "n": 25,
+    "grade": "Fair",
+    "poem": [
+      "Do not weary your heart over the road ahead",
+      "Asking the gods again and again is in vain",
+      "Just wait until the rooster and dog days have passed",
+      "Then, without offerings, you will see how it goes"
+    ],
+    "meaning": "Do not wear yourself out, and there is no need to keep asking the gods. Give it some time, and the answer will come on its own."
+  },
+  {
+    "n": 26,
+    "grade": "Good",
+    "poem": [
+      "Choose the first and finest peony blossom",
+      "Pick it, I urge you, without delay",
+      "If you ask where true kinship is found",
+      "In all things spring has come; the time is right"
+    ],
+    "meaning": "The best opportunity is right in front of you — if you want it, take it and stop hesitating. The timing is perfect, so go with the flow."
+  },
+  {
+    "n": 27,
+    "grade": "Good",
+    "poem": [
+      "Set your heart at ease and be free",
+      "Your home is blessed, your family without care",
+      "Wealth and treasure will favor you in the end",
+      "Nothing will be harmed; no need to strive"
+    ],
+    "meaning": "Live with an easy heart; your home is peaceful and free of worry. Prosperity will come naturally, with no need to force it."
+  },
+  {
+    "n": 28,
+    "grade": "Poor",
+    "poem": [
+      "Now is not the time to act on this",
+      "A tiger come down to the plain is mocked by dogs",
+      "In this world, so much is hard to settle",
+      "Before a thousand hills and rivers, you hesitate"
+    ],
+    "meaning": "Now is not the time to make your move; you may be slighted or underestimated. Be patient, and do not fight from a weak position."
+  },
+  {
+    "n": 29,
+    "grade": "Fair",
+    "poem": [
+      "The withered tree, alas, has not yet met spring",
+      "For now it lies hidden in the dark",
+      "Be at ease and hold on until the frost withdraws",
+      "Then you will once again shape your own world"
+    ],
+    "meaning": "Right now you are like a bare tree in winter, still waiting for spring. Stay calm and endure the cold; your day to flourish again will come."
+  },
+  {
+    "n": 30,
+    "grade": "Fair",
+    "poem": [
+      "Slowly the moon grows calm and full",
+      "Afterward, beware: you may not rise high",
+      "If you change course and go forward",
+      "Every matter will surely take double toil"
+    ],
+    "meaning": "Things seem calm now, but later they may stall or fall short of expectations. If you change direction, be ready to put in twice the effort."
+  },
+  {
+    "n": 31,
+    "grade": "Good",
+    "poem": [
+      "Green willows thick and lush — the time is right",
+      "Go forth now and build your own world",
+      "Flowers and fruit, full and unspoiled",
+      "Blessings and fortune will gladden your home"
+    ],
+    "meaning": "The willows are green — this is the time to show what you can do. Go ahead with confidence; the results will be rich and your home full of blessings."
+  },
+  {
+    "n": 32,
+    "grade": "Poor",
+    "poem": [
+      "Dragon and tiger meet before your gate",
+      "This matter binds both sides together",
+      "Gold suddenly turns into iron",
+      "What use are offerings or asking the gods?"
+    ],
+    "meaning": "Something that looks wonderful may suddenly turn sour, so beware of disappointment. Rather than praying for help, take a practical look at your own plans."
+  },
+  {
+    "n": 33,
+    "grade": "Fair",
+    "poem": [
+      "You wish to sail the river, its waters vast and hazy",
+      "Hold the boat steady and you will meet no storm",
+      "At home, take care and do more good",
+      "Soon the fish and the water will meet"
+    ],
+    "meaning": "The way ahead looks uncertain, but if you hold your course you will avoid any great storm. Put your heart into home and good deeds, and things will turn out well."
+  },
+  {
+    "n": 34,
+    "grade": "Fair",
+    "poem": [
+      "The perilous high mountains are all behind you",
+      "Do not mind the twists still left on this road",
+      "When the orchid and cassia begin to bloom",
+      "The long snake turns and becomes a dragon"
+    ],
+    "meaning": "The hardest part of the road is already behind you, so do not mind the few bumps left. Good fortune is building, and even a small snake can become a dragon."
+  },
+  {
+    "n": 35,
+    "grade": "Good",
+    "poem": [
+      "Why use clever schemes in this matter?",
+      "The changes ahead will make themselves known",
+      "See — as you go, harmony will be found",
+      "Little by little you will come out into peace"
+    ],
+    "meaning": "There is no need to scheme; what lies ahead will reveal itself. In time, agreement will be reached and you will find your way out of difficulty."
+  },
+  {
+    "n": 36,
+    "grade": "Good",
+    "poem": [
+      "Blessings vast as the Eastern Sea, life long as the hills",
+      "Why do you lament your hardships?",
+      "Great good fortune will come to you by fate",
+      "Pray sincerely and peace will surely be yours"
+    ],
+    "meaning": "You are blessed with good fortune and long life, so stop lamenting your hardships. Good luck is written in your fate; pray sincerely, and all will be well."
+  },
+  {
+    "n": 37,
+    "grade": "Good",
+    "poem": [
+      "Fortune favors you; your standing will rise",
+      "All that concerns you will be to your benefit",
+      "All the way ahead, nothing will be hard",
+      "Once you resolve, you will be kept safe and well"
+    ],
+    "meaning": "Your luck is strong, and both body and mind will gain from it. There are no great obstacles ahead; make up your mind, and things will go smoothly."
+  },
+  {
+    "n": 38,
+    "grade": "Good",
+    "poem": [
+      "Renown and purpose stand at the very center",
+      "No need to pray; your heart is at peace",
+      "Wait a little while, until the days have passed",
+      "Then at once your wish will be fulfilled"
+    ],
+    "meaning": "Recognition and opportunity are close at hand, so there is no need to pray too hard. Give it a little more time, and your wish will come true."
+  },
+  {
+    "n": 39,
+    "grade": "Fair",
+    "poem": [
+      "If your heart seeks the path of the immortals",
+      "Step back, I urge you, and look out from a high tower",
+      "Be at ease, hold steady, sit calmly",
+      "You will surely meet a patron who helps you"
+    ],
+    "meaning": "Instead of seeking a shortcut, step back and look at the bigger picture. Stay calm and steady, and someone will come to support you."
+  },
+  {
+    "n": 40,
+    "grade": "Good",
+    "poem": [
+      "A lifetime of wealth, honor, and high position",
+      "Your family's gate will surely shine",
+      "In this there will be no loss",
+      "Husband and wife together, joyful for a hundred years"
+    ],
+    "meaning": "A prosperous life lies ahead, and your family will be honored. There will be no loss, and husband and wife will grow old together in harmony."
+  },
+  {
+    "n": 41,
+    "grade": "Fair",
+    "poem": [
+      "Having come this far, it is hard to push on",
+      "Singing and drinking freely, you linger and wander",
+      "Where cock-crow and dog-bark are heard, news is near",
+      "A marriage fated from a past life will make a pair"
+    ],
+    "meaning": "Though it is hard to move things forward right now, let yourself relax. Good news is close, and a fated match may come together."
+  },
+  {
+    "n": 42,
+    "grade": "Poor",
+    "poem": [
+      "One stretch of river, then one more mountain",
+      "Who knew the road ahead would be hard again?",
+      "However you change your pleas, you cannot pass",
+      "Quarrels and gossip will long give you no peace"
+    ],
+    "meaning": "Past one mountain there is another river; this road is harder than you thought. Changing tactics will not force a breakthrough, so seek stability and stay clear of disputes."
+  },
+  {
+    "n": 43,
+    "grade": "Good",
+    "poem": [
+      "All year your affairs rush on as if in flight",
+      "Set your heart at ease and do not hesitate",
+      "Your helper is still a thousand miles away",
+      "News will slowly arrive by the middle of the month"
+    ],
+    "meaning": "This is a busy, hurried year, but keep your heart at ease and do not waver. Help is still far away, and news will gradually reach you around mid-month."
+  },
+  {
+    "n": 44,
+    "grade": "Fair",
+    "poem": [
+      "Traveling far, you will find much to gain",
+      "Why are you torn between two doubts?",
+      "Though along the way there is advance and retreat",
+      "When the moon rises bright, your time will come"
+    ],
+    "meaning": "Seeking opportunity away from home will be rewarding, so stop hesitating. There will be ups and downs along the way, but your time will come."
+  },
+  {
+    "n": 45,
+    "grade": "Good",
+    "poem": [
+      "The flowers have bloomed and now bear fruit",
+      "Wealth and honor will last into old age",
+      "The noble and the humble meet in harmony",
+      "All things clear and blessed — do not worry"
+    ],
+    "meaning": "The flowers have borne fruit, and comfort will last into old age. You will get along well with all kinds of people; things will go your way, so do not worry."
+  },
+  {
+    "n": 46,
+    "grade": "Good",
+    "poem": [
+      "Success and honor come to you with pride",
+      "Ahead lie wealth and joy, with peace of mind",
+      "When the full, bright moon shines on you",
+      "On the fifteenth, reunion — light fills the sky"
+    ],
+    "meaning": "Your efforts will be recognized, and your future is prosperous and secure. Like the full moon on the fifteenth, everything will come together in harmony."
+  },
+  {
+    "n": 47,
+    "grade": "Fair",
+    "poem": [
+      "Why must you seek signs from the gods?",
+      "What will help you is already in your heart",
+      "For now, wait until the middle of the month",
+      "Misfortune will pass and turn to good"
+    ],
+    "meaning": "There is no need to keep asking the gods; the answer is already in your heart. By the middle of the month, even bad things can turn to good."
+  },
+  {
+    "n": 48,
+    "grade": "Poor",
+    "poem": [
+      "In worldly affairs, you are not of one mind with others",
+      "Clouds veil the moon, its light dim and hazy",
+      "In your heart you long to go forward",
+      "But I fear your luck is not yet open"
+    ],
+    "meaning": "You are out of step with others right now, and the way ahead is hazy, like a moon behind clouds. Think twice before pushing forward; your luck has not yet opened."
+  },
+  {
+    "n": 49,
+    "grade": "Fair",
+    "poem": [
+      "Though there is much talk, do not follow it",
+      "Where wind and cloud are still, the dragon does not fly",
+      "In quiet, clear news will come at last",
+      "Why ask again and again?"
+    ],
+    "meaning": "You hear a lot of advice, but you need not follow all of it. The time is not yet right, so be still; news will come quietly, with no need to keep asking."
+  },
+  {
+    "n": 50,
+    "grade": "Good",
+    "poem": [
+      "Before the Buddha you vowed a single heart",
+      "Look ahead, and good news will come",
+      "This thing was only iron to begin with",
+      "Yet it can be transformed into gold"
+    ],
+    "meaning": "Stay sincere and devoted, and good news will come. Even if you feel like plain iron now, you can slowly be refined into gold."
+  },
+  {
+    "n": 51,
+    "grade": "Fair",
+    "poem": [
+      "North, south, east, and west — no road is fit to walk",
+      "The matter before you is one you can bear",
+      "I urge you to stand firm and not worry",
+      "Your household will be kept safe and well"
+    ],
+    "meaning": "Rather than running in every direction, stay where you are and hold your ground. You can handle what is in front of you; settle your heart, and your home will be safe and well."
+  },
+  {
+    "n": 52,
+    "grade": "Fair",
+    "poem": [
+      "Rank and career are given by Heaven",
+      "No need to fret with an anxious heart",
+      "If you ask whether it will come slow or swift",
+      "The meeting of wind and cloud is right before you"
+    ],
+    "meaning": "Your career has its own course, so there is no need to worry about it all the time. As for when — the right opportunity is actually right in front of you."
+  },
+  {
+    "n": 53,
+    "grade": "Good",
+    "poem": [
+      "I see you come to ask what lies in your heart",
+      "A family that does good has blessings to spare",
+      "Luck flows; wealth and children both arrive",
+      "Soon joy will overflow your gate"
+    ],
+    "meaning": "What you asked about looks very promising, and a family that does good has blessings to spare. Good news about wealth and family will come one after another."
+  },
+  {
+    "n": 54,
+    "grade": "Good",
+    "poem": [
+      "A lone lamp, silent, deep in the night",
+      "All things clear and blessed, all things fulfilled",
+      "If good deeds are done where none can see",
+      "Burn fine incense, and it will reach the gods"
+    ],
+    "meaning": "Even in lonely, quiet moments, things will turn out well. Keep doing good and pray sincerely, and the gods will hear you."
+  },
+  {
+    "n": 55,
+    "grade": "Fair",
+    "poem": [
+      "Know that talk of advance and retreat is empty",
+      "What seems to bloom in the dark may not be whole",
+      "Pearls and jade still lie deep, unchanged",
+      "What your heart seeks now is in vain"
+    ],
+    "meaning": "Promises may not be trustworthy, and what looks good may not be complete. The treasure is still hidden; pushing for it now will only waste your effort."
+  },
+  {
+    "n": 56,
+    "grade": "Fair",
+    "poem": [
+      "In sickness, laboring with a bitter heart",
+      "In the end, things will not come out whole",
+      "Once it is gone, do not look back to ask",
+      "The cares in your heart will wear away"
+    ],
+    "meaning": "Times of illness or hardship are tiring, and things may not resolve fully right away. Let the past be, and your worries will gradually fade."
+  },
+  {
+    "n": 57,
+    "grade": "Good",
+    "poem": [
+      "Hold your heart steady; do not let it waver",
+      "The road ahead is clear and blessed; your time has come",
+      "In the end, nothing serious along the way",
+      "And the immortals guard your peaceful home"
+    ],
+    "meaning": "Settle your heart; your luck is turning for the better. No great trouble lies along the way, and the gods will watch over your home."
+  },
+  {
+    "n": 58,
+    "grade": "Poor",
+    "poem": [
+      "The snake longs to become a dragon",
+      "But I fear your luck is not yet open",
+      "In long illness, sit with an easy heart",
+      "Though there is much talk, do not follow it"
+    ],
+    "meaning": "You want to rise higher, but your luck has not yet opened. For now, relax and look after your health, and do not believe idle gossip."
+  },
+  {
+    "n": 59,
+    "grade": "Good",
+    "poem": [
+      "If you mean to do good, do not delay",
+      "Seek your name now — the time is right and blessed",
+      "This matter will surely come together",
+      "Wealth and treasure will gladly follow"
+    ],
+    "meaning": "If you want to do good, do it now; this is the right time to pursue success. The matter can be settled, and prosperity will follow."
+  },
+  {
+    "n": 60,
+    "grade": "Fair",
+    "poem": [
+      "The rising moon's bright light is pure and blessed",
+      "Yet drifting clouds still cast their shade",
+      "At home, take care and do more good",
+      "In official matters, reason it out, and you will gain"
+    ],
+    "meaning": "Your luck is good at heart, only hidden for now behind passing clouds. Do good at home, and in formal matters stay reasonable — it will work in your favor."
+  }
+]

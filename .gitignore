@@ -10,3 +10,8 @@ server/db/bazi.db
 # SQLite WAL sidecar files (local dev)
 server/db/bazi.db-shm
 server/db/bazi.db-wal
+
+# temple light-bake work files
+temple/.bake/
+temple/assets/cand/
+temple/worker/.wrangler/

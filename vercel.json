@@ -11,6 +11,10 @@
     {
       "source": "/today",
       "destination": "/today.html"
+    },
+    {
+      "source": "/temple",
+      "destination": "/temple.html"
     }
   ]
 }
