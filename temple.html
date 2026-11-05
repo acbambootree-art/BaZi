@@ -49,6 +49,7 @@
     border-radius: 14px; font-size: 12px; }
   #bar button span { font-size: 20px; line-height: 1.1; }
   #bar button:hover, #bar button:focus-visible { background: rgba(184, 35, 26, 0.1); outline: none; }
+  #bar button.on { background: rgba(184, 35, 26, 0.14); }
   #bar button:disabled { opacity: 0.4; }
 
   #toast { position: fixed; top: 30%; left: 50%; transform: translate(-50%, -10px); opacity: 0;
@@ -105,6 +106,14 @@
   #intro .bar { width: 160px; height: 1px; margin: 8px auto 0; background: rgba(90,76,60,.18); }
   #intro .bar i { display: block; height: 100%; width: 0; background: rgba(90,76,60,.6); transition: width .5s; }
   #intro.out { opacity: 0; }
+  #intro .msg { opacity: 0; transition: opacity .8s; }
+  #intro.waiting .msg { opacity: 1; }
+  #enter { position: absolute; left: 50%; top: calc(50% + 11vmin); translate: -50% 0; pointer-events: auto; cursor: pointer;
+    padding: 12px 34px; border-radius: 999px; border: 1px solid rgba(110, 86, 60, .35); background: rgba(250, 246, 238, .72);
+    color: rgba(80, 62, 44, .9); font: 17px/1 var(--brush); letter-spacing: 6px; box-shadow: 0 6px 24px rgba(90, 80, 60, .12);
+    backdrop-filter: blur(4px); transition: opacity .8s, background .3s; }
+  #enter:hover, #enter:focus-visible { background: rgba(255, 252, 245, .92); outline: none; }
+  #intro.waiting #enter { opacity: 0; pointer-events: none; }
   body.intro #top, body.intro #bar, body.intro #hint, body.intro #credits, body.intro #joy, body.intro .nametag { opacity: 0; pointer-events: none; }
   #top, #bar, #hint, #credits, #joy { transition: opacity 1.5s; }
 </style>
@@ -133,7 +142,7 @@
 <div id="toast" class="glass"></div>
 <div id="modal"><div class="card" id="card"></div></div>
 <div id="rest"><div>你在廟裡歇著</div><button class="btn primary" id="wake" style="flex:none;padding:10px 22px">回到廟裡</button></div>
-<div id="intro"><div class="t">歇腳廟</div><div class="msg"><span id="gateMsg">雲 開 中</span><div class="bar"><i id="gateBar"></i></div></div></div>
+<div id="intro"><div class="t">歇腳廟</div><button id="enter">入 廟</button><div class="msg"><span id="gateMsg">雲 開 中</span><div class="bar"><i id="gateBar"></i></div></div></div>
 
 <script type="importmap">
 { "imports": {

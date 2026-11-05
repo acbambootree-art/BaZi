@@ -540,7 +540,7 @@ function mainHall() {
   plinth.userData.role = 'occ';     // its top is under the floor; not worth lightmap space
   g.add(plinth);
   for (let i = 0; i < 4; i++) g.add(mesh(new THREE.BoxGeometry(HW * 2, F * (i + 1) / 4, 0.5), stone, 0, F * (i + 1) / 8, ZF + 1.75 - i * 0.5));
-  const fl = mesh(new THREE.PlaneGeometry(HW * 2, ZF - ZB), pbr('granite_tile_02', 16, 14, { roughness: 0.6, color: 0xd8d4cc }), 0, F + 0.01, (ZF + ZB) / 2, { cast: false });   // grey stone: a calm field under the red
+  const fl = mesh(new THREE.PlaneGeometry(HW * 2, ZF - ZB), pbr('large_grey_tiles', 10, 9, { roughness: 0.75 }), 0, F + 0.01, (ZF + ZB) / 2, { cast: false });   // large grey stone slabs (Poly Haven, CC0): a calm field under the red
   fl.rotation.x = -Math.PI / 2; fl.name = 'hallFloor'; g.add(fl);
 
   // walls: back + sides
@@ -561,9 +561,9 @@ function mainHall() {
     if (z === -8 && Math.abs(x) < 6) g.add(dragonColumn(x, F, z, colH, 0.5));
     else g.add(mesh(colGeo, Math.abs(x) > 8 ? darkWood : red, x, F + colH / 2, z));   // outer rows plain wood: red only along the aisle
     g.add(mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.35, 16), stone, x, F + 0.17, z));
-    // the two rows nearest the altar are left out: nothing stands between you and the deities. (Hidden, not
+    // the two rows nearest the altar, and the inner pair among the cushions, are left out: nothing stands between you and the deities. (Hidden, not
     // removed, so the baked-lighting fingerprint still matches; their baked copies are hidden with them.)
-    if (z === -20 || z === -26) g.children.slice(-2).forEach((o) => (o.visible = false));
+    if (z === -20 || z === -26 || (z === -14 && Math.abs(x) < 8)) g.children.slice(-2).forEach((o) => (o.visible = false));   // and none among the prayer cushions
   }
   // beams
   const bt = beamTex();

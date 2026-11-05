@@ -38,6 +38,9 @@ const TX = {
   room: [(n) => `第 ${n} 殿`, (n) => `Hall ${n}`],
   hint: [matchMedia('(pointer: coarse)').matches ? '搖桿走路轉向・拖曳看看・雙指拉近' : '↑↓ 走路・←→ 轉向・拖曳看看・滾輪拉近（第一人稱）', matchMedia('(pointer: coarse)').matches ? 'Joystick to walk & turn · drag to look · pinch to zoom' : '↑↓ walk · ←→ turn · drag to look · scroll in for first person'],
   loading: ['雲 開 中', 'Parting the clouds'],
+  enter: ['入 廟', 'Enter the temple'],
+  endPray: ['結束', 'End prayer'],
+  praying: ['雙手合十，靜靜祈禱。想結束時按「結束」或走開就好', 'Palms together. Pray as long as you like. Tap End prayer or walk away to finish.'],
   rest: ['你在廟裡歇著', 'You are resting in the temple'],
   wake: ['回到廟裡', 'Come back in'],
   acts: [['拜拜', '坐下', '上香', '擲筊', '求籤', '點燈', '木魚'], ['Pray', 'Kneel', 'Incense', 'Blocks', 'Fortune', 'Lamp', 'Muyu']],
@@ -113,6 +116,7 @@ $('#brand b').textContent = t('brand');
 $('#room').textContent = t('room', 1);
 $('#hint').textContent = t('hint');
 $('#gateMsg').textContent = t('loading');
+$('#enter').textContent = t('enter');
 const intro = { on: true, parting: false, k: 0 };          // the cloud intro (built further down)
 // every three.js loader reports to the default manager: the gates stay shut until all of it has arrived
 const loadState = { done: 0, total: 0, idle: null };
@@ -1075,7 +1079,7 @@ function bowSeq(up, down, base, n = 3, t0 = 0.35, period = 1.08) {
   return k;
 }
 function actKeys(act, kneeling) {
-  const base = kneeling ? 'palms' : 'idle';
+  const base = kneeling ? 'palms' : 'idle';   // (a praying pilgrim's rest pose is also palms: see update())
   switch (act) {
     case 'palms': return [[0, base], [0.45, 'palms'], [1.8, 'palms'], [2.2, base]];
     case 'bai': return bowSeq('palms', kneeling ? 'prostrate' : 'bow', base);
@@ -1184,12 +1188,12 @@ class Pilgrim {
   }
   setName(n) { this.name = n; if (this.label) this.label.element.textContent = n; }
   play(act) {
-    this.keys = actKeys(act, this.kneel); if (!this.keys) return;
+    this.keys = actKeys(act, this.kneel || this.praying); if (!this.keys) return;
     this.act = act; this.actT = 0; this.incense.visible = act === 'incense';
   }
   update(dt) {
     this.t += dt; this.actT += dt;
-    if (this.walking) this.kneel = false;
+    if (this.walking) this.kneel = this.praying = false;
     const damp = (cur, want, rate) => cur + (want - cur) * (1 - Math.exp(-dt * rate));
     this.kn = damp(this.kn, this.kneel ? 1 : 0, 5);
     const spd = this.speed ?? (this.walking ? 3 : 0);
@@ -1202,7 +1206,7 @@ class Pilgrim {
       const end = this.keys[this.keys.length - 1][0];
       want = samplePose(this.keys, Math.min(this.actT, end));
       if (this.actT >= end) { this.act = null; this.incense.visible = false; }
-    } else want = { ...POSE[this.kneel ? 'palms' : 'idle'] };
+    } else want = { ...POSE[this.kneel || this.praying ? 'palms' : 'idle'] };
 
     // breathing and a gentle walk cycle layered on top
     const ph = this.phase, w = this.walkAmt;
@@ -1242,7 +1246,7 @@ class Pilgrim {
 const F = HALL.floor, DOORS = [-6, 0, 6], GATE = [19.4, 24.6];
 const OBSTACLES = [
   [0, 8, 2.4],                                                         // 天公爐 (planPath relies on index 0)
-  ...[-11, -5.5, 5.5, 11].flatMap((x) => [-8, -14].map((z) => [x, z, z === -8 && Math.abs(x) < 6 ? 1.35 : 0.8])),   // scanned dragon pillars have wide bases; no columns nearer the altar
+  ...[-11, -5.5, 5.5, 11].flatMap((x) => [-8, -14].filter((z) => z === -8 || Math.abs(x) > 8).map((z) => [x, z, z === -8 && Math.abs(x) < 6 ? 1.35 : 0.8])),   // scanned dragon pillars have wide bases; no columns nearer the altar
   ...[-10, -7.4, -4.6, -1.6, 1.6, 4.6, 7.4, 10].map((x) => [x, 24.2, Math.abs(x) < 2 ? 0.7 : 0.5]),
   [-12, 30, 1.3], [13, 31, 1.1], [-13.5, 12, 1.1],
   [13.5, -2, 0.8],
@@ -1385,6 +1389,7 @@ function locomotion(dt) {
   }
   me.speed = loco.speed;
   me.walking = loco.speed > 0.25;
+  if (me.walking && prayBtn().classList.contains('on')) endPrayer();   // walking away ends a prayer
   if (me.walking && atMuyu) { atMuyu = false; me.mallet.visible = false; }
 }
 
@@ -1576,7 +1581,7 @@ function followCam(dt, snap = false) {
 const camLook = new THREE.Vector3();
 function deityFraming(p, ground) {
   if (!DEITY || cam.dragging || me.walking) return null;
-  if (!(me.kneel || busy || me.act || atMuyu)) return null;
+  if (!(me.kneel || me.praying || busy || me.act || atMuyu)) return null;
   const dx = DEITY.x - p.x, dz = DEITY.z - p.z, L0 = Math.hypot(dx, dz);
   if (L0 > 70 || Math.abs(angDiff(Math.atan2(dx, dz), me.root.rotation.y)) > 1.2) return null;   // not facing the deity
   const ux = dx / L0, uz = dz / L0, rx = -uz, rz = ux;
@@ -1703,14 +1708,18 @@ async function throwBlocks(who, r) {
   if (who === me) clearBlocks();
   who.play('throw');
   await wait(0.5);
-  const from = who.handPos, ry = who.root.rotation.y, floor = groundY(who.root.position.x, who.root.position.z);
+  const from = who.handPos, ry = who.root.rotation.y, wz = who.root.position.z;
+  const floor = groundY(who.root.position.x, wz) + (inHall(wz) ? 0.014 : 0.004);   // the visible floor surface: never sink in and flicker
   const fwd = new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry)), side = new THREE.Vector3(Math.cos(ry), 0, -Math.sin(ry));
   const jobs = r.map((flatUp, i) => {
     const b = new THREE.Mesh(blockGeo, blockMat); b.castShadow = true;
+    b.rotation.order = 'YXZ';                          // flip about its own axis, then turn about the vertical: lies flat
     scene.add(b); thrown.push(b);
     const land = who.root.position.clone().addScaledVector(fwd, 0.85 + Math.random() * 0.25).addScaledVector(side, (i ? 1 : -1) * (0.3 + Math.random() * 0.15));
-    land.y = floor + (flatUp ? 0.11 : 0.005);
     const spinX = (flatUp ? Math.PI / 2 : -Math.PI / 2) + Math.PI * 2 * (2 + i), yaw = Math.random() * Math.PI * 2;
+    // rest exactly on the floor: measure the block's lowest point in its final orientation
+    b.rotation.set(spinX, yaw, 0); b.position.set(0, 0, 0); b.updateMatrixWorld(true);
+    land.y = floor - new THREE.Box3().setFromObject(b).min.y + 0.002;
     return animate(0.85 + i * 0.08, (k) => {
       b.position.lerpVectors(from, land, k);
       b.position.y += Math.sin(k * Math.PI) * 0.9;
@@ -1764,6 +1773,12 @@ fetch('/temple/lots.json').then((r) => (r.ok ? r.json() : null)).then((d) => (LO
 let LOTS_EN = null;
 if (EN) fetch('/temple/lots_en.json').then((r) => (r.ok ? r.json() : null)).then((d) => (LOTS_EN = d)).catch(() => {});
 
+const prayBtn = () => document.querySelector('#bar button[data-act="bai"]');
+function endPrayer() {
+  if (!me.praying) return;
+  me.praying = false;
+  prayBtn().lastChild.textContent = TX.acts[+EN][0]; prayBtn().classList.remove('on');
+}
 // ---------------- rituals ----------------
 const ALTAR = { x: 0, z: -25.0 };
 const toAltar = () => { SHOTS.altar(); return walkTo(ALTAR.x, ALTAR.z, Math.PI); };
@@ -1788,10 +1803,14 @@ const ACTS = {
   },
   async sit() { setBusy(false); await sitAt(nearestCushion()); },
 
+  // prayer mode: one gentle bow, then palms together facing the deity for as long as you like.
+  // Tap the button again (now "End prayer") or simply walk away to finish.
   async bai() {
-    me.play('bai'); net.act('bai');
-    for (let i = 0; i < 3; i++) setTimeout(() => sfx.muyu(), 300 + i * 1200);
-    await wait(3.6);
+    if (me.praying) { endPrayer(); return; }
+    me.praying = true; net.act('palms');
+    me.play('palms');
+    prayBtn().lastChild.textContent = t('endPray'); prayBtn().classList.add('on');
+    toast(t('praying'), 4200);
   },
 
   async incense() {
@@ -2266,7 +2285,19 @@ async function partClouds() {
     const tick = () => (loadState.total && loadState.done >= loadState.total ? setTimeout(() => (loadState.done >= loadState.total ? res() : tick()), 500) : setTimeout(tick, 150));
     tick();
   });
-  await Promise.race([Promise.all([quiet(), bakeDone]).then(quiet), new Promise((res) => setTimeout(res, 30000))]);   // never keep anyone in the clouds
+  const loaded = Promise.race([Promise.all([quiet(), bakeDone]).then(quiet), new Promise((res) => setTimeout(res, 30000))]);   // never stuck loading
+  // you part the clouds yourself: the click is also what lets the browser start the ambient sound
+  const entered = new Promise((res) => {
+    const go = () => {
+      sfx.on = true; store.set('sound', true); $('#sound').textContent = '🔈';
+      sfx.init(); sfx.ctx.resume?.(); sfx.master.gain.value = 1;
+      $('#intro').classList.add('waiting');                 // swap the button for the quiet progress line
+      res();
+    };
+    $('#enter').addEventListener('click', go, { once: true });
+  });
+  $('#enter').focus({ preventScroll: true });                // Enter / Space work too
+  await Promise.all([loaded, entered]);
   $('#gateBar').style.width = '100%';
   try { await renderer.compileAsync(scene, camera); } catch {}
   await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
