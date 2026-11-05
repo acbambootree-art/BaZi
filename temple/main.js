@@ -770,7 +770,7 @@ const KOI_YAW = Math.PI / 2;    // placed, the koi's head (geometry +z: the roun
     }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(gu, 2)); geo.setIndex(gi); geo.computeVertexNormals();
     const tl = new THREE.TextureLoader(), tex = (m, srgb) => { const t = tl.load(`/temple/assets/tex/leafy_grass_${m}.webp`); t.wrapS = t.wrapT = THREE.RepeatWrapping; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
-    const meadow = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex('diff', true), normalMap: tex('nor'), roughness: 1, color: 0xb8c4a8, side: THREE.DoubleSide }));
+    const meadow = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex('diff', true), normalMap: tex('nor'), roughness: 1, color: 0x9cb47e, side: THREE.DoubleSide }));
     meadow.receiveShadow = true; meadow.userData.role = 'skip'; scene.add(meadow);
   }
   const normals = new THREE.TextureLoader().load('/temple/assets/env/waternormals.jpg', (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
@@ -2174,7 +2174,8 @@ world.lamps = (() => {
       for (let k = 0; k <= rs; k++) {
         const a = (k / rs) * Math.PI * 2, cx = Math.cos(a), sx = Math.sin(a);
         const nx = cx * N.x + sx * Bn.x, ny = cx * N.y + sx * Bn.y, nz = cx * N.z + sx * Bn.z;
-        pos.push(p.x + nx * rr, p.y + ny * rr, p.z + nz * rr); nor.push(nx, ny, nz);
+        const kn = rr * (1 + Math.sin(a * 3 + t * len * 1.3 + rad0 * 17) * 0.08 + Math.sin(a * 5 - t * len * 2.3) * 0.05 + Math.max(0, Math.sin(t * len * 0.9 + rad0 * 31)) ** 6 * 0.18);   // knots and swellings
+        pos.push(p.x + nx * kn, p.y + ny * kn, p.z + nz * kn); nor.push(nx, ny, nz);
         uv.push((k / rs) * Math.max(1, Math.round(rr * 4)), (t * len) / 2.5);
       }
     }
@@ -2198,26 +2199,61 @@ world.lamps = (() => {
   const rootAngles = [];
   const settle = (d) => { let m = 0; for (let k = -3; k <= 3; k++) m += groundAt(d + k * 0.1); return Math.max(groundAt(d), m / 7); };   // a root rests on each step and slopes down its edge
   const rootDirs = [];
-  for (let j = 0; j < 11; j++) rootDirs.push([Math.PI - B.arc * 0.92 + (j / 10) * B.arc * 1.84, j % 2 ? 0.2 : 0.38]);   // front: fewer, so the niches show between them
-  for (let j = 0; j < 16; j++) rootDirs.push([Math.PI + B.arc + (j / 15) * (Math.PI * 2 - B.arc * 2), j % 3 ? 0.22 : 0.42]);
+  for (let j = 0; j < 11; j++) rootDirs.push([Math.PI - B.arc * 0.92 + (j / 10) * B.arc * 1.84, j % 2 ? 0.15 : 0.28]);   // front: fewer, so the niches show between them
+  for (let j = 0; j < 16; j++) rootDirs.push([Math.PI + B.arc + (j / 15) * (Math.PI * 2 - B.arc * 2), j % 3 ? 0.16 : 0.3]);
+  const heaved = [];                                                  // blocks the roots have pushed up
   for (const [a0, t0] of rootDirs) {
     let a = a0 + (r() - 0.5) * 0.08;
     const thick = t0 + r() * 0.12, end = B.r0 + 0.8 + r() * 2.6;
-    const pts = [at(1.6, a, TOP + 3.2 + r() * 1.5), at(2.6, a, TOP + 1.6)];
-    for (let d = 3.3; d < end; d += 0.3) {
+    const dive = r() < 0.6 ? 7.4 + r() * 3.5 : -9;                     // where this root slips under a step and out again
+    const pts = [at(4.5, a, TOP + 1.2), at(6.4, a, groundAt(6.4) + thick * 0.4)];
+    for (let d = 7.0; d < end; d += 0.3) {
       a += (r() - 0.5) * 0.03;
-      pts.push(at(d, a, settle(d) + thick * 0.6));
-      rootAngles.push([d, a, thick]);
+      const under = Math.abs(d - dive) < 0.45;
+      pts.push(at(d, a, settle(d) + thick * (under ? -1.1 : 0.6)));
+      if (!under) rootAngles.push([d, a, thick]);
+      if (groundAt(d + 0.3) < groundAt(d) && r() < 0.35) heaved.push([d, a + (r() < 0.5 ? -1 : 1) * (thick + 0.35) / d, groundAt(d)]);
     }
     wood.push(tube(pts, thick * 1.7, thick * 0.3, pts.length * 2, 9));
   }
+  // the bole: wide enough low down to have swallowed the top tiers; flanges along each root break out through the
+  // risers below. (Shared with the niches, which are left out wherever the wood has taken the stone.)
+  const YF = TOP - 1.6;
+  const trunkR = (th, y) => {
+    let b = 0; for (const [a0, t0] of rootDirs) { const d = Math.atan2(Math.sin(th - a0), Math.cos(th - a0)); b += t0 * 9 * Math.exp(-(d * d) / 0.012); }
+    const core = Math.min(7.4, 2.6 + 6.5 * Math.exp(-(y - YF) / 3.0));   // wider than the top two tiers: it has swallowed them
+    return core + b * Math.exp(-Math.max(0, y - 1.2) / 3.4);
+  };
 
-  // ---- the trunk: a braid of fused strands round a core ----
-  wood.push(tube([at(0, 0, TOP - 0.3), at(0.3, 1, TOP + 6), at(0.2, 2, TOP + 12), at(0.5, 3, 22)], 3.0, 2.0, 30, 22));
-  for (let j = 0; j < 16; j++) {
-    const a0 = (j / 16) * Math.PI * 2 + r() * 0.2, tw = 0.5 + r() * 0.5, h1 = 15 + r() * 6;
-    const pts = []; for (let k = 0; k <= 6; k++) { const u = k / 6; pts.push(at(2.7 - u * 0.7 + Math.sin(u * 7 + j) * 0.15, a0 + u * tw, TOP + 0.6 + u * (h1 - TOP))); }
-    wood.push(tube(pts, 0.55 + r() * 0.35, 0.35, 28, 9));
+  // ---- the trunk: one great flared bole. Wide at the foot, it runs out into buttresses that line up with the roots
+  // spilling down the steps; higher up it is fluted and slightly twisted, like many stems grown into one ----
+  {
+    const NA = 160, NH = 56, y0 = 1.0, y1 = 22, pos = [], uv = [], col = [], idx = [];
+    for (let i = 0; i <= NH; i++) {
+      const y = y0 + (y1 - y0) * Math.pow(i / NH, 1.5);                 // rings packed low down, where the flare is
+      const flare = Math.exp(-Math.max(0, y - YF) / 1.8);
+      for (let k = 0; k <= NA; k++) {
+        const th = (k / NA) * Math.PI * 2, tw = th + (y - y0) * 0.04;
+        const lobes = flare * (0.7 * Math.sin(th * 7 + 1.3 + y * 0.15) + 0.45 * Math.sin(th * 12 - y * 0.6) + 0.25 * Math.sin(th * 19 + y * 1.4));   // fused root-stems at the foot, deep fissures between
+        const rad = trunkR(th, y) + lobes + Math.sin(tw * 13) * 0.1 * (1 - flare) + Math.sin(th * 5 + y * 0.7) * 0.14 + Math.sin(th * 11 - y * 1.3) * 0.06 + Math.sin(th * 23 + y * 2.9) * 0.025;
+        pos.push(B.x + Math.cos(th) * rad, y, B.z + Math.sin(th) * rad);
+        uv.push((k / NA) * 8, y / 2.5);
+        const moss = Math.exp(-Math.max(0, y - YF + 0.6) / 1.6);
+        col.push(1 - moss * 0.4, 1 - moss * 0.22, 1 - moss * 0.5);      // darker, greener at the foot
+      }
+    }
+    for (let i = 0; i < NH; i++) for (let k = 0; k < NA; k++) { const a = i * (NA + 1) + k, b = a + NA + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx);
+    g.computeVertexNormals();
+    const trunkMat = bark.clone(); trunkMat.vertexColors = true;
+    add(new THREE.Mesh(g, trunkMat));
+  }
+
+  if (heaved.length) {                                               // stones tipped up where roots force through
+    const hb = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), stone, heaved.length), e3 = new THREE.Euler();
+    heaved.forEach(([d, a, y], i) => hb.setMatrixAt(i, m4.compose(at(d - 0.15, a, y + 0.06), q.setFromEuler(e3.set((r() - 0.5) * 0.5, -a, 0.15 + r() * 0.3)), s3.set(0.42 + r() * 0.2, 0.2, 0.5 + r() * 0.2))));
+    add(hb);
   }
 
   // ---- limbs: long, low and spreading, a few rising branches on each ----
@@ -2243,16 +2279,21 @@ world.lamps = (() => {
   }
   add(new THREE.Mesh(mergeGeometries(wood), bark));
 
-  // ---- aerial roots hanging from the limbs; some reach the ground as pillar roots ----
-  const hang = sprigs.filter(() => r() < 0.55);
-  const aerial = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1.3, 1, 6, 1, true).translate(0, -0.5, 0), bark, hang.length);
-  hang.forEach((s, i) => {
-    const d = Math.hypot(s.p.x - B.x, s.p.z - B.z), pillar = d < B.r0 + 2 && r() < 0.1, floor = groundAt(d);
-    const len = pillar ? s.p.y - floor : Math.min(s.p.y - floor - 0.5, 2 + r() * 8);
-    const rad = pillar ? 0.09 + r() * 0.07 : 0.018 + r() * 0.03;
-    aerial.setMatrixAt(i, m4.compose(v.set(s.p.x + (r() - 0.5) * 0.3, s.p.y, s.p.z + (r() - 0.5) * 0.3), q.identity(), s3.set(rad, Math.max(0.5, len), rad)));
-  });
-  add(aerial);
+  // ---- aerial roots: thin, slightly wavy strands hanging in small bunches; a few reach the ground ----
+  const strands = [];
+  for (const s of sprigs) {
+    if (r() > 0.5) continue;
+    const d = Math.hypot(s.p.x - B.x, s.p.z - B.z), floor = groundAt(d);
+    for (let n = 1 + Math.floor(r() * 3); n > 0; n--) {
+      const pillar = d < B.r0 + 2 && r() < 0.02;
+      const len = pillar ? s.p.y - floor + 0.1 : Math.min(s.p.y - floor - 0.6, 1.5 + r() * 7);
+      if (len < 0.8) continue;
+      const x0 = s.p.x + (r() - 0.5) * 0.5, z0 = s.p.z + (r() - 0.5) * 0.5, ph = r() * 6.28, sw = 0.08 + r() * 0.12;
+      const pts = []; for (let k = 0; k <= 6; k++) { const t = k / 6; pts.push(new THREE.Vector3(x0 + Math.sin(ph + t * 4) * sw * t, s.p.y + 0.1 - t * len, z0 + Math.cos(ph + t * 3) * sw * t)); }
+      strands.push(pillar ? tube(pts, 0.045, 0.03, 14, 6) : tube(pts, 0.012 + r() * 0.016, 0.003, 10, 4));
+    }
+  }
+  if (strands.length) add(new THREE.Mesh(mergeGeometries(strands), new THREE.MeshStandardMaterial({ color: 0x8a7860, roughness: 0.9 })), false);
 
   // ---- the canopy: puffs of real leaves along the limbs and over the crown ----
   gl.load('/temple/assets/env/leafpuffs.glb', (g) => {
@@ -2284,39 +2325,111 @@ world.lamps = (() => {
     const R = tierR(i), n = Math.floor((2 * B.arc * R) / 0.62);
     for (let k = 0; k < n; k++) {
       const a = Math.PI - B.arc + ((k + 0.5) / n) * 2 * B.arc;
-      const blocked = rootAngles.some(([d, ra, th]) => Math.abs(d - R) < 0.5 && Math.abs(Math.atan2(Math.sin(a - ra), Math.cos(a - ra))) * R < th * 1.2 + 0.25);
+      const blocked = trunkR(a, i * B.rise + 0.35) > R - 0.2 || rootAngles.some(([d, ra, th]) => Math.abs(d - R) < 0.5 && Math.abs(Math.atan2(Math.sin(a - ra), Math.cos(a - ra))) * R < th * 1.2 + 0.25);
       if (!blocked) spots.push({ i, a, R });
     }
   }
   const N = spots.length;
   const rim = new THREE.InstancedMesh(new THREE.ExtrudeGeometry(frameShape, { depth: 0.15, bevelEnabled: true, bevelSize: 0.012, bevelThickness: 0.012, bevelSegments: 1, curveSegments: 6 }).translate(0, -0.035, 0),
     stone, N);
-  const inner = new THREE.InstancedMesh(arch(1), new THREE.MeshStandardMaterial({ color: 0x3a2208, roughness: 1, emissive: 0xc87a2a, emissiveIntensity: 0.32 }), N);
+  // the back of every niche glows warm gold round the Buddha's halo, fading to shadow at the edges
+  const backGlow = canvasTex(128, 128, (c, w, h) => {
+    const g = c.createRadialGradient(w / 2, h * 0.5, 0, w / 2, h * 0.5, w * 0.62);
+    g.addColorStop(0, '#fff8e6'); g.addColorStop(0.4, '#f5dca0'); g.addColorStop(0.8, '#a87a3a'); g.addColorStop(1, '#3a2812');
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+  });
+  backGlow.repeat.set(1 / W, 1 / Hn); backGlow.offset.set(0.5, 0);    // the arch's UVs are in metres
+  const inner = new THREE.InstancedMesh(arch(1), new THREE.MeshStandardMaterial({ color: 0x3a2008, map: backGlow, emissive: 0xffe6b8, emissiveMap: backGlow, emissiveIntensity: 0.8, roughness: 1 }), N);
   const cells = new THREE.InstancedMesh(new THREE.BoxGeometry(0.2, 0.36, 0.14).translate(0, 0.18, 0),
-    new THREE.MeshStandardMaterial({ color: 0xe0b45a, metalness: 0.55, roughness: 0.32, emissive: 0xffb860, emissiveIntensity: 0.45 }), N);
+    new THREE.MeshStandardMaterial({ color: 0xe8be5c, metalness: 0.8, roughness: 0.3, emissive: 0xc89a3a, emissiveIntensity: 0.38 }), N);
   spots.forEach(({ i, a, R }, k) => {
     const nrm = new THREE.Vector3(Math.cos(a), 0, Math.sin(a)), y = i * B.rise + 0.07;
     q.setFromAxisAngle(up, Math.atan2(nrm.x, nrm.z));
     const p = at(R, a, y);
     rim.setMatrixAt(k, m4.compose(p, q, s3.set(1, 1, 1)));
     inner.setMatrixAt(k, m4.compose(p.clone().addScaledVector(nrm, 0.01), q, s3.set(1, 1, 1)));
-    const bp = p.clone().addScaledVector(nrm, 0.06);
+    const bp = p.clone().addScaledVector(nrm, 0.09);
     cells.setMatrixAt(k, m4.compose(bp, q, s3.set(1, 1, 1)));
     const lit = r() < 0.22;
-    cells.setColorAt(k, col.set(lit ? 0xffe8c4 : 0xa08a62));                       // claimed: bright gold; waiting: aged gold
+    cells.setColorAt(k, col.set(lit ? 0xfff0d0 : 0xc9a160));                       // claimed: bright gold; waiting: softer gold
     slots.push({ pos: bp.clone().add(new THREE.Vector3(0, 0.2, 0)), ang: a, lit });
   });
   for (const m of [rim, inner, cells]) { m.frustumCulled = false; add(m, m === rim); }
-  gl.load('/temple/assets/env/fig_lo.glb', (g) => {                  // the little seated Buddha, 36 cm
-    let geo = null; g.scene.updateMatrixWorld(true);
-    g.scene.traverse((o) => { if (o.isMesh && !geo) geo = bakeGeo(o); });
-    if (!geo) return;
-    geo.computeBoundingBox(); const b = geo.boundingBox, c = b.getCenter(new THREE.Vector3()), h = b.max.y - b.min.y;
-    geo.translate(-c.x, -b.min.y, -c.z); geo.scale(0.4 / h, 0.4 / h, 0.4 / h); geo.computeVertexNormals();
+  // the little seated Buddha (47 cm): lotus seat, crossed legs, robed body, hands in the lap, head and topknot, halo
+  {
+    const P = (geo, x, y, z, sx = 1, sy = 1, sz = 1) => geo.scale(sx, sy, sz).translate(x, y, z);
+    const body = new THREE.LatheGeometry([[0.001, 0.2], [0.25, 0.2], [0.24, 0.32], [0.2, 0.48], [0.19, 0.55], [0.12, 0.6], [0.06, 0.63], [0.001, 0.64]].map(([x, y]) => new THREE.Vector2(x, y)), 16);
+    const parts = [
+      P(new THREE.CylinderGeometry(0.36, 0.3, 0.09, 20), 0, 0.045, 0),                    // lotus seat
+      P(new THREE.SphereGeometry(1, 16, 8), 0, 0.15, 0.03, 0.4, 0.11, 0.26),             // crossed legs
+      body.scale(1, 1, 0.75),
+      P(new THREE.SphereGeometry(1, 10, 6), 0, 0.26, 0.15, 0.11, 0.05, 0.07),            // hands in the lap
+      P(new THREE.SphereGeometry(0.12, 14, 10), 0, 0.73, 0.01, 1, 1.08, 1),              // head
+      P(new THREE.SphereGeometry(0.055, 10, 6), 0, 0.86, 0),                              // topknot
+      P(new THREE.CircleGeometry(0.22, 24), 0, 0.72, -0.09),                              // halo
+    ];
+    const geo = mergeGeometries(parts); geo.scale(0.47, 0.47, 0.47);
     cells.geometry.dispose(); cells.geometry = geo;
-  });
+  }
   return { cells, slots };
 })();
+
+// ---------------- meadow: grass tufts and small wildflowers swaying in a light breeze ----------------
+// Each tuft is three crossed cards of painted blades; thousands are instanced over the open ground (round the lake,
+// round the banyan, in the woods), never on the paving or in the water.
+let grassTick = null;
+{
+  let seed = 2468; const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const bladeTex = (flowers) => canvasTex(128, 128, (c, w, h) => {
+    c.clearRect(0, 0, w, h);
+    for (let i = 0; i < 26; i++) {
+      const x = 14 + r() * 100, top = 10 + r() * 60, bend = (r() - 0.5) * 30, wd = 2 + r() * 3;
+      c.fillStyle = `hsl(${78 + r() * 30}, ${35 + r() * 25}%, ${24 + r() * 22}%)`;
+      c.beginPath(); c.moveTo(x - wd, h); c.quadraticCurveTo(x + bend * 0.4, (h + top) / 2, x + bend, top); c.quadraticCurveTo(x + bend * 0.4 + 1, (h + top) / 2, x + wd, h); c.fill();
+      if (flowers && i % 4 === 0) {
+        const col = ['#f4f1e6', '#f2e3a0', '#e9d3e6', '#f7f4ee'][i % 16 / 4 | 0];
+        for (let k = 0; k < 5; k++) { const a = k / 5 * 6.28; c.fillStyle = col; c.beginPath(); c.arc(x + bend + Math.cos(a) * 3.2, top + Math.sin(a) * 3.2, 2.6, 0, 7); c.fill(); }
+        c.fillStyle = '#e8b830'; c.beginPath(); c.arc(x + bend, top, 1.8, 0, 7); c.fill();
+      }
+    }
+  });
+  const tuft = (wd, ht) => {
+    const parts = [0, 1, 2].map((k) => new THREE.PlaneGeometry(wd, ht).translate(0, ht / 2, 0).rotateY((k * Math.PI) / 3));
+    return mergeGeometries(parts);
+  };
+  const uT = { value: 0 };
+  const sway = (m) => { m.onBeforeCompile = (sh) => {
+    sh.uniforms.uT = uT;
+    sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      vec4 wp = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+      float bendK = uv.y * uv.y;
+      transformed.x += sin(uT * 1.3 + wp.x * 0.35 + wp.z * 0.2) * 0.06 * bendK;
+      transformed.z += cos(uT * 1.1 + wp.z * 0.3) * 0.04 * bendK;`);
+  }; return m; };
+  const mat = (flowers) => sway(new THREE.MeshStandardMaterial({ map: bladeTex(flowers), alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.95, color: 0xd8e6c0 }));
+  const paved = (x, z) => Math.abs(x) < 22.3 && z > -32.3 && z < 38.3 && !inLake(x, z, 1.45);   // courtyard, plaza and hall paving (the lake's meadow ring is grass)
+  const ok = (x, z) => !paved(x, z) && !inLake(x, z, 1.12) && !inPond(x, z, 1.2) && Math.hypot(x - BANYAN.x, z - BANYAN.z) > BANYAN.r0 + 0.3 && Math.hypot(x - BODHI.x, z - BODHI.z) > 7.6;
+  const spots = [];
+  const near = (cx, cz, r0, r1, n) => { for (let i = 0, t = 0; i < n && t < n * 6; t++) { const a = r() * 6.28, d = r0 + Math.sqrt(r()) * (r1 - r0), x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d; if (ok(x, z)) { spots.push([x, z]); i++; } } };
+  const k = isMobile ? 0.4 : 1;
+  near(LAKE.x, LAKE.z, 0, 24, 3200 * k);                                // round the lotus lake
+  near(BANYAN.x, BANYAN.z, BANYAN.r0, BANYAN.r0 + 16, 2600 * k);        // round the banyan
+  near(0, -20, 20, 70, 3600 * k);                                       // the woods all round
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+  const fill = (geo, material, list) => {
+    const im = new THREE.InstancedMesh(geo, material, list.length);
+    list.forEach(([x, z], i) => { const s2 = 0.8 + r() * 0.9; im.setMatrixAt(i, m4.compose(v.set(x, 0, z), q.setFromAxisAngle(up, r() * 6.28), sc.set(s2, s2 * (0.8 + r() * 0.5), s2))); });
+    im.userData.role = 'skip'; im.receiveShadow = true; im.frustumCulled = false; scene.add(im);
+  };
+  const flowers = spots.filter((_, i) => i % 9 === 0), grass = spots.filter((_, i) => i % 9 !== 0);
+  fill(tuft(0.8, 0.6), mat(false), grass);
+  fill(tuft(0.7, 0.62), mat(true), flowers);
+  grassTick = (dt) => { uT.value += dt; };
+}
+// more ferns where people look: round the lake and the banyan
+scatter('/temple/assets/env/fern.glb', 90, (rnd) => { const a = rnd() * 6.28, [x, z] = lakeAt(a, 1.25 + rnd() * 1.1); return Math.abs(x) < 22.3 && z > -32.3 && z < 38.3 ? null : [x, z]; }, [0.9, 1.5]);
+scatter('/temple/assets/env/fern.glb', 80, (rnd) => { const a = rnd() * 6.28, d = 13 + rnd() * 9, x = 36 + Math.cos(a) * d, z = 4 + Math.sin(a) * d; return x < 22.5 ? null : [x, z]; }, [0.9, 1.6]);
+
 const LW = world.lamps;
 const lampLabels = [];
 const myLamps = store.get('lamps', []);
@@ -2653,7 +2766,7 @@ function frame() {
   updateSticks();
   updateWisps(dt);
   const t = clock.elapsedTime;
-  pondTick?.(dt); lakeTick?.(dt); bodhiTick?.(dt); banyanTick?.(dt);
+  pondTick?.(dt); lakeTick?.(dt); bodhiTick?.(dt); banyanTick?.(dt); grassTick?.(dt);
   for (const l of world.lanterns) l.rotation.z = Math.sin(t * 0.8 + l.userData.swing) * 0.04;
   for (const f of flames) {
     const k = 1 + Math.sin(t * 13 + f.seed) * 0.07 + Math.sin(t * 29 + f.seed * 2) * 0.05 + Math.sin(t * 61 + f.seed) * 0.03;

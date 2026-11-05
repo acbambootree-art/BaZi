@@ -996,7 +996,7 @@ export function buildWorld(scene) {
   const ground = mesh(new THREE.PlaneGeometry(44, 70), pbr('rectangular_paving', 12, 19), 0, 0, 3, { cast: false });
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
-  const grass = mesh(new THREE.PlaneGeometry(400, 400), pbr('leafy_grass', 130, 130, { color: 0xb8c4a8 }), 0, -0.02, 0, { cast: false });
+  const grass = mesh(new THREE.PlaneGeometry(400, 400), pbr('leafy_grass', 130, 130, { color: 0x9cb47e }), 0, -0.02, 0, { cast: false });
   grass.rotation.x = -Math.PI / 2; grass.userData.role = 'occ';
   scene.add(grass);
 

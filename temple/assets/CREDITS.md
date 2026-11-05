@@ -38,7 +38,6 @@
 - `env/bamboo.glb` — "Free Bamboo Set" by JonhGillessen, CC BY 4.0 (some culms tinted purple on the site). https://sketchfab.com/3d-models/e9f9fa5397814f81bf85ad06acf5bf30
 - `env/greattree.glb` — "Island Tree 01", Poly Haven, CC0 (leaves thinned and branches decimated for the web). https://polyhaven.com/a/island_tree_01
 - `env/leafpuffs.glb` — leaf clusters cut from "Island Tree 01" (Poly Haven, CC0) for the blessing banyan's canopy.
-- `env/fig_lo.glb` — a low-poly copy of `env/figurine.glb` for the banyan's niche Buddhas.
 - `tex/chinese_hackberry_bark_*`, `tex/large_sandstone_blocks_01_*` — Poly Haven, CC0 (bark brightened to a banyan's pale grey). https://polyhaven.com/textures
 - `env/figurine.glb` — the little Buddhas on the tree: a reduced copy of `statue.glb` (Minneapolis Institute of Art, CC0).
 - `baked/*` — lighting baked in Blender from the assets above.
