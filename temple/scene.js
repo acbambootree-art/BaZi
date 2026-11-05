@@ -180,17 +180,49 @@ const bracketTex = canvasTex(512, 64, (c, w, h) => {
   c.fillStyle = '#e0b04f'; c.fillRect(0, 56, w, 8);
 });
 
-const cofferTex = () => canvasTex(256, 256, (c, w, h) => {
-  // faded mineral pigments on old wood (bright saturated paint makes a ceiling feel low and busy)
-  c.fillStyle = '#b9a27a'; c.fillRect(0, 0, w, h);
+// painted coffers (天花): 2×2 per tile. Mineral pigments — malachite, azurite, cinnabar, gold — with a lotus or a
+// cloud roundel in each square, gold swallow-tail corners, and a dark green border the raised ribs sit on.
+const cofferTex = () => canvasTex(1024, 1024, (c, w) => {
+  const S = w / 2, GOLD = '#d7a84a', GREEN = '#2e6b5a', BLUE = '#2b4a7a', RED = '#a5321f', CREAM = '#efe1bf';
+  const lotus = (x, y, R) => {
+    for (const [n, rr, col, rot] of [[16, R, '#c9933a', 0], [8, R * 0.78, RED, Math.PI / 8], [8, R * 0.55, '#e8b85a', 0]]) {
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2 + rot;
+        c.save(); c.translate(x, y); c.rotate(a); c.fillStyle = col;
+        c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(rr * 0.42, rr * 0.45, 0, rr); c.quadraticCurveTo(-rr * 0.42, rr * 0.45, 0, 0); c.fill();
+        c.strokeStyle = 'rgba(60,30,10,.35)'; c.lineWidth = 2; c.stroke(); c.restore();
+      }
+    }
+    c.fillStyle = GOLD; c.beginPath(); c.arc(x, y, R * 0.2, 0, 7); c.fill();
+    c.fillStyle = '#7a3a12'; for (let k = 0; k < 7; k++) { const a = k / 7 * 6.28; c.beginPath(); c.arc(x + Math.cos(a) * R * 0.11, y + Math.sin(a) * R * 0.11, 3, 0, 7); c.fill(); }
+  };
+  const clouds = (x, y, R) => {
+    c.fillStyle = RED; c.beginPath(); c.arc(x, y, R, 0, 7); c.fill();
+    c.strokeStyle = GOLD; c.lineWidth = 5; c.beginPath(); c.arc(x, y, R - 6, 0, 7); c.stroke();
+    c.lineWidth = 6;
+    for (let k = 0; k < 4; k++) {                                     // four curling cloud scrolls round a pearl
+      c.save(); c.translate(x, y); c.rotate(k * Math.PI / 2);
+      c.beginPath(); for (let t = 0; t < 9; t += 0.2) { const rr = R * 0.62 - t * 4.2; c.lineTo(R * 0.28 + Math.cos(t) * rr * 0.32, Math.sin(t) * rr * 0.32); } c.stroke();
+      c.restore();
+    }
+    c.fillStyle = CREAM; c.beginPath(); c.arc(x, y, R * 0.16, 0, 7); c.fill();
+  };
   for (let r = 0; r < 2; r++) for (let k = 0; k < 2; k++) {
-    const x = k * 128, y = r * 128;
-    c.fillStyle = '#5d7177'; c.fillRect(x + 8, y + 8, 112, 112);
-    c.fillStyle = '#7f9686'; c.fillRect(x + 22, y + 22, 84, 84);
-    c.fillStyle = '#c8b086'; c.beginPath(); c.arc(x + 64, y + 64, 22, 0, 7); c.fill();
-    c.fillStyle = '#8f5a4a'; c.beginPath(); c.arc(x + 64, y + 64, 10, 0, 7); c.fill();
+    const x = k * S, y = r * S, cx = x + S / 2, cy = y + S / 2;
+    c.fillStyle = '#1f4a3e'; c.fillRect(x, y, S, S);                   // border (under the ribs)
+    c.fillStyle = GOLD; c.fillRect(x + 22, y + 22, S - 44, S - 44);
+    c.fillStyle = (r + k) % 2 ? BLUE : GREEN; c.fillRect(x + 30, y + 30, S - 60, S - 60);
+    c.fillStyle = (r + k) % 2 ? '#3d6496' : '#3f8270'; c.fillRect(x + 70, y + 70, S - 140, S - 140);
+    for (const [sx, sy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {   // swallow-tail corners (燕尾)
+      c.fillStyle = GOLD; c.beginPath();
+      const ox = cx + sx * (S / 2 - 30), oy = cy + sy * (S / 2 - 30);
+      c.moveTo(ox, oy); c.lineTo(ox - sx * 92, oy); c.lineTo(ox - sx * 60, oy - sy * 22); c.lineTo(ox - sx * 22, oy - sy * 60); c.lineTo(ox, oy - sy * 92); c.closePath(); c.fill();
+      c.fillStyle = RED; c.beginPath(); c.arc(ox - sx * 30, oy - sy * 30, 11, 0, 7); c.fill();
+    }
+    c.strokeStyle = 'rgba(239,225,191,.55)'; c.lineWidth = 3; c.strokeRect(x + 84, y + 84, S - 168, S - 168);
+    if ((r + k) % 2) clouds(cx, cy, S * 0.25); else lotus(cx, cy, S * 0.27);
   }
-}, [8, 7]);
+}, [8 / 2.4, 8 / 2.4]);
 
 // ink landscape murals for the hall walls
 const muralTex = (seed) => canvasTex(1024, 512, (c, w, h) => {
@@ -584,9 +616,10 @@ function mainHall() {
   const ceilGeo = new THREE.ShapeGeometry(shape);
   ceilGeo.rotateX(Math.PI / 2);
   const uv = ceilGeo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / 8, uv.getY(i) / 8);
-  g.add(mesh(ceilGeo, std(0xffffff, { map: cofferTex(), side: THREE.DoubleSide }), 0, F + C, 0, { cast: false }));
+  g.add(mesh(ceilGeo, std(0xc9bc9e, { map: cofferTex(), side: THREE.DoubleSide }), 0, F + C, 0, { cast: false }));   // tinted: old pigment, softened by smoke
 
   // 藻井: stacked octagonal bracket rings, each turned a little — the spiral dome
+  const domeStart = g.children.length;
   const ringMat = new THREE.MeshStandardMaterial({ map: bracketTex, side: THREE.DoubleSide, metalness: 0.35, roughness: 0.5 });
   bracketTex.wrapS = THREE.RepeatWrapping; bracketTex.repeat.set(3, 1);
   for (let i = 0; i < 11; i++) {
@@ -606,6 +639,97 @@ function mainHall() {
     }), emissive: 0x6a4a10, emissiveIntensity: 0.4, side: THREE.DoubleSide,
   }), 0, F + C + 5.75, domeZ, { cast: false });
   cap.rotation.x = Math.PI / 2; g.add(cap);
+  // The 藻井 in carved detail: eight octagonal tiers of gilded brackets (斗栱), each tier turned a little so the
+  // dome spirals up; painted fascias and azure soffits between them; a gold lotus and a hanging lotus at the crown.
+  // (The plain rings above are kept, hidden, so the baked-lighting fingerprint still matches; everything here is
+  // instanced or marked 'skip' and stays out of it.)
+  g.children.slice(domeStart).forEach((o) => (o.visible = false));
+  {
+    const D = new THREE.Group(); D.userData.role = 'skip'; g.add(D);
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    const M = {
+      gold: new THREE.MeshStandardMaterial({ color: 0xd9a845, metalness: 0.6, roughness: 0.35, emissive: 0x4a3008, emissiveIntensity: 0.35 }),
+      red: new THREE.MeshStandardMaterial({ color: 0x8a1d14, roughness: 0.5 }),
+      green: new THREE.MeshStandardMaterial({ color: 0x2f7a62, roughness: 0.55 }),
+      blue: new THREE.MeshStandardMaterial({ color: 0x23406a, roughness: 0.6 }),
+      teal: new THREE.MeshStandardMaterial({ color: 0x245e4c, roughness: 0.6 }),
+      fascia: new THREE.MeshStandardMaterial({ roughness: 0.55, map: canvasTex(64, 128, (c, w, h) => {
+        const bands = [['#d9a845', 10], ['#8a1d14', 30], ['#d9a845', 6], ['#2f7a62', 44], ['#d9a845', 6], ['#2b4f88', 26], ['#d9a845', 6]];
+        let y = 0; for (const [col, hh] of bands) { c.fillStyle = col; c.fillRect(0, y, w, hh); y += hh; }
+        c.fillStyle = '#e9c66a'; for (let x = 4; x < w; x += 16) { c.beginPath(); c.arc(x, 68, 5, 0, 7); c.fill(); }   // a row of gold studs
+      }) }),
+    };
+    const parts = { gold: [], red: [], green: [], blue: [], teal: [], fascia: [] };
+    const put = (kind, p, yaw, sx, sy, sz, pitch = 0) => parts[kind].push([p.clone(), yaw, pitch, sx, sy, sz]);
+    const TIERS = 8, R0 = R - 0.35, STEP = (R0 - 1.0) / TIERS, H = 0.36, K = H / 0.6;   // the roof is ~3 m above the ceiling: keep under it
+    for (let i = 0; i < TIERS; i++) {
+      const rc = R0 - i * STEP, y0 = F + C + i * H, tw = Math.PI / 8 + i * 0.13;
+      const vtx = (k, rr) => new THREE.Vector3(Math.cos(tw + (k * Math.PI) / 4) * rr, 0, domeZ + Math.sin(tw + (k * Math.PI) / 4) * rr);
+      for (let k = 0; k < 8; k++) {
+        const a = vtx(k, rc), b = vtx(k + 1, rc), mid = a.clone().add(b).multiplyScalar(0.5), len = a.distanceTo(b);
+        const yaw = -Math.atan2(b.z - a.z, b.x - a.x), inward = new THREE.Vector3(0, 0, domeZ).sub(mid).setY(0).normalize();
+        put('fascia', mid.clone().setY(y0 + 0.11 * K), yaw, len + 0.06, 0.22 * K, 0.07);                       // painted band
+        put(i % 2 ? 'teal' : 'blue', mid.clone().addScaledVector(inward, STEP / 2).setY(y0 + H - 0.02), yaw, len, 0.04, STEP + 0.05);   // azure / malachite soffit
+        put('gold', mid.clone().addScaledVector(inward, STEP - 0.02).setY(y0 + H - 0.06), yaw, len * (1 - STEP / rc) + 0.04, 0.04, 0.05);   // gilded lip
+        const n = Math.max(2, Math.round(len / 0.34));
+        for (let j = 0; j < n; j++) {
+          const p = a.clone().lerp(b, (j + 0.5) / n);
+          put('gold', p.clone().addScaledVector(inward, 0.03).setY(y0 + 0.27 * K), yaw, 0.18, 0.12 * K, 0.18);          // 斗 block
+          put('red', p.clone().addScaledVector(inward, 0.06).setY(y0 + 0.36 * K), yaw, Math.min(0.3, len / n * 0.9), 0.08 * K, 0.09);   // 栱 arm
+          put('green', p.clone().addScaledVector(inward, 0.06 + STEP * 0.45).setY(y0 + 0.44 * K), yaw, 0.08, 0.07 * K, STEP * 0.95, -0.22);   // 昂 cantilever
+          put('gold', p.clone().addScaledVector(inward, STEP * 0.92).setY(y0 + 0.5 * K), yaw, 0.1, 0.07 * K, 0.1);        // small block on its tip
+        }
+      }
+    }
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(0, 0, 0, 'YXZ'), sc = new THREE.Vector3();
+    for (const [kind, list] of Object.entries(parts)) {
+      const im = new THREE.InstancedMesh(box, M[kind], list.length);
+      list.forEach(([p, yaw, pitch, sx, sy, sz], i) => im.setMatrixAt(i, m4.compose(p, q.setFromEuler(e.set(pitch, yaw, 0)), sc.set(sx, sy, sz))));
+      im.castShadow = false; im.receiveShadow = true; D.add(im);
+    }
+    // the crown: a gold lotus roundel, and a lotus bud hanging from it
+    const topY = F + C + TIERS * H;
+    const crown = new THREE.Mesh(new THREE.CircleGeometry(1.15, 48), new THREE.MeshStandardMaterial({
+      side: THREE.DoubleSide, metalness: 0.5, roughness: 0.4, emissive: 0x6a4a10, emissiveIntensity: 0.45,
+      map: canvasTex(512, 512, (c, w) => {
+        c.fillStyle = '#2b4f88'; c.fillRect(0, 0, w, w);
+        for (const [n, R2, col, rot] of [[24, 250, '#b8862e', 0], [16, 200, '#8a1d14', Math.PI / 16], [12, 150, '#e0b04f', 0], [8, 100, '#c0451f', Math.PI / 8]]) {
+          for (let k = 0; k < n; k++) {
+            c.save(); c.translate(w / 2, w / 2); c.rotate((k / n) * Math.PI * 2 + rot); c.fillStyle = col;
+            c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(R2 * 0.3, R2 * 0.5, 0, R2); c.quadraticCurveTo(-R2 * 0.3, R2 * 0.5, 0, 0); c.fill();
+            c.strokeStyle = 'rgba(50,25,5,.4)'; c.lineWidth = 2; c.stroke(); c.restore();
+          }
+        }
+        c.fillStyle = '#f3d27a'; c.beginPath(); c.arc(w / 2, w / 2, 46, 0, 7); c.fill();
+        c.strokeStyle = '#8a1d14'; c.lineWidth = 6; c.beginPath(); for (let t = 0; t < 14; t += 0.1) c.lineTo(w / 2 + Math.cos(t) * t * 2.6, w / 2 + Math.sin(t) * t * 2.6); c.stroke();
+      }),
+    }));
+    crown.rotation.x = Math.PI / 2; crown.position.set(0, topY + 0.02, domeZ); D.add(crown);
+    const bud = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), M.gold); bud.scale.set(1, 1.5, 1); bud.position.set(0, topY - 0.6, domeZ); D.add(bud);
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.25, 12), M.gold); tip.rotation.x = Math.PI; tip.position.set(0, topY - 1.0, domeZ); D.add(tip);
+    for (let k = 0; k < 8; k++) {                                       // petals cupping the bud
+      const pt = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), M.red); pt.scale.set(0.5, 1.4, 0.25);
+      const a = (k / 8) * Math.PI * 2; pt.position.set(Math.cos(a) * 0.2, topY - 0.42, domeZ + Math.sin(a) * 0.2); pt.rotation.set(0, -a, 0.5); pt.rotateZ(0); D.add(pt);
+    }
+    const lamp = new THREE.PointLight(0xffd9a0, 16, 9, 1.4); lamp.position.set(0, topY - 1.4, domeZ); D.add(lamp);   // lights the dome from within
+    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.55, 6), M.gold); cord.position.set(0, topY - 0.22, domeZ); D.add(cord);
+  }
+  // raised ribs (支條) over the coffer borders, with gilded rosettes where they cross
+  {
+    const CELL = 1.2, Y = F + C - 0.045, segs = [], dots = [];
+    const open = (x, z) => Math.hypot(x, z - domeZ) < R + 0.15;            // the dome's opening
+    const k0 = (lo, hi) => { const out = []; for (let k = Math.ceil(lo / CELL); k * CELL <= hi + 1e-3; k++) out.push(k * CELL); return out; };
+    const xs = k0(-HW, HW), zs = k0(ZB, ZF);
+    for (const x of xs) for (let j = 0; j + 1 < zs.length; j++) { const z = (zs[j] + zs[j + 1]) / 2; if (!open(x, z)) segs.push([x, z, 0.11, CELL]); }
+    for (const z of zs) for (let j = 0; j + 1 < xs.length; j++) { const x = (xs[j] + xs[j + 1]) / 2; if (!open(x, z)) segs.push([x, z, CELL, 0.11]); }
+    for (const x of xs) for (const z of zs) if (!open(x, z)) dots.push([x, z]);
+    const ribs = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.07, 1), new THREE.MeshStandardMaterial({ color: 0x24564a, roughness: 0.6 }), segs.length);
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3();
+    segs.forEach(([x, z, sx, sz], i) => ribs.setMatrixAt(i, m4.compose(v.set(x, Y, z), q, sc.set(sx, 1, sz))));
+    const ros = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.1, 0.12, 0.05, 12), new THREE.MeshStandardMaterial({ color: 0xd9a845, metalness: 0.6, roughness: 0.35, emissive: 0x3a2606, emissiveIntensity: 0.3 }), dots.length);
+    dots.forEach(([x, z], i) => ros.setMatrixAt(i, m4.compose(v.set(x, Y - 0.05, z), q, sc.set(1, 1, 1))));
+    for (const m of [ribs, ros]) { m.userData.role = 'skip'; m.receiveShadow = true; g.add(m); }
+  }
   // soft light shaft from the dome
   const shaftTex = canvasTex(4, 128, (c, w, h) => {
     const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,230,170,0.9)'); gr.addColorStop(1, 'rgba(255,230,170,0)');
@@ -844,7 +968,8 @@ function forest(scene) {
     if (Math.abs(x) < 24 && z > -44 && z < 21) continue;               // the temple and its walls
     if (Math.abs(x) < 16 && z >= 21 && z < 46) continue;               // open plaza in front of the gate
     if (x > -36 && x < -15 && z > -14 && z < 22) continue;              // the lotus lake and its shore (west side)
-    if (Math.hypot(x + 38, z - 4) < 17) continue;                       // the great Bodhi tree's crown
+    if (Math.hypot(x + 38, z - 4) < 17) continue;                       // the great tree's crown
+    if (Math.hypot(x - 36, z - 4) < 25) continue;                       // the blessing banyan's crown
     if (Math.abs(x) < 6 && z >= 46) continue;                          // the approach path
     spots[Math.floor(rnd() * 6)].push([x, z, 0.8 + rnd() * 0.45, rnd() * Math.PI]); n++;
   }
