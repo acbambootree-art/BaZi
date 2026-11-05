@@ -36,4 +36,11 @@
 - `pond/koi.glb` — "Koi Fish" by SDPM Esare, CC BY 4.0 (swim wave added in the shader). https://sketchfab.com/3d-models/3e1b80c3653f43349252aab3b4fb1d86
 - `pond/cattails.glb` — "Cattails" by AlkaliDragon, CC BY 4.0. https://sketchfab.com/3d-models/2f35ed566d3d4d74abd6e7c48d82f8eb
 - `env/bamboo.glb` — "Free Bamboo Set" by JonhGillessen, CC BY 4.0 (some culms tinted purple on the site). https://sketchfab.com/3d-models/e9f9fa5397814f81bf85ad06acf5bf30
+- `env/bodhi.glb` — "Bodhi Tree" by Ashim Shakya (ashimshakya), CC BY 4.0. https://sketchfab.com/3d-models/943594369dc84239bc140e6e7d07a005
+- `env/figurine.glb` — the little Buddhas on the tree: a reduced copy of `statue.glb` (Minneapolis Institute of Art, CC0).
 - `baked/*` — lighting baked in Blender from the assets above.
+
+## Gate
+
+- `gate/doorgod_l.webp`, `gate/doorgod_r.webp` — the door gods Yuchi Gong and Qin Shubao, plates "The Door-gods, Civil and Military" by Chinese artists in E.T.C. Werner, *Myths & Legends of China* (1922), public domain; paper background removed. https://www.gutenberg.org/files/15250/15250-h/15250-h.htm
+- Everything else on the gate (carved stone panels, painted beams and friezes, brackets, couplets, plaques) is drawn in code (`gate.js`).

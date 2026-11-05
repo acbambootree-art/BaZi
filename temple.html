@@ -134,7 +134,7 @@
   <button data-act="incense"><span>🪔</span>上香</button>
   <button data-act="jiao"><span>🌙</span>擲筊</button>
   <button data-act="qian"><span>🎋</span>求籤</button>
-  <button data-act="lamp"><span>🏮</span>點燈</button>
+  <button data-act="lamp"><span>🪷</span>祈福</button>
   <button data-act="muyu"><span>🐟</span>木魚</button>
 </nav>
 
@@ -143,6 +143,14 @@
 <div id="modal"><div class="card" id="card"></div></div>
 <div id="rest"><div>你在廟裡歇著</div><button class="btn primary" id="wake" style="flex:none;padding:10px 22px">回到廟裡</button></div>
 <div id="intro"><div class="t">歇腳廟</div><button id="enter">入 廟</button><div class="msg"><span id="gateMsg">雲 開 中</span><div class="bar"><i id="gateBar"></i></div></div></div>
+<script>
+  // catch the Enter click at once (the 3D scene may still be loading); the click is also what may start audio
+  window.__enter = new Promise((res) => document.getElementById('enter').addEventListener('click', () => {
+    try { window.__actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+    document.getElementById('intro').classList.add('waiting');
+    res();
+  }, { once: true }));
+</script>
 
 <script type="importmap">
 { "imports": {

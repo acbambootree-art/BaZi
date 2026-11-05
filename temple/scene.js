@@ -545,7 +545,8 @@ function mainHall() {
 
   // walls: back + sides
   g.add(mesh(new THREE.BoxGeometry(HW * 2, C, 0.5), PLASTER(6, 3), 0, F + C / 2, ZB));
-  for (const sx of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(0.5, C, ZF - ZB - 1), PLASTER(6, 3), sx * HW, F + C / 2, (ZF + ZB) / 2 - 0.5));
+  // side walls (hidden: the hall is open at the sides, looking out to the bamboo and the stream; kept for the bake fingerprint)
+  for (const sx of [-1, 1]) g.add(Object.assign(mesh(new THREE.BoxGeometry(0.5, C, ZF - ZB - 1), PLASTER(6, 3), sx * HW, F + C / 2, (ZF + ZB) / 2 - 0.5), { visible: false }));
   // murals behind the side altars
   const murals = [];
   for (const sx of [-1, 1]) {
@@ -700,7 +701,8 @@ function mainHall() {
   table.position.set(0, F, -27.3);
   g.add(table);
 
-  // ---- lamp walls (光明燈) lining both sides of the hall ----
+  // ---- lamp walls (光明燈) lining both sides of the hall: retired (hidden) — blessings now hang on the Bodhi tree (main.js) ----
+  const lampStart = g.children.length;
   const COLS = 34, ROWS = 20, cell = 0.6, z0 = -29.5;
   // each niche: a gilded figurine rendered from the scanned Guanyin (tools/bake/render_figure.py)
   const lampTex = TL.load('/temple/assets/env/lamp_cell.webp');
@@ -733,6 +735,7 @@ function mainHall() {
     for (let c = 0; c <= COLS; c++) bars.setMatrixAt(bi++, m4.compose(bp.set(x, F + 1.2 + ROWS * cell / 2, z0 + c * cell), bq, bs.set(0.08, ROWS * cell, 0.05)));
   }
   g.add(bars);
+  g.children.slice(lampStart).forEach((o) => (o.visible = false));
 
   // ---- kneeling cushions (拜墊) in the nave ----
   const spots = [];
@@ -840,6 +843,7 @@ function forest(scene) {
     const x = (rnd() - 0.5) * 190, z = -120 + rnd() * 200;
     if (Math.abs(x) < 24 && z > -44 && z < 21) continue;               // the temple and its walls
     if (Math.abs(x) < 16 && z >= 21 && z < 46) continue;               // open plaza in front of the gate
+    if (x > -28 && x < -15 && z > -44 && z < 50) continue;              // the stream and its banks (west side)
     if (Math.abs(x) < 6 && z >= 46) continue;                          // the approach path
     spots[Math.floor(rnd() * 6)].push([x, z, 0.8 + rnd() * 0.45, rnd() * Math.PI]); n++;
   }
@@ -872,11 +876,14 @@ export function buildWorld(scene) {
 
   const gateG = gate();
   scene.add(gateG);
-  for (const sx of [-1, 1]) scene.add(sideCorridor(sx));
+  // the side walkways are gone: the courtyard opens onto bamboo and, on the left, a stream (main.js). Hidden, not
+  // removed, so the baked-lighting fingerprint still matches.
+  for (const sx of [-1, 1]) { const c = sideCorridor(sx); c.visible = false; scene.add(c); }
   // perimeter wall behind the hall
   const wallMat = BRICK(14, 1);
-  scene.add(mesh(new THREE.BoxGeometry(40, 2.5, 0.5), wallMat, 0, 1.25, -38));
-  for (const sx of [-1, 1]) scene.add(mesh(new THREE.BoxGeometry(0.5, 2.46, 34), wallMat, sx * 19.8, 1.23, -21));
+  // (hidden too: the temple now stands open in the bamboo and the forest, like a mountain temple)
+  scene.add(Object.assign(mesh(new THREE.BoxGeometry(40, 2.5, 0.5), wallMat, 0, 1.25, -38), { visible: false }));
+  for (const sx of [-1, 1]) scene.add(Object.assign(mesh(new THREE.BoxGeometry(0.5, 2.46, 34), wallMat, sx * 19.8, 1.23, -21), { visible: false }));
 
   const hall = mainHall();
   scene.add(hall.group);
@@ -888,9 +895,6 @@ export function buildWorld(scene) {
 
   const lanterns = [];
   for (const x of [-12, -6, 0, 6, 12]) { const l = lantern(x, HALL.floor + HALL.ceil - 1.6, -5.2, 1.4); lanterns.push(l); scene.add(l); }
-  for (const z of [0, 6, 12]) for (const sx of [-1, 1]) {
-    const l = lantern(sx * 16.6, 3.3, z + 1.9, 0.75); lanterns.push(l); scene.add(l);
-  }
   for (const sx of [-1, 1]) { const l = lantern(sx * 4.8, 5.4, 24.6, 1); lanterns.push(l); scene.add(l); }
   // street lanterns in front of the gate
   for (const z of [28, 33]) for (const sx of [-1, 1]) {

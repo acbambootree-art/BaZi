@@ -13,6 +13,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Water } from 'three/addons/objects/Water.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { connectPresence } from './presence.js';
+import { buildGate } from './gate.js';
 
 // Presence server (Cloudflare Worker). Empty = solo mode. ?ws=... overrides for local testing.
 const WS_URL = new URLSearchParams(location.search).get('ws') || window.TEMPLE_WS || '';
@@ -43,14 +44,14 @@ const TX = {
   praying: ['雙手合十，靜靜祈禱。想結束時按「結束」或走開就好', 'Palms together. Pray as long as you like. Tap End prayer or walk away to finish.'],
   rest: ['你在廟裡歇著', 'You are resting in the temple'],
   wake: ['回到廟裡', 'Come back in'],
-  acts: [['拜拜', '坐下', '上香', '擲筊', '求籤', '點燈', '木魚'], ['Pray', 'Kneel', 'Incense', 'Blocks', 'Fortune', 'Lamp', 'Muyu']],
+  acts: [['拜拜', '坐下', '上香', '擲筊', '求籤', '祈福', '木魚'], ['Pray', 'Kneel', 'Incense', 'Blocks', 'Fortune', 'Blessing', 'Muyu']],
   muyuHint: ['再點「木魚」或按空白鍵，敲一聲', 'Tap Muyu again (or press Space) to strike'],
   kneel: ['跪在拜墊上，靜靜待一會兒', 'Kneeling on the cushion. Stay as long as you like.'],
   bench: ['坐在池邊，看看水、看看魚。想走時動一下就好', 'Sitting by the pond. Watch the water and the koi. Move whenever you like to get up.'],
   toBurner: ['走到天公爐前…', 'Walking to the Heaven burner…'],
   incenseDone: [(n) => `香已插上，心意神明收到了（第 ${n} 炷）`, (n) => `Your incense is offered. The gods received it (stick no. ${n}).`],
   copied: ['已複製，貼給朋友吧', 'Link copied. Paste it to a friend.'],
-  myLamp: ['我的燈', 'My lamp'],
+  myLamp: ['我的祈福', 'My blessing'],
   no: ['先不要', 'Not now'],
   jiaoTitle: ['擲筊・問神明', 'Moon blocks · ask the gods'],
   jiaoIntro: ['雙手合十，在心裡說：自己的姓名、生日、住在哪裡，然後問一件「是或不是」的事。',
@@ -79,21 +80,21 @@ const TX = {
   notToday: ['求不到也沒關係，可能今天不適合問這件事。', 'That is fine. Perhaps today is not the day for this question.'],
   stop: ['今天先這樣', 'Enough for today'],
   reshake: ['再搖一次', 'Shake again'],
-  lampTitle: ['點一盞燈', 'Light a lamp'],
-  lampIntro: ['為自己或家人點一盞燈，祈求 2027 丁未年光明平安。', 'Light a lamp for yourself or family, for a bright and peaceful 2027, Year of the Fire Goat.'],
-  lampName: ['燈上的名字（可以只寫暱稱）', 'Name on the lamp (a nickname is fine)'],
+  lampTitle: ['寫下祝福', 'Write a blessing'],
+  lampIntro: ['為自己或家人寫下祝福。菩提樹上會有一尊小佛守著這份心意，祈求 2027 丁未年光明平安。', 'Write a blessing for yourself or family. A little Buddha on the Bodhi tree will keep it, for a bright and peaceful 2027, Year of the Fire Goat.'],
+  lampName: ['祝福給誰（可以只寫暱稱）', 'Who is it for (a nickname is fine)'],
   lampPh: ['例如：阿嬤、小明', 'e.g. Grandma, Ming'],
   birthYear: ['出生年（國曆生日在 2/4 立春前，請選前一年）', 'Birth year (born before Feb 4? pick the year before; that is when the zodiac year begins)'],
-  light: ['點燈', 'Light it'],
+  light: ['掛上', 'Hang it'],
   someone: ['有緣人', 'A friend'],
-  kindGM: ['光明燈', 'Brightness Lamp 光明燈'],
-  kindTS: ['太歲燈', 'Tai Sui Lamp 太歲燈'],
-  lampLit: [(nm, k) => `${nm} 的${k}亮了`, (nm, k) => `${nm}'s ${k} is lit`],
+  kindGM: ['光明祈福', 'Brightness blessing 光明'],
+  kindTS: ['安太歲祈福', 'Tai Sui blessing 安太歲'],
+  lampLit: [(nm, k) => `${nm} 的${k}，有一尊小佛守著了`, (nm, k) => `${nm}'s ${k} now rests with a little Buddha`],
   born: [(z, y) => `屬${z}・${y} 年生`, (z, y) => `Year of the ${z} · born ${y}`],
-  clashText: ['丁未羊年你犯太歲，傳統會點太歲燈、安太歲，求一年平穩。變動多的年份，重要決定慢一點做。',
-    'In 2027, the Year of the Fire Goat, your sign clashes with Tai Sui, the god of the year. Tradition is to light a Tai Sui lamp for a steady year. Expect change, and take big decisions slowly.'],
-  okText: ['2027 丁未年你沒有犯太歲。點光明燈，祈求一年前途光明、諸事順利。',
-    'Your sign does not clash with Tai Sui in 2027. A Brightness Lamp asks for a clear road and smooth year.'],
+  clashText: ['丁未羊年你犯太歲，傳統會安太歲，求一年平穩。變動多的年份，重要決定慢一點做。',
+    'In 2027, the Year of the Fire Goat, your sign clashes with Tai Sui, the god of the year. Tradition is to pacify Tai Sui (安太歲) for a steady year. Expect change, and take big decisions slowly.'],
+  okText: ['2027 丁未年你沒有犯太歲。祈求一年前途光明、諸事順利。',
+    'Your sign does not clash with Tai Sui in 2027. This blessing asks for a clear road and a smooth year.'],
   zodiacNote: ['生肖只看出生年。真正的流年吉凶要看完整八字（年、月、日、時）。', 'Your zodiac uses only the birth year. A full BaZi chart (year, month, day and hour) shows much more.'],
   bazi2027: ['免費排八字，看 2027 流年', 'Free BaZi chart: see your 2027'],
   shareFamily: ['分享給家人', 'Share with family'],
@@ -349,6 +350,8 @@ function backlight(root) {
   scene.add(body, head);
 }
 const gl = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+buildGate(scene, { gl, isMobile, oldGate: world.occluders[0] });   // the detailed 三川殿 front gate (gate.js)
+{ const fill = new THREE.PointLight(0xfff1dc, 14, 13, 1.6); fill.position.set(0, 4.6, 25.2); scene.add(fill); }   // soft daylight bounce under the gate porch
 // missing file → keep the procedural statues
 gl.load(STATUE.url, (g) => placeScan(g.scene, world.altar.center, 9.0, STATUE.yaw), undefined, () => {});   // towering over the hall
 gl.load('/temple/assets/statue_side.glb', (g) => {
@@ -407,6 +410,7 @@ gl.load(PROPS + 'censer_ding_cleveland.glb', (g) => {
   const ding = placeProp(g.scene, { x: 0, y: 0, z: 8, h: 2.6 });   // a 天公爐 stands on its own three legs
   const top = new THREE.Box3().setFromObject(ding).max.y;
   world.luPos.y = top - 0.45;                      // incense goes into the ash just below the rim
+  setTimeout(restoreSticks, 0);                     // your still-burning sticks from an earlier visit (needs the ash height)
   luSmoke.pos.y = top - 0.1;
 }, undefined, () => {});
 
@@ -556,7 +560,8 @@ gl.load('/temple/assets/env/bamboo.glb', (g) => {
     band(26 * many, sx * 18.5, sx * 23, 20, 44);       // framing the plaza
     band(38 * many, sx * 18.2, sx * 23.5, -40, 18);    // behind the courtyard walls
   }
-  const keep = spots.filter(([x, z]) => !inPond(x, z, 1.6) && Math.hypot(x - 13, z - 31) > 2.5 && Math.hypot(x + 12, z - 30) > 2.5);
+  band(46 * many, -24.5, -29.5, -40, 48);              // the far bank of the stream (west)
+  const keep = spots.filter(([x, z]) => !inPond(x, z, 1.6) && !nearStream(x, z, 1.4) && Math.hypot(x - 13, z - 31) > 2.5 && Math.hypot(x + 12, z - 30) > 2.5);
   // each spot is a little clump of 2–3 culms of mixed heights, leaning slightly
   const per = plants.map(() => []);
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3();
@@ -587,6 +592,14 @@ const pondK = (a) => 1 + 0.07 * Math.sin(3 * a + 1.3) + 0.04 * Math.sin(5 * a + 
 const pondAt = (a, k = 1) => [POND.x + Math.cos(a) * POND.rx * pondK(a) * k, POND.z + Math.sin(a) * POND.rz * pondK(a) * k];
 const inPond = (x, z, k = 1) => { const a = Math.atan2((z - POND.z) / POND.rz, (x - POND.x) / POND.rx), K = pondK(a) * k; return ((x - POND.x) / (POND.rx * K)) ** 2 + ((z - POND.z) / (POND.rz * K)) ** 2 < 1; };
 let pondTick = null, pondBank = null;
+// a winding stream on the west side, where the courtyard walkway used to stand: from the forest behind the hall,
+// past the courtyard and out beside the plaza
+const STREAM = { z0: -42, z1: 50, y: 0.22 };
+const streamX = (z) => -20.6 + 1.3 * Math.sin(z * 0.13 + 0.6) + 0.6 * Math.sin(z * 0.31 + 2);
+const streamW = (z) => 2.3 + 0.6 * Math.sin(z * 0.21 + 1);                     // full width of the water
+const streamInner = (z) => streamX(z) + streamW(z) / 2;                           // the courtyard-side waterline
+const nearStream = (x, z, pad = 0) => z > STREAM.z0 - 2 && z < STREAM.z1 + 2 && Math.abs(x - streamX(z)) < streamW(z) / 2 + pad;
+let streamBank = null, streamTick = null;
 const KOI_YAW = Math.PI / 2;    // the koi model's head points along -x (tall tail fin at +x)
 {
   const N = 72, shape = new THREE.Shape();
@@ -675,6 +688,62 @@ const KOI_YAW = Math.PI / 2;    // the koi model's head points along -x (tall ta
     });
   }, undefined, () => {});
 }
+{
+  const N = 184, pos = [], idx = [], bank = [], bIdx = [], buv = [];
+  for (let i = 0; i <= N; i++) {
+    const z = STREAM.z0 + ((STREAM.z1 - STREAM.z0) * i) / N, cx = streamX(z), hw = streamW(z) / 2;
+    pos.push(cx - hw, -z, 0, cx + hw, -z, 0);                                  // water ribbon (local XY, laid flat below)
+    const top = STREAM.y + 0.06;
+    for (const [x, y] of [[cx - hw - 1.0, 0.004], [cx - hw + 0.06, top], [cx + hw - 0.06, top], [cx + hw + 1.0, 0.004]]) { bank.push(x, y, z); buv.push(x * 0.6, z * 0.6); }
+    if (i < N) {
+      const a = i * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);   // wound to face up once laid flat
+      const b = i * 4, c = b + 4;
+      bIdx.push(b, b + 1, c, b + 1, c + 1, c, b + 2, b + 3, c + 2, b + 3, c + 3, c + 2);   // the two sloping banks
+    }
+  }
+  const ribbon = new THREE.BufferGeometry(); ribbon.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); ribbon.setIndex(idx);
+  ribbon.computeVertexNormals();                      // the water shader needs normals (shadow lookups go NaN without them)
+  const flat = (geo, y, mat) => { const m = new THREE.Mesh(geo, mat); m.rotation.x = -Math.PI / 2; m.position.y = y; m.userData.role = 'skip'; scene.add(m); return m; };
+  flat(ribbon.clone(), 0.03, new THREE.MeshStandardMaterial({ color: 0x1b2018, roughness: 1 }));        // dark stony bed
+  const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(bank, 3)); bg.setAttribute('uv', new THREE.Float32BufferAttribute(buv, 2)); bg.setIndex(bIdx); bg.computeVertexNormals();
+  streamBank = new THREE.Mesh(bg, new THREE.MeshStandardMaterial({ color: 0x3b3a2c, roughness: 0.95, side: THREE.DoubleSide }));
+  streamBank.receiveShadow = true; streamBank.userData.role = 'skip'; scene.add(streamBank);
+  // the old paved terrace reaches x = -22: past the far bank it's covered with grass, so the stream sits in the meadow
+  {
+    const gp = [], gi = [], gu = [];
+    for (let i = 0; i <= N; i++) {
+      const z = STREAM.z0 + ((STREAM.z1 - STREAM.z0) * i) / N, x0 = streamX(z) - streamW(z) / 2 - 0.9;
+      for (const x of [-22.6, Math.max(x0, -22.6)]) { gp.push(x, 0.012, z); gu.push(x * 0.31, z * 0.31); }   // from the paving's edge to the far bank
+      if (i < N) { const a = i * 2; gi.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+    }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(gu, 2)); geo.setIndex(gi); geo.computeVertexNormals();
+    const tl = new THREE.TextureLoader(), tex = (m, srgb) => { const t = tl.load(`/temple/assets/tex/leafy_grass_${m}.webp`); t.wrapS = t.wrapT = THREE.RepeatWrapping; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
+    const grassStrip = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex('diff', true), normalMap: tex('nor'), roughness: 1, color: 0xb8c4a8, side: THREE.DoubleSide }));
+    grassStrip.receiveShadow = true; grassStrip.userData.role = 'skip'; scene.add(grassStrip);
+  }
+  const normals = new THREE.TextureLoader().load('/temple/assets/env/waternormals.jpg', (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
+  const res = isMobile ? 256 : 512;
+  const water = new Water(ribbon, {
+    textureWidth: res, textureHeight: res, waterNormals: normals, sunDirection: new THREE.Vector3(-35, 45, 30).normalize(),
+    sunColor: 0x8a7a64, waterColor: 0x15403a, distortionScale: 0.45, fog: true, alpha: 0.66,
+  });
+  water.material.uniforms.size.value = 5; water.material.transparent = true; water.renderOrder = 1;
+  water.rotation.x = -Math.PI / 2; water.position.y = STREAM.y; water.userData.role = 'skip';
+  scene.add(water);
+  // the water moves a little faster than the pond's; only drawn when you're on its side of the temple
+  streamTick = (dt) => { water.material.uniforms.time.value += dt * 0.7; water.visible = camera.position.x < 4 && camera.position.z > -8; };
+  // rocks along both banks and ferns behind them
+  let seed = 909; const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const stones = [], ferns = [];
+  for (let z = STREAM.z0; z <= STREAM.z1; z += 0.75) for (const side of [-1, 1]) {
+    const cx = streamX(z), hw = streamW(z) / 2, d = r() * 0.45;
+    stones.push([cx + side * (hw + 0.05 + d), z + (r() - 0.5) * 0.5, 0.45 + r() * 0.5, r() * 6.28, 0.5 + r() * 0.3, (STREAM.y + 0.06) * (1 - d / 1.06)]);
+    if (r() < 0.18) ferns.push([cx + side * (hw + 1.1 + r() * 0.6), z, 1.1 + r() * 0.6, r() * 6.28]);
+  }
+  ring('/temple/assets/env/rocks.glb', stones, 0.3, true);
+  ring('/temple/assets/env/fern.glb', ferns);
+}
+
 // rim stones and ferns, from the same CC0 scans as the forest floor. Each part is re-centred and sized in metres
 // (the files store their pieces spread apart), then instanced along the bank.
 // split a mesh into its separate pieces (triangles joined by shared positions), e.g. single rocks out of a rock set
@@ -747,7 +816,8 @@ function ring(url, list, sink = 0, split = false, onParts) {
     stones.push([x, z, 0.6 + r() * 0.5, r() * 6.28, 0.5 + r() * 0.3, (POND.y + 0.06) * (1.16 - k) / 0.19]);
   }
   ring('/temple/assets/env/rocks.glb', stones, 0.3, true, (parts) => {      // the bank wears the same mossy stone
-    const m = parts[0].mat; pondBank.material = new THREE.MeshStandardMaterial({ map: m.map, normalMap: m.normalMap, roughness: 1, color: 0x9a9a90 });
+    const m = parts[0].mat;
+    for (const bank of [pondBank, streamBank]) if (bank) bank.material = new THREE.MeshStandardMaterial({ map: m.map, normalMap: m.normalMap, roughness: 1, color: 0x9a9a90, side: THREE.DoubleSide });
   });
   const ferns = [];
   for (let i = 0; i < 16; i++) {
@@ -835,6 +905,7 @@ const outsideWalls = (rnd) => {
   if (Math.abs(x) < 21 && z > -40 && z < 20) return null;            // temple
   if (Math.abs(x) < 5 && z > 20) return null;                        // keep the approach path clear
   if (inPond(x, z, 1.4)) return null;
+  if (nearStream(x, z, 1.6)) return null;
   return [x, z];
 };
 scatter('/temple/assets/env/fern.glb', 260, outsideWalls, [0.8, 1.6]);
@@ -868,7 +939,7 @@ const sfx = {
   ctx: null, on: store.get('sound', true), buf: {},
   init() {
     if (this.ctx) return;
-    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    this.ctx = window.__actx || new (window.AudioContext || window.webkitAudioContext)();   // made inside the Enter click when possible
     this.master = this.ctx.createGain();
     this.master.gain.value = this.on ? 1 : 0;
     this.master.connect(this.ctx.destination);
@@ -990,23 +1061,33 @@ function setBurn(g, k) {                            // k: 0 fresh .. 1 burnt dow
   ash.position.y = HANDLE * scale + L;
   ember.position.y = ash.position.y + 0.012 * scale;
 }
-function plantIncense(n = 3) {
+const BURN_MS = 30 * 60000;                          // a stick burns for half an hour
+function plantIncense(n = 3, born = Date.now(), spot) {
   for (let i = 0; i < n; i++) {
-    const a = Math.random() * Math.PI * 2, r = Math.random() * 0.55;
+    const a = spot ? spot[i * 2] : Math.random() * Math.PI * 2, r = spot ? spot[i * 2 + 1] : Math.random() * 0.55;
     const g = jossStick();
     g.position.set(world.luPos.x + Math.cos(a) * r, world.luPos.y, world.luPos.z + Math.sin(a) * r);
     g.rotation.set((Math.random() - 0.5) * 0.2, 0, (Math.random() - 0.5) * 0.2);
-    g.userData.born = performance.now();
+    g.userData.born = born; g.userData.spot = [a, r];
     scene.add(g); sticks.push(g);
   }
   while (sticks.length > 90) scene.remove(sticks.shift());
   luSmoke.rate = Math.min(14, 2.5 + sticks.length * 0.35);
 }
+// your sticks are remembered on this device, so leaving and coming back finds them still burning
+function saveSticks() { store.set('incense', sticks.filter((g) => g.userData.mine).map((g) => [g.userData.born, ...g.userData.spot])); }
+function restoreSticks() {
+  for (const [born, a, r] of store.get('incense', [])) {
+    if (Date.now() - born >= BURN_MS) continue;
+    plantIncense(1, born, [a, r]); sticks[sticks.length - 1].userData.mine = true;
+  }
+  saveSticks();
+}
 function updateSticks() {
-  const now = performance.now();
+  const now = Date.now();
   for (let i = sticks.length - 1; i >= 0; i--) {
-    const k = (now - sticks[i].userData.born) / 180000;
-    if (k >= 1) { scene.remove(sticks[i]); sticks.splice(i, 1); continue; }
+    const k = (now - sticks[i].userData.born) / BURN_MS;
+    if (k >= 1) { const mine = sticks[i].userData.mine; scene.remove(sticks[i]); sticks.splice(i, 1); if (mine) saveSticks(); continue; }
     setBurn(sticks[i], k);
   }
   luSmoke.rate = Math.min(14, 2.5 + sticks.length * 0.35);
@@ -1265,9 +1346,9 @@ const nearestDoor = (x) => DOORS.reduce((a, b) => (Math.abs(b - x) < Math.abs(a 
 function clampWalk(p) {
   const C = THREE.MathUtils.clamp;
   if (p.z < -4.5) { p.x = C(p.x, -14.3, 14.3); p.z = Math.max(p.z, Math.abs(p.x) < 5 ? -26 : -27.6); }
-  else if (p.z <= GATE[0]) p.x = C(p.x, -15.6, 15.6);
+  else if (p.z <= GATE[0]) p.x = C(p.x, streamInner(p.z) + 0.5, 17.4);          // courtyard: open to the stream bank and the bamboo
   else if (p.z < GATE[1]) { const d = nearestDoor(p.x); p.x = C(p.x, d - 1.05, d + 1.05); }
-  else { p.x = C(p.x, -18, 18); p.z = Math.min(p.z, 37); }
+  else { p.x = C(p.x, Math.max(-18, streamInner(p.z) + 0.5), 18); p.z = Math.min(p.z, 37); }
   for (const [ox, oz, r] of OBSTACLES) {
     const dx = p.x - ox, dz = p.z - oz, d = Math.hypot(dx, dz);
     if (d < r && d > 1e-4) { p.x = ox + dx / d * r; p.z = oz + dz / d * r; }
@@ -1737,6 +1818,88 @@ async function throwBlocks(who, r) {
 }
 
 // ---------------- lamps ----------------
+// ---------------- the Bodhi blessing tree (菩提樹) in the courtyard ----------------
+// "Bodhi Tree" by Ashim Shakya (Sketchfab, CC BY 4.0). Little gold Buddhas (a small copy of the hall's scanned Guanyin)
+// hang from its canopy on red cords: each blessing written here is kept by one of them. Same slot system the old
+// lamp walls used, so earlier lamps simply reappear as Buddhas on the tree.
+const BODHI = { x: 10.2, z: 9.5, h: 12.5 };
+world.lamps = (() => {
+  const N = 150, slots = [], m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color(), one = new THREE.Vector3(1, 1, 1);
+  let seed = 4321; const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const cells = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12, 0.3, 0.1).translate(0, 0.15, 0),
+    new THREE.MeshStandardMaterial({ color: 0xd9ab4f, metalness: 0.75, roughness: 0.32, emissive: 0x3a2508, emissiveIntensity: 0.6 }), N);
+  const cords = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.006, 0.006, 1, 4).translate(0, 0.5, 0), new THREE.MeshStandardMaterial({ color: 0x9a2a1e, roughness: 0.8 }), N);
+  for (let i = 0; i < N; i++) {
+    // a loose shell under the canopy: low enough to see and reach with the eye, spread all round the trunk
+    const a = (i / N) * Math.PI * 2 * 7.3 + r() * 0.6, rad = 2.2 + r() * 3.2, y = 2.4 + r() * 3.6 + (rad > 4 ? 0.8 : 0);
+    const p = new THREE.Vector3(BODHI.x + Math.cos(a) * rad, y, BODHI.z + Math.sin(a) * rad);
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(-(p.x - BODHI.x), -(p.z - BODHI.z)) + Math.PI);   // facing outward
+    cells.setMatrixAt(i, m4.compose(p, q, one));
+    const len = 0.35 + r() * 0.5;
+    cords.setMatrixAt(i, m4.compose(p.clone().setY(y + 0.3), q, new THREE.Vector3(1, len, 1)));
+    const lit = r() < 0.22;
+    cells.setColorAt(i, col.set(lit ? 0xffe8c4 : 0xa08a62));                       // claimed: bright gold; waiting: aged gold
+    slots.push({ pos: p, side: 0, lit });
+  }
+  for (const m of [cells, cords]) { m.castShadow = true; m.receiveShadow = true; m.userData.role = 'skip'; m.frustumCulled = false; scene.add(m); }
+  gl.load('/temple/assets/env/figurine.glb', (g) => {                // swap the stand-in boxes for the little Buddha
+    let geo = null; g.scene.updateMatrixWorld(true);
+    g.scene.traverse((o) => { if (o.isMesh && !geo) { geo = o.geometry.clone(); geo.applyMatrix4(o.matrixWorld); } });
+    if (!geo) return;
+    for (const n of ['position', 'normal']) {
+      const at = geo.attributes[n]; if (!at || at.array instanceof Float32Array) continue;
+      const f = new Float32Array(at.count * at.itemSize); for (let i = 0; i < at.count; i++) for (let k = 0; k < at.itemSize; k++) f[i * at.itemSize + k] = at.getComponent(i, k);
+      geo.setAttribute(n, new THREE.BufferAttribute(f, at.itemSize));
+    }
+    geo.computeBoundingBox(); const b = geo.boundingBox, c = b.getCenter(new THREE.Vector3()), h = b.max.y - b.min.y;
+    geo.translate(-c.x, -b.min.y, -c.z); geo.scale(0.42 / h, 0.42 / h, 0.42 / h);      // 42 cm, hanging from its cord
+    geo.computeVertexNormals(); geo.computeBoundingSphere();
+    cells.geometry.dispose(); cells.geometry = geo;
+  }, undefined, () => {});
+  gl.load('/temple/assets/env/bodhi.glb', (g) => {
+    g.scene.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(g.scene), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+    const t = g.scene; t.scale.setScalar(BODHI.h / size.y);
+    t.position.set(BODHI.x - c.x * t.scale.x, -box.min.y * t.scale.y - 1.0, BODHI.z - c.z * t.scale.z);   // roots sunk into the ground
+    t.traverse((o) => {
+      if (!o.isMesh) return;
+      o.castShadow = o.receiveShadow = true;
+      if (o.material.transparent || o.material.alphaTest) { o.material.transparent = false; o.material.alphaTest = 0.45; o.material.depthWrite = true; o.material.side = THREE.DoubleSide; }
+    });
+    t.userData.role = 'skip'; scene.add(t);
+    // hang every Buddha from a real branch: sample bark points out along the limbs, well spread apart
+    t.updateMatrixWorld(true);
+    const pts = [], v = new THREE.Vector3();
+    t.traverse((o) => {
+      if (!o.isMesh || o.material.transparent || o.material.alphaTest) return;
+      const pa = o.geometry.attributes.position;
+      for (let i = 0; i < pa.count; i += 7) {
+        v.fromBufferAttribute(pa, i).applyMatrix4(o.matrixWorld);
+        const d = Math.hypot(v.x - BODHI.x, v.z - BODHI.z);
+        if (v.y > 4.0 && v.y < 8.2 && d > 1.4 && d < 6.5) pts.push(v.clone());
+      }
+    });
+    let s2 = 77; const r2 = () => ((s2 = (s2 * 16807) % 2147483647) / 2147483647);
+    for (let i = pts.length - 1; i > 0; i--) { const j = (r2() * (i + 1)) | 0; [pts[i], pts[j]] = [pts[j], pts[i]]; }
+    const anchors = [];
+    for (const p of pts) { if (anchors.length >= slots.length) break; if (anchors.every((a) => a.distanceTo(p) > 0.55)) anchors.push(p); }
+    if (anchors.length < slots.length) return;                            // keep the fallback layout
+    // lowest anchors first, so the reachable ones are the ones handed out first
+    anchors.sort((a, b) => a.y - b.y);
+    const order = slots.map((_, i) => i).sort((a, b) => slots[a].pos.y - slots[b].pos.y);
+    order.forEach((si, k) => {
+      const a = anchors[k], len = 0.45 + r2() * 0.6, top = a.y - len;
+      slots[si].pos.set(a.x, top - 0.42, a.z);
+      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(a.x - BODHI.x, a.z - BODHI.z));   // facing outward
+      cells.setMatrixAt(si, m4.compose(slots[si].pos, q, one));
+      cords.setMatrixAt(si, m4.compose(new THREE.Vector3(a.x, top, a.z), q, new THREE.Vector3(1, len, 1)));
+    });
+    cells.instanceMatrix.needsUpdate = cords.instanceMatrix.needsUpdate = true;
+    for (const o of lampLabels) if (o.userData.slot != null) o.position.copy(slots[o.userData.slot].pos).add(new THREE.Vector3(0, 0.6, 0));
+  }, undefined, () => {});
+  return { cells, slots };
+})();
+OBSTACLES.push([BODHI.x, BODHI.z, 1.4]);             // walk round the trunk
 const LW = world.lamps;
 const lampLabels = [];
 const myLamps = store.get('lamps', []);
@@ -1747,21 +1910,23 @@ function lightSlot(i, mine, name) {
   LW.cells.instanceColor.needsUpdate = true;
   if (mine) {
     const tag = document.createElement('div');
-    tag.className = 'nametag'; tag.textContent = '🏮 ' + (name || t('myLamp'));
-    const o = new CSS2DObject(tag);
+    tag.className = 'nametag'; tag.textContent = '🪷 ' + (name || t('myLamp'));
+    const o = new CSS2DObject(tag); o.userData.slot = i;
     lampLabels.push(o);
-    o.position.copy(lampWorld(i)).add(new THREE.Vector3(-LW.slots[i].side * 0.2, 0.38, 0));
+    o.position.copy(lampWorld(i)).add(new THREE.Vector3(0, 0.6, 0));
     scene.add(o);
   }
 }
 function freeSlot() {
   const free = LW.slots.map((s, i) => (!s.lit ? i : -1)).filter((i) => i >= 0);
   if (!free.length) { const i = Math.random() * LW.slots.length | 0; return i; }
-  const eye = (i) => Math.abs(LW.slots[i].pos.y - (F + 2.4)) + Math.random() * 0.8;
+  const eye = (i) => { const p = LW.slots[i].pos; return Math.abs(p.y - 3.0) + (p.x > BODHI.x ? 2.5 : 0) + Math.random() * 0.8; };   // low, facing the courtyard
   free.sort((a, b) => eye(a) - eye(b));
   return free[Math.random() * Math.min(12, free.length) | 0];
 }
 const lampWorld = (i) => LW.slots[i].pos.clone();
+myLamps.forEach((l) => { if (!LW.slots[l.slot]) l.slot %= LW.slots.length; });   // lamps from the old walls (up to 1,360 niches) move onto the tree
+store.set('lamps', myLamps);
 myLamps.forEach((l) => lightSlot(l.slot, true, l.name));
 
 // ---------------- 太歲 2027 丁未 ----------------
@@ -1825,7 +1990,7 @@ const ACTS = {
     me.play('incense'); net.act('incense');
     for (let i = 0; i < 3; i++) setTimeout(() => sfx.bell(), 400 + i * 1200);
     await wait(3.7);
-    plantIncense(3);
+    plantIncense(3); sticks.slice(-3).forEach((g) => (g.userData.mine = true)); saveSticks();
     const n = store.get('incenseCount', 0) + 1; store.set('incenseCount', n);
     toast(t('incenseDone', n), 3200);
   },
@@ -1915,9 +2080,9 @@ const ACTS = {
     store.set('year', year); store.set('lampName', nm);
     const b = branchOf(year), clash = TAISUI_2027[b];
     const slot = freeSlot(), p = lampWorld(slot);
-    const side = LW.slots[slot].side, lz = THREE.MathUtils.clamp(p.z, -27, -10);
-    SHOTS.lamp(side, lz);
-    await walkTo(p.x - side * 1.5, lz, side * Math.PI / 2);
+    const out = new THREE.Vector3(p.x - BODHI.x, 0, p.z - BODHI.z).normalize();       // stand just outside your Buddha, facing it
+    const stand = clampWalk({ x: p.x + out.x * 1.6, z: p.z + out.z * 1.6 });
+    await walkTo(stand.x, stand.z, Math.atan2(p.x - stand.x, p.z - stand.z));
     me.play('palms'); await wait(1.2);
     sfx.bell();
     lightSlot(slot, true, nm);
@@ -1960,6 +2125,7 @@ $('#credits').onclick = () => modal(`
   <p class="muted">${EN ? 'Stone lions, dragon pillars and drum stones' : '石獅、龍柱、抱鼓石'}: "Stone Big Lion 01", "Stone Dragon Pillar 02", "Stone Old Sculpture Drum 01" by zhengzhangxun (Sketchfab), CC BY 4.0.</p>
   <p class="muted">${EN ? 'Offerings' : '供品'}: "Mandarin Scan", "Pineapple Scan" by Franco Pizzani; "White Orchid" by gottalovehana; "Chrystanthemum flower" by Lassi Kaukonen (recoloured) — Sketchfab, CC BY 4.0.</p>
   <p class="muted">${EN ? 'Bamboo' : '竹林'}: "Free Bamboo Set" by JonhGillessen — Sketchfab, CC BY 4.0.</p>
+  <p class="muted">${EN ? 'Bodhi tree' : '菩提樹'}: "Bodhi Tree" by Ashim Shakya — Sketchfab, CC BY 4.0.</p>
   <p class="muted">${EN ? 'Pond' : '放生池'}: "Lilypads" by sligocreatures; "Water Lily, Nymphaea cv." by ffish.asia / floraZia.com; "Koi Fish" by SDPM Esare; "Cattails" by AlkaliDragon — Sketchfab, CC BY 4.0.</p>
   <div class="row"><button class="btn ghost" data-v="ok">${t('ok')}</button></div>`);
 
@@ -2028,7 +2194,7 @@ addEventListener('keydown', poke); addEventListener('wheel', poke);
 document.addEventListener('visibilitychange', () => { hiddenAt = document.hidden ? performance.now() : 0; });
 setInterval(() => {
   const now = performance.now();
-  if (!resting && ((hiddenAt && now - hiddenAt > 90000) || now - lastInput > 15 * 60000)) {
+  if (!resting && !intro.on && ((hiddenAt && now - hiddenAt > 90000) || now - lastInput > 15 * 60000)) {   // never mid-intro: the clouds would freeze
     resting = true; net.close(); $('#rest').classList.add('on');
   }
 }, 5000);
@@ -2051,7 +2217,7 @@ function frame() {
   // camera follows
   followCam(dt, intro.on);           // during the intro: where the camera will end up (snapped), the flight eases toward it
   introTick(dt);
-  for (const o of lampLabels) o.visible = inHall(me.root.position.z);
+  for (const o of lampLabels) o.visible = Math.hypot(me.root.position.x - BODHI.x, me.root.position.z - BODHI.z) < 18;
 
   sendT += dt;
   if (sendT > 0.15) { sendT = 0; net.pos(me.root.position.x, me.root.position.z, me.root.rotation.y); }
@@ -2062,7 +2228,7 @@ function frame() {
   updateSticks();
   updateWisps(dt);
   const t = clock.elapsedTime;
-  pondTick?.(dt);
+  pondTick?.(dt); streamTick?.(dt);
   for (const l of world.lanterns) l.rotation.z = Math.sin(t * 0.8 + l.userData.swing) * 0.04;
   for (const f of flames) {
     const k = 1 + Math.sin(t * 13 + f.seed) * 0.07 + Math.sin(t * 29 + f.seed * 2) * 0.05 + Math.sin(t * 61 + f.seed) * 0.03;
@@ -2279,7 +2445,7 @@ function introTick(dt) {
     intro.on = false;
     scene.remove(intro.clouds); intro.clouds.children.forEach((c) => c.material.dispose());
     document.body.classList.remove('intro');
-    $('#intro').remove();
+    $('#intro')?.remove();
   }
 }
 
@@ -2292,14 +2458,10 @@ async function partClouds() {
   });
   const loaded = Promise.race([Promise.all([quiet(), bakeDone]).then(quiet), new Promise((res) => setTimeout(res, 30000))]);   // never stuck loading
   // you part the clouds yourself: the click is also what lets the browser start the ambient sound
-  const entered = new Promise((res) => {
-    const go = () => {
-      sfx.on = true; store.set('sound', true); $('#sound').textContent = '🔈';
-      sfx.init(); sfx.ctx.resume?.(); sfx.master.gain.value = 1;
-      $('#intro').classList.add('waiting');                 // swap the button for the quiet progress line
-      res();
-    };
-    $('#enter').addEventListener('click', go, { once: true });
+  // the Enter click is caught by a tiny script in the page (it may come before this module has loaded)
+  const entered = window.__enter.then(() => {
+    sfx.on = true; store.set('sound', true); $('#sound').textContent = '🔈';
+    sfx.init(); sfx.ctx.resume?.(); sfx.master.gain.value = 1;
   });
   $('#enter').focus({ preventScroll: true });                // Enter / Space work too
   await Promise.all([loaded, entered]);
