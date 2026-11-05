@@ -475,8 +475,8 @@ gl.load(PROPS + 'pillar_dragon_02.glb', (g) => {
     const s = o.userData.spot;
     o.visible = false;
     // the scan only has a carved front; pairs are mirrored so the two dragons of each pair face each other
-    const hall = s.y > 1;                                              // the hall's pair: slimmer and set back, so their lotus bases stay on the hall floor, not over the steps
-    placeProp(g.scene, { x: s.x, y: s.y, z: hall ? s.z - 0.45 : s.z, h: s.h, girthOf: hall ? 10.5 : s.h, yaw: -Math.PI / 2, mirror: s.x < 0 });
+    const hall = s.y > 1;                                              // the hall's pair: massive, and set well back so their lotus bases stand on the hall floor, not over the steps
+    placeProp(g.scene, { x: s.x, y: s.y, z: hall ? s.z - 1.4 : s.z, h: s.h, girthOf: hall ? 18 : s.h, yaw: -Math.PI / 2, mirror: s.x < 0 });
   });
 }, undefined, () => {});
 gl.load(PROPS + 'lion_stone_big.glb', (g) => {
@@ -1594,7 +1594,7 @@ class Pilgrim {
 const F = HALL.floor, DOORS = [-6, 0, 6], GATE = [19.4, 24.6];
 const OBSTACLES = [
   [0, 8, 2.4],                                                         // 天公爐
-  ...[-11, -5.5, 5.5, 11].flatMap((x) => [-8, -14].filter((z) => z === -8 || Math.abs(x) > 8).map((z) => [x, z, z === -8 && Math.abs(x) < 6 ? 1.35 : 0.8])),   // scanned dragon pillars have wide bases; no columns nearer the altar
+  ...[-11, -5.5, 5.5, 11].flatMap((x) => [-8, -14].filter((z) => z === -8 || Math.abs(x) > 8).map((z) => (z === -8 && Math.abs(x) < 6 ? [x, -9.4, 2.7] : [x, z, 0.8]))),   // the scanned dragon pillars stand on wide lotus bases; no columns nearer the altar
   ...[-10, -7.4, -4.6, -1.6, 1.6, 4.6, 7.4, 10].map((x) => [x, 24.2, Math.abs(x) < 2 ? 0.7 : 0.5]),
   [-12, 30, 1.3], [13, 31, 1.1], [-13.5, 12, 1.1],
   [13.5, -2, 0.8],
