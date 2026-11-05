@@ -875,7 +875,9 @@ const sfx = {
     // ambience bus: louder and open outdoors, softer and muffled inside the hall
     this.ambLP = this.ctx.createBiquadFilter(); this.ambLP.type = 'lowpass'; this.ambLP.frequency.value = 18000;
     this.ambGain = this.ctx.createGain(); this.ambGain.gain.value = 0;
-    this.ambLP.connect(this.ambGain).connect(this.master);
+    // tame the chirps: the high birdsong band is pulled down, the soft stream-and-air underneath stays
+    this.ambShelf = this.ctx.createBiquadFilter(); this.ambShelf.type = 'highshelf'; this.ambShelf.frequency.value = 2800; this.ambShelf.gain.value = -8;
+    this.ambLP.connect(this.ambShelf).connect(this.ambGain).connect(this.master);
     for (const [k, f] of Object.entries(SFX_FILES)) {
       fetch(`/temple/assets/sfx/${f}.mp3`).then((r) => r.arrayBuffer()).then((b) => this.ctx.decodeAudioData(b))
         .then((buf) => { this.buf[k] = buf; if (k === 'birds') this.ambient(); }).catch(() => {});
@@ -913,7 +915,10 @@ const sfx = {
   update(inside, dt) {
     if (!this.ctx) return;
     const k = 1 - Math.exp(-dt * 1.5);
-    this.ambGain.gain.value += ((inside ? 0.07 : 0.18) - this.ambGain.gain.value) * k;   // a quiet bed under everything, not a soundtrack
+    // a quiet bed under everything, not a soundtrack: it slowly swells and recedes (about a minute per breath),
+    // so there are long gentle stretches rather than a constant wall of birds
+    const tt = this.ctx.currentTime, swell = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(tt * 2 * Math.PI / 70)) * (0.6 + 0.4 * Math.sin(tt * 2 * Math.PI / 29 + 1));
+    this.ambGain.gain.value += ((inside ? 0.05 : 0.11) * swell - this.ambGain.gain.value) * k;
     this.ambLP.frequency.value += ((inside ? 1400 : 18000) - this.ambLP.frequency.value) * k;
   },
 };
