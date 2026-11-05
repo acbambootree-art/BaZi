@@ -273,19 +273,28 @@ function gild(root) {
   root.traverse((o) => {
     if (!o.isMesh) return;
     const src = o.material.map?.image;
-    let detail = null;
+    let detail = null, ao = null, bump = null, rough = null;
     if (src) {
-      const c = document.createElement('canvas'), w = Math.min(1024, src.width), h = Math.min(1024, src.height);
-      c.width = w; c.height = h;
-      const g = c.getContext('2d'); g.drawImage(src, 0, 0, w, h);
-      const d = g.getImageData(0, 0, w, h), p = d.data;
-      for (let i = 0; i < p.length; i += 4) {
-        const l = (0.3 * p[i] + 0.59 * p[i + 1] + 0.11 * p[i + 2]) / 255;
-        const v = Math.round(255 * (0.55 + 0.45 * Math.pow(l, 0.7)));   // more contrast: the carving's recesses read as depth
-        p[i] = p[i + 1] = p[i + 2] = v;
-      }
-      g.putImageData(d, 0, 0);
-      detail = new THREE.CanvasTexture(c); detail.colorSpace = THREE.SRGBColorSpace; detail.flipY = o.material.map.flipY;
+      // the scan's own shading holds its carving: stretch its contrast, then use it four ways — tone in the gilding,
+      // occlusion in the recesses, bump for crisp edges, and polish on the raised parts (worn smooth by hands)
+      const w = Math.min(1024, src.width), h = Math.min(1024, src.height);
+      const rd = document.createElement('canvas'); rd.width = w; rd.height = h;
+      const rg = rd.getContext('2d'); rg.drawImage(src, 0, 0, w, h);
+      const px = rg.getImageData(0, 0, w, h).data, L = new Float32Array(w * h);
+      for (let i = 0; i < L.length; i++) L[i] = (0.3 * px[i * 4] + 0.59 * px[i * 4 + 1] + 0.11 * px[i * 4 + 2]) / 255;
+      const sorted = L.slice().sort(), lo = sorted[Math.floor(L.length * 0.02)], hi = sorted[Math.floor(L.length * 0.98)];
+      for (let i = 0; i < L.length; i++) L[i] = Math.min(1, Math.max(0, (L[i] - lo) / Math.max(0.01, hi - lo)));
+      const tex = (f, srgb) => {
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const g = c.getContext('2d'), d = g.createImageData(w, h);
+        for (let i = 0; i < L.length; i++) { const v = Math.round(255 * f(L[i])); d.data[i * 4] = d.data[i * 4 + 1] = d.data[i * 4 + 2] = v; d.data[i * 4 + 3] = 255; }
+        g.putImageData(d, 0, 0);
+        const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.flipY = o.material.map.flipY; t.anisotropy = 8; return t;
+      };
+      detail = tex((l) => 0.6 + 0.4 * Math.pow(l, 0.8), true);
+      ao = tex((l) => 0.25 + 0.75 * Math.pow(l, 0.6));                 // deep shadow in the folds outlines every feature
+      bump = tex((l) => l);
+      rough = tex((l) => 0.5 + 0.5 * (1 - l));                         // raised parts polished, recesses a little duller
     }
     // the decimated scan shades in flat facets: weld its vertices and smooth the normals
     const g0 = new THREE.BufferGeometry();                             // unpack the quantized, interleaved scan to plain floats first
@@ -298,7 +307,8 @@ function gild(root) {
     if (o.geometry.index) g0.setIndex(o.geometry.index);
     try { const sm = mergeVertices(g0, 1e-3); sm.computeVertexNormals(); o.geometry = sm; } catch (e) { console.warn('statue smoothing skipped', e); }
     // polished gilding; the scan's own shading doubles as occlusion, so folds and recesses darken and the form reads in 3D
-    o.material = new THREE.MeshPhysicalMaterial({ color: 0xffc24e, map: detail, aoMap: detail, aoMapIntensity: 0.7, metalness: 1, roughness: 0.25, clearcoat: 0.6, clearcoatRoughness: 0.08, envMapIntensity: 3.2 });
+    o.material = new THREE.MeshPhysicalMaterial({ color: 0xffc85a, map: detail, aoMap: ao, aoMapIntensity: 1, bumpMap: bump, bumpScale: 1.4,
+      roughnessMap: rough, metalness: 1, roughness: 0.32, clearcoat: 0.8, clearcoatRoughness: 0.05, envMapIntensity: 3.6 });
   });
 }
 
