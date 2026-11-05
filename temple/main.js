@@ -394,6 +394,17 @@ const haloTex = canvasTex(512, 512, (c, w) => {
     c.fillStyle = fg; c.beginPath(); c.moveTo(-8, 0); c.bezierCurveTo(-9, -18, 6, -22, 2, -36); c.bezierCurveTo(9, -20, 8, -8, 8, 0); c.fill(); c.restore();
   });
 });
+// a soft rainbow band in the head halo, between its two gold rings (red outside to violet inside, like a real rainbow)
+const rainbowTex = canvasTex(512, 512, (c, w) => {
+  const m = w / 2, img = c.createImageData(w, w), r0 = 0.6, r1 = 0.82;
+  for (let y = 0; y < w; y++) for (let x = 0; x < w; x++) {
+    const r = Math.hypot(x - m, y - m) / m; if (r < r0 || r > r1) continue;
+    const u = (r - r0) / (r1 - r0), col = new THREE.Color().setHSL(0.78 * (1 - u), 0.85, 0.62);   // violet in, red out
+    const a = Math.sin(u * Math.PI) ** 0.8, i = (y * w + x) * 4;
+    img.data[i] = col.r * 255; img.data[i + 1] = col.g * 255; img.data[i + 2] = col.b * 255; img.data[i + 3] = a * 255;
+  }
+  c.putImageData(img, 0, 0);
+});
 function backlight(root) {
   const box = new THREE.Box3().setFromObject(root), H = box.max.y - box.min.y, W = box.max.x - box.min.x;
   const cx = (box.min.x + box.max.x) / 2, z = box.min.z + (box.max.z - box.min.z) * 0.18;
@@ -406,8 +417,82 @@ function backlight(root) {
   const hy = box.min.y + H * 0.86, hr = Math.min(W * 0.3, (roof - hy) / 0.96);   // its flame fringe reaches ~0.95 of the disc
   const head = new THREE.Mesh(new THREE.CircleGeometry(hr, 64), mat(haloTex, 0.95));
   head.position.set(cx, hy, z + 0.02);
-  body.userData.role = head.userData.role = 'skip';
-  scene.add(body, head);
+  const rainbow = new THREE.Mesh(new THREE.CircleGeometry(Math.max(hr, W * 0.32), 64),   // full size even where the ceiling cramps the halo: the ring shows round the head
+    new THREE.MeshBasicMaterial({ map: rainbowTex, transparent: true, opacity: 0.3, depthWrite: false }));
+  rainbow.position.set(cx, hy, z + 0.03);
+  body.userData.role = head.userData.role = rainbow.userData.role = 'skip';
+  scene.add(body, head, rainbow);
+  // radiance for the prayer (see glory()): a slowly turning sunburst behind the head, dark until someone prays
+  const rays = new THREE.Mesh(new THREE.PlaneGeometry(hr * 7, hr * 7), mat(raysTex, 0));   // blazes out across the mural
+  rays.position.set(cx, hy, z - 0.05); rays.userData.role = 'skip'; rays.visible = false;
+  scene.add(rays);
+  GLORY.halos.push({ body, head, rays, rainbow, spin: (GLORY.halos.length % 2 ? -1 : 1) * 0.04 });
+}
+// ---- the glory: when you kneel and pray, the halos blaze up as the mantra swells, as if the Buddha descends ----
+const GLORY = { halos: [], k: 0, mural: null };
+const raysTex = canvasTex(512, 512, (c, w, h) => {
+  const cx = w / 2, cy = h / 2;
+  c.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 72; i++) {                                     // long and short rays, fanned all round
+    const a = (i / 72) * Math.PI * 2, len = (i % 2 ? 0.62 : 0.98) * w / 2, wd = i % 2 ? 0.018 : 0.03;
+    const g = c.createLinearGradient(cx, cy, cx + Math.cos(a) * len, cy + Math.sin(a) * len);
+    g.addColorStop(0, 'rgba(255,240,200,0.55)'); g.addColorStop(0.5, 'rgba(255,214,140,0.22)'); g.addColorStop(1, 'rgba(255,200,120,0)');
+    c.fillStyle = g; c.beginPath(); c.moveTo(cx, cy);
+    c.lineTo(cx + Math.cos(a - wd) * len, cy + Math.sin(a - wd) * len); c.lineTo(cx + Math.cos(a + wd) * len, cy + Math.sin(a + wd) * len); c.fill();
+  }
+  const core = c.createRadialGradient(cx, cy, 0, cx, cy, w * 0.3);
+  core.addColorStop(0, 'rgba(255,250,235,0.9)'); core.addColorStop(0.4, 'rgba(255,226,160,0.35)'); core.addColorStop(1, 'rgba(255,210,140,0)');
+  c.fillStyle = core; c.fillRect(0, 0, w, h);
+});
+const gloryLight = new THREE.PointLight(0xffd79a, 0, 46, 1.4);      // the hall warms in the light
+gloryLight.position.set(0, HALL.floor + 13, -27); scene.add(gloryLight);
+// golden motes drifting down from above the altar, like light falling from heaven
+const MOTES = isMobile ? 90 : 180, moteP = new Float32Array(MOTES * 3), moteV = [];
+for (let i = 0; i < MOTES; i++) { moteP.set([(Math.random() - 0.5) * 26, HALL.floor + 2 + Math.random() * 20, -33 + Math.random() * 9], i * 3); moteV.push(0.25 + Math.random() * 0.5); }
+const moteGeo = new THREE.BufferGeometry(); moteGeo.setAttribute('position', new THREE.BufferAttribute(moteP, 3));
+const motes = new THREE.Points(moteGeo, new THREE.PointsMaterial({ color: 0xffe2a0, size: 0.16, map: canvasTex(32, 32, (c, w) => {
+  const g = c.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, w, w);
+}), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+motes.userData.role = 'skip'; motes.visible = false; motes.frustumCulled = false; scene.add(motes);
+// shafts of light pouring down from the ceiling onto the statues
+const beamTex = canvasTex(64, 256, (c, w, h) => {
+  const img = c.createImageData(w, h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const u = (x / (w - 1)) * 2 - 1, v = y / (h - 1), a = Math.exp(-u * u * 4) * (1 - v) ** 1.3 * 255, i = (y * w + x) * 4;
+    img.data[i] = 255; img.data[i + 1] = 236; img.data[i + 2] = 190; img.data[i + 3] = a;
+  }
+  c.putImageData(img, 0, 0);
+});
+const beams = new THREE.Group(); beams.visible = false; beams.userData.role = 'skip';
+for (const [x, z, w, tilt] of [[0, -30.5, 7, 0], [-4.5, -29.5, 3.2, 0.12], [4.5, -29.5, 3.2, -0.12], [-12, -30.5, 4.5, 0.06], [12, -30.5, 4.5, -0.06], [-1.8, -28.8, 2, 0.04], [2.2, -28.6, 2.2, -0.05]]) {
+  const H = HALL.ceil - 1;
+  const b = new THREE.Mesh(new THREE.PlaneGeometry(w, H), new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+  b.position.set(x, HALL.floor + 1.5 + H / 2, z); b.rotation.z = tilt;
+  beams.add(b);
+}
+scene.add(beams); noReflect.add(beams);
+function glory(on, dt) {
+  GLORY.k += ((on ? 1 : 0) - GLORY.k) * (1 - Math.exp(-dt * (on ? 0.55 : 1.4)));   // swells in over a few seconds with the mantra, fades quicker
+  const k = GLORY.k, t = clock.elapsedTime, pulse = 1 + Math.sin(t * 1.3) * 0.08 * k;
+  for (const h of GLORY.halos) {
+    h.body.material.color.setScalar(1 + k * 0.9 * pulse);
+    h.head.material.color.setScalar(1 + k * 1.6 * pulse);
+    h.rainbow.material.opacity = 0.3 + k * 0.35;                    // the rainbow brightens with the prayer
+    h.rays.visible = k > 0.01; h.rays.material.opacity = Math.min(1, k * 1.0 * pulse);
+    h.rays.rotation.z += dt * h.spin; h.rays.scale.setScalar(0.9 + k * 0.15);
+  }
+  gloryLight.intensity = k * 140;
+  beams.visible = k > 0.01;
+  beams.children.forEach((b, i) => { b.material.opacity = k * (0.32 + 0.1 * Math.sin(t * 0.6 + i * 1.7)); });
+  if (GLORY.mural) GLORY.mural.material.emissiveIntensity = 0.14 + k * 0.22;
+  motes.visible = k > 0.01; motes.material.opacity = k * 0.9;
+  if (motes.visible) {
+    for (let i = 0; i < MOTES; i++) {
+      moteP[i * 3 + 1] -= moteV[i] * dt; moteP[i * 3] += Math.sin(t * 0.7 + i) * 0.003;
+      if (moteP[i * 3 + 1] < HALL.floor + 1.5) moteP[i * 3 + 1] = HALL.floor + 21;
+    }
+    moteGeo.attributes.position.needsUpdate = true;
+  }
 }
 const gl = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 const scenery = buildScenery(scene, { isMobile });                  // plateau, cliffs, sea of cloud, Zhangjiajie horizon, sky
@@ -1157,7 +1242,7 @@ scatter('/temple/assets/env/fern.glb', 24, (rnd) => {                // ferns at
   const W = HALL.halfW * 2 - 0.4, H = HALL.ceil - 1.6;                // wall to wall, from the altar top to just under the ceiling
   const mural = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshStandardMaterial({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.14, roughness: 0.9 }));
   mural.position.set(0, HALL.floor + 1.5 + H / 2, HALL.back + 0.34); mural.userData.role = 'skip';
-  scene.add(mural);
+  scene.add(mural); GLORY.mural = mural;
 }
 
 // ---------------- tiny tween helper ----------------
@@ -3091,7 +3176,9 @@ function frame() {
     director.pos.set(0, F + 3.2 + u * 1.6, -8.2 - u * 2.5); director.look.set(0, F + 2.5 + u * 10.5, -30);
     if (reveal.t >= 7.5) { director = null; reveal.t = 8; }
   }
-  sfx.chant(me.kneel && me.praying && !seated && !atMuyu, dt);   // kneel, then Pray: the mantra; end the prayer or stand and it fades away
+  const praying = me.kneel && me.praying && !seated && !atMuyu;
+  sfx.chant(praying, dt);                                         // kneel, then Pray: the mantra; end the prayer or stand and it fades away
+  glory(praying, dt);                                             // ...and the halos blaze up with it
   updatePeers(dt);
   updateSmoke(dt);
   updateSticks();
