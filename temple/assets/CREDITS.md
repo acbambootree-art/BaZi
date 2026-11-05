@@ -36,11 +36,20 @@
 - `pond/koi.glb` — "Koi Fish" by SDPM Esare, CC BY 4.0 (swim wave added in the shader). https://sketchfab.com/3d-models/3e1b80c3653f43349252aab3b4fb1d86
 - `pond/cattails.glb` — "Cattails" by AlkaliDragon, CC BY 4.0. https://sketchfab.com/3d-models/2f35ed566d3d4d74abd6e7c48d82f8eb
 - `env/bamboo.glb` — "Free Bamboo Set" by JonhGillessen, CC BY 4.0 (some culms tinted purple on the site). https://sketchfab.com/3d-models/e9f9fa5397814f81bf85ad06acf5bf30
-- `env/bodhi.glb` — "Bodhi Tree" by Ashim Shakya (ashimshakya), CC BY 4.0. https://sketchfab.com/3d-models/943594369dc84239bc140e6e7d07a005
+- `env/greattree.glb` — "Island Tree 01", Poly Haven, CC0 (leaves thinned and branches decimated for the web). https://polyhaven.com/a/island_tree_01
 - `env/figurine.glb` — the little Buddhas on the tree: a reduced copy of `statue.glb` (Minneapolis Institute of Art, CC0).
 - `baked/*` — lighting baked in Blender from the assets above.
 
 ## Gate
 
 - `gate/doorgod_l.webp`, `gate/doorgod_r.webp` — the door gods Yuchi Gong and Qin Shubao, plates "The Door-gods, Civil and Military" by Chinese artists in E.T.C. Werner, *Myths & Legends of China* (1922), public domain; paper background removed. https://www.gutenberg.org/files/15250/15250-h/15250-h.htm
-- Everything else on the gate (carved stone panels, painted beams and friezes, brackets, couplets, plaques) is drawn in code (`gate.js`).
+- Wall murals (one per panel; Tang-era and Dunhuang paintings, public domain or CC0):
+  - `gate/mural_1.webp` — "Dunhuang217.jpg" (Unknown painter), Public domain, via Wikimedia Commons: https://commons.wikimedia.org/wiki/File:Dunhuang217.jpg
+  - `gate/mural_2.webp` — "唐-五代 菩薩圖 軸-Banner with Bodhisattva, possibly Mahamayuri MET DP161529.jpg" (anonymous), CC0, via Wikimedia Commons: https://commons.wikimedia.org/wiki/File:%E5%94%90-%E4%BA%94%E4%BB%A3_%E8%8F%A9%E8%96%A9%E5%9C%96_%E8%BB%B8-Banner_with_Bodhisattva,_possibly_Mahamayuri_MET_DP161529.jpg
+  - `gate/mural_3.webp` — "Chinesischer Maler des 8. Jahrhunderts 001.jpg" (Unknown author, Tang dynasty, 8th century), Public domain, via Wikimedia Commons: https://commons.wikimedia.org/wiki/File:Chinesischer_Maler_des_8._Jahrhunderts_001.jpg
+  - `gate/mural_4.webp` — "觀無量壽經變.jpg" (Unknown author), Public domain, via Wikimedia Commons: https://commons.wikimedia.org/wiki/File:%E8%A7%80%E7%84%A1%E9%87%8F%E5%A3%BD%E7%B6%93%E8%AE%8A.jpg
+  - `gate/mural_5.webp` — "Mogao Cave 217 - South Wall of the Main Chamber - Lotus Sutra tableau (preaching Buddha with Summit of Being atop; parable of the Phantom city to the right).png" (Unknown 8th century mural painter), Public domain, via Wikimedia Commons: https://commons.wikimedia.org/wiki/File:Mogao_Cave_217_-_South_Wall_of_the_Main_Chamber_-_Lotus_Sutra_tableau_(preaching_Buddha_with_Summit_of_Being_atop;_parable_of_the_Phantom_city_to_the_right).png
+  - `gate/mural_6.webp` — "Detail, Anonymous-Bodhisattva Leading the Way (cropped).jpg" (anonymous), Public domain, via Wikimedia Commons: https://commons.wikimedia.org/wiki/File:Detail,_Anonymous-Bodhisattva_Leading_the_Way_(cropped).jpg
+  - `gate/mural_7.webp` — "Mural Avolokitesvara.jpg" (unknown ancient Buddhist artist(s)), Public domain, via Wikimedia Commons: https://commons.wikimedia.org/wiki/File:Mural_Avolokitesvara.jpg
+  - `gate/mural_8.webp` — "西方淨土變.jpg" (Unknown author), Public domain, via Wikimedia Commons: https://commons.wikimedia.org/wiki/File:%E8%A5%BF%E6%96%B9%E6%B7%A8%E5%9C%9F%E8%AE%8A.jpg
+- Everything else on the gate (Tang-style painted beams with baoxiang flowers and honeysuckle scrolls, each bay seeded differently; brackets, plaster, lanterns, couplets, plaques) is drawn in code (`gate.js`).

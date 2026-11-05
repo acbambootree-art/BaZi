@@ -563,7 +563,7 @@ gl.load('/temple/assets/env/bamboo.glb', (g) => {
     band(38 * many, sx * 18.2, sx * 23.5, -40, 18);    // behind the courtyard walls
   }
   band(40 * many, -33, -38, -14, 24);                  // behind the lake (west)
-  const keep = spots.filter(([x, z]) => !inPond(x, z, 1.6) && !inLake(x, z, 1.5) && Math.hypot(x - 13, z - 31) > 2.5 && Math.hypot(x + 12, z - 30) > 2.5);
+  const keep = spots.filter(([x, z]) => !inPond(x, z, 1.6) && !inLake(x, z, 1.5) && Math.hypot(x + 38, z - 4) > 9.5 && Math.hypot(x - 13, z - 31) > 2.5 && Math.hypot(x + 12, z - 30) > 2.5);
   // each spot is a little clump of 2–3 culms of mixed heights, leaning slightly
   const per = plants.map(() => []);
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3();
@@ -595,19 +595,40 @@ function koiSchool(put, ticks, P, n, y0, inside) {
   gl.load('/temple/assets/pond/koi.glb', (g) => {
     let seed = Math.round(P.x * 31 + P.z * 7) | 0; const r = () => ((seed = (seed * 16807 + 11) % 2147483647 + 2147483647) % 2147483647 / 2147483647);
     const pick = () => { for (let i = 0; i < 40; i++) { const x = P.x + (r() - 0.5) * 2 * P.rx, z = P.z + (r() - 0.5) * 2 * P.rz; if (inside(x, z, 0.82)) return [x, z]; } return [P.x, P.z]; };
+    // The scan was caught mid-turn: its body is bent in a C. Measure that bend (the body's centreline, sideways offset
+    // along its length; in the model the fish runs along z, head at +z, side-to-side is x) so the shader can
+    // straighten it before adding a proper swimming wave.
+    let geoRef = null; g.scene.traverse((o) => { if (o.isMesh && !geoRef) geoRef = o.geometry; });
+    const B = 13, cl = new Array(B).fill(0);
+    {
+      const pa = geoRef.attributes.position, bins = Array.from({ length: B }, () => []);
+      for (let i = 0; i < pa.count; i++) bins[Math.min(B - 1, Math.round((pa.getZ(i) + 1) / 2 * (B - 1)))].push(pa.getX(i));
+      bins.forEach((xs, k) => { xs.sort((a, b) => a - b); cl[k] = xs.length ? xs[xs.length >> 1] : 0; });
+      for (let pass = 0; pass < 2; pass++) for (let k = 1; k < B - 1; k++) cl[k] = (cl[k - 1] + 2 * cl[k] + cl[k + 1]) / 4;   // smooth
+    }
     const fish = [];
     for (let i = 0; i < n; i++) {
-      const u = { phase: { value: r() * 6 }, amp: { value: 0.06 } };
+      const u = { phase: { value: r() * 6 }, amp: { value: 0.1 }, fin: { value: r() * 6 } };
       const src = g.scene.clone(true);
       src.traverse((o) => {
         if (!o.isMesh) return;
         o.material = o.material.clone();
         o.material.onBeforeCompile = (sh) => {
-          sh.uniforms.uPhase = u.phase; sh.uniforms.uAmp = u.amp;
-          sh.vertexShader = 'uniform float uPhase; uniform float uAmp;\n' + sh.vertexShader.replace('#include <begin_vertex>',
+          sh.uniforms.uPhase = u.phase; sh.uniforms.uAmp = u.amp; sh.uniforms.uFin = u.fin; sh.uniforms.uCL = { value: cl };
+          sh.vertexShader = `uniform float uPhase; uniform float uAmp; uniform float uFin; uniform float uCL[${B}];\n` + sh.vertexShader.replace('#include <begin_vertex>',
             `#include <begin_vertex>
-             float along = clamp((transformed.x + 0.45) / 0.95, 0.0, 1.0);            // 0 head .. 1 tail
-             transformed.z += sin(uPhase - along * 5.0) * uAmp * along * along;`);
+             float fz = clamp((transformed.z + 1.0) * 0.5 * ${B - 1}.0, 0.0, ${B - 1}.0);
+             int i0 = int(floor(fz)); int i1 = min(i0 + 1, ${B - 1});
+             float centre = mix(uCL[i0], uCL[i1], fz - float(i0));
+             float side = transformed.x - centre;
+             transformed.x = side;                                                   // straighten the scanned bend
+             float along = clamp((1.0 - transformed.z) * 0.5, 0.0, 1.0);              // 0 at the snout .. 1 at the tail fan
+             // swimming: a travelling wave, small at the head, big at the tail
+             transformed.x += sin(uPhase - along * 6.2) * uAmp * (0.15 + along * along * 1.6);
+             // pectoral fins (wide parts just behind the head) row up and down
+             float finZone = smoothstep(0.25, 0.32, along) * (1.0 - smoothstep(0.42, 0.5, along));
+             float finOut = max(abs(side) - 0.13, 0.0);
+             transformed.y += sin(uFin + sign(side) * 0.6) * finOut * 0.9 * finZone;`);
         };
       });
       const [x, z] = pick();
@@ -621,8 +642,8 @@ function koiSchool(put, ticks, P, n, y0, inside) {
         const dx = k.tgt[0] - k.x, dz = k.tgt[1] - k.z, d = Math.hypot(dx, dz);
         if (d < 0.4 || k.t <= 0) {                                         // a new whim
           const roll = r();
-          k.mode = roll < 0.12 ? 'dart' : roll < 0.3 ? 'rest' : 'cruise';
-          k.vWant = k.mode === 'dart' ? 0.7 + r() * 0.3 : k.mode === 'rest' ? 0.02 + r() * 0.03 : 0.14 + r() * 0.16;
+          k.mode = roll < 0.14 ? 'dart' : roll < 0.26 ? 'rest' : 'cruise';
+          k.vWant = k.mode === 'dart' ? 0.7 + r() * 0.3 : k.mode === 'rest' ? 0.03 + r() * 0.03 : 0.18 + r() * 0.16;
           k.t = k.mode === 'dart' ? 1 + r() : k.mode === 'rest' ? 2 + r() * 4 : 4 + r() * 6;
           if (k.mode !== 'rest') k.tgt = pick();
         }
@@ -633,17 +654,19 @@ function koiSchool(put, ticks, P, n, y0, inside) {
           const ox = k.x - o.x, oz = k.z - o.z, od = Math.hypot(ox, oz);
           if (od < 0.6 && od > 1e-3) want += Math.sign(Math.sin(Math.atan2(ox, oz) - k.h)) * 0.6 * (1 - od / 0.6);
         }
-        const ahead = [k.x + Math.sin(k.h) * 0.8, k.z + Math.cos(k.h) * 0.8];
-        if (!inside(ahead[0], ahead[1], 0.88)) { want = Math.atan2(P.x - k.x, P.z - k.z); k.vWant = Math.max(k.vWant, 0.15); }
+        const look = Math.min(0.6, 0.2 * Math.min(P.rx, P.rz));            // look a little ahead (less in a small pond)
+        const ahead = [k.x + Math.sin(k.h) * look, k.z + Math.cos(k.h) * look];
+        if (!inside(ahead[0], ahead[1], 0.9)) want = Math.atan2(P.x - k.x, P.z - k.z) + Math.sin(k.yPh) * 0.4;   // curve back in
         const turn = Math.atan2(Math.sin(want - k.h), Math.cos(want - k.h));
         const rate = (k.mode === 'dart' ? 2.2 : 0.9) + Math.sin(k.yPh + k.t) * 0.2;   // gentle, slightly wavering turns
         k.h += THREE.MathUtils.clamp(turn, -rate * dt, rate * dt);
         k.v += (k.vWant - k.v) * (1 - Math.exp(-dt * (k.vWant > k.v ? 2.5 : 0.8)));   // quick to speed up, slow to glide down
         k.x += Math.sin(k.h) * k.v * dt; k.z += Math.cos(k.h) * k.v * dt;
-        if (!inside(k.x, k.z, 0.95)) { k.x -= Math.sin(k.h) * k.v * dt; k.z -= Math.cos(k.h) * k.v * dt; k.h += Math.PI * dt; }
+        if (!inside(k.x, k.z, 0.97)) { const a = Math.atan2(P.x - k.x, P.z - k.z); k.x += Math.sin(a) * 0.3 * dt; k.z += Math.cos(a) * 0.3 * dt; }   // never through the bank
         // tail beat follows speed; a resting koi just fans its tail slowly
-        k.u.phase.value += dt * (2.2 + k.v * 14);
-        k.u.amp.value = 0.03 + Math.min(0.07, k.v * 0.12) + Math.abs(turn) * 0.015;
+        k.u.phase.value += dt * (2.5 + k.v * 16);                          // tail beat follows speed
+        k.u.amp.value = 0.05 + Math.min(0.16, k.v * 0.3) + Math.abs(turn) * 0.04;   // bigger strokes when fast or turning
+        k.u.fin.value += dt * (k.v < 0.08 ? 3.2 : 1.6);                      // a resting koi sculls with its fins
         k.yPh += dt * 0.4;
         k.f.position.set(k.x, k.y0 + Math.sin(k.yPh) * 0.02, k.z);
         k.f.rotation.set(0, k.h + KOI_YAW, Math.sin(k.yPh * 1.7) * 0.04);
@@ -664,7 +687,7 @@ const lakeK = (a) => 1 + 0.08 * Math.sin(3 * a + 2.1) + 0.05 * Math.sin(5 * a + 
 const lakeAt = (a, k = 1) => [LAKE.x + Math.cos(a) * LAKE.rx * lakeK(a) * k, LAKE.z + Math.sin(a) * LAKE.rz * lakeK(a) * k];
 const inLake = (x, z, k = 1) => { const a = Math.atan2((z - LAKE.z) / LAKE.rz, (x - LAKE.x) / LAKE.rx), K = lakeK(a) * k; return ((x - LAKE.x) / (LAKE.rx * K)) ** 2 + ((z - LAKE.z) / (LAKE.rz * K)) ** 2 < 1; };
 let lakeBank = null, lakeTick = null;
-const KOI_YAW = Math.PI / 2;    // the koi model's head points along -x (tall tail fin at +x)
+const KOI_YAW = Math.PI / 2;    // placed, the koi's head (geometry +z: the round end with the pectoral fins) points along -x
 {
   const N = 72, shape = new THREE.Shape();
   for (let i = 0; i <= N; i++) { const [x, z] = pondAt((i / N) * Math.PI * 2); i ? shape.lineTo(x - POND.x, -(z - POND.z)) : shape.moveTo(x - POND.x, -(z - POND.z)); }
@@ -1463,7 +1486,8 @@ const OBSTACLES = [
   [-3.1, 26.2, 1.1], [3.1, 26.2, 1.1],                                  // stone lions
   ...[28, 33].flatMap((z) => [[-6, z, 0.3], [6, z, 0.3]]),
 ];
-BENCHES.forEach((b) => OBSTACLES.push([b.x, b.z, 0.6]));            // you walk round the pond benches, not through them
+BENCHES.forEach((b) => OBSTACLES.push([b.x, b.z, 0.6]));
+OBSTACLES.push([-11.25, 25, 0.7], [11.25, 25, 0.7]);                 // the gate's stone lanterns            // you walk round the pond benches, not through them
 const inHall = (z) => z < HALL.front;
 const nearestDoor = (x) => DOORS.reduce((a, b) => (Math.abs(b - x) < Math.abs(a - x) ? b : a));
 function clampWalk(p) {
@@ -1944,88 +1968,214 @@ async function throwBlocks(who, r) {
 }
 
 // ---------------- lamps ----------------
-// ---------------- the Bodhi blessing tree (菩提樹) in the courtyard ----------------
-// "Bodhi Tree" by Ashim Shakya (Sketchfab, CC BY 4.0). Little gold Buddhas (a small copy of the hall's scanned Guanyin)
-// hang from its canopy on red cords: each blessing written here is kept by one of them. Same slot system the old
-// lamp walls used, so earlier lamps simply reappear as Buddhas on the tree.
-const BODHI = { x: 10.2, z: 9.5, h: 12.5 };
+// ---------------- the great Bodhi tree (菩提樹) beyond the lotus lake ----------------
+// A giant, ancient tree ("Bodhi Tree" by Ashim Shakya, CC BY 4.0, scaled up) rising from a mossy rock mound on the
+// lake's far shore: a canopy of white-and-lilac blossom, little glowing Buddhas in alcoves in its trunk and roots,
+// glowing orbs hanging from its branches, water spilling from its roots into the lake, mist and drifting petals.
+// The little gold Buddhas hanging in its branches keep the blessings people write (same slot system the old lamp
+// walls used, so earlier lamps reappear here); claimed ones glow.
+const BODHI = { x: -38, z: 4, h: 58, mound: 3.2, yaw: 0 };   // h: well above the hall roof (~20 m)
+let bodhiTick = null;
 world.lamps = (() => {
   const N = 150, slots = [], m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color(), one = new THREE.Vector3(1, 1, 1);
   let seed = 4321; const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  const cells = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12, 0.3, 0.1).translate(0, 0.15, 0),
-    new THREE.MeshStandardMaterial({ color: 0xd9ab4f, metalness: 0.75, roughness: 0.32, emissive: 0x3a2508, emissiveIntensity: 0.6 }), N);
-  const cords = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.006, 0.006, 1, 4).translate(0, 0.5, 0), new THREE.MeshStandardMaterial({ color: 0x9a2a1e, roughness: 0.8 }), N);
-  for (let i = 0; i < N; i++) {
-    // a loose shell under the canopy: low enough to see and reach with the eye, spread all round the trunk
-    const a = (i / N) * Math.PI * 2 * 7.3 + r() * 0.6, rad = 2.2 + r() * 3.2, y = 2.4 + r() * 3.6 + (rad > 4 ? 0.8 : 0);
+  const ticks = [];
+  bodhiTick = (dt) => ticks.forEach((f) => f(dt));
+  const Y0 = BODHI.mound, H = BODHI.h;
+  const cells = new THREE.InstancedMesh(new THREE.BoxGeometry(0.2, 0.5, 0.15).translate(0, 0.25, 0),
+    new THREE.MeshStandardMaterial({ color: 0xd9ab4f, metalness: 0.7, roughness: 0.35, emissive: 0xffb860, emissiveIntensity: 0.22 }), N);
+  const cords = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.01, 0.01, 1, 4).translate(0, 0.5, 0), new THREE.MeshStandardMaterial({ color: 0x9a2a1e, roughness: 0.8 }), N);
+  for (let i = 0; i < N; i++) {                       // fallback layout until the tree has loaded
+    const a = r() * Math.PI * 2, rad = 4 + r() * 8, y = Y0 + 9 + r() * 8;
     const p = new THREE.Vector3(BODHI.x + Math.cos(a) * rad, y, BODHI.z + Math.sin(a) * rad);
-    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(-(p.x - BODHI.x), -(p.z - BODHI.z)) + Math.PI);   // facing outward
     cells.setMatrixAt(i, m4.compose(p, q, one));
-    const len = 0.35 + r() * 0.5;
-    cords.setMatrixAt(i, m4.compose(p.clone().setY(y + 0.3), q, new THREE.Vector3(1, len, 1)));
+    cords.setMatrixAt(i, m4.compose(p.clone().setY(y + 0.5), q, new THREE.Vector3(1, 1, 1)));
     const lit = r() < 0.22;
     cells.setColorAt(i, col.set(lit ? 0xffe8c4 : 0xa08a62));                       // claimed: bright gold; waiting: aged gold
     slots.push({ pos: p, side: 0, lit });
   }
   for (const m of [cells, cords]) { m.castShadow = true; m.receiveShadow = true; m.userData.role = 'skip'; m.frustumCulled = false; scene.add(m); }
-  gl.load('/temple/assets/env/figurine.glb', (g) => {                // swap the stand-in boxes for the little Buddha
+
+  // ---- the mound: big mossy boulders round a rock core ----
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 7.2, Y0, 28), new THREE.MeshStandardMaterial({ color: 0x4a4a3a, roughness: 1 }));
+  core.position.set(BODHI.x, Y0 / 2 - 0.05, BODHI.z); core.receiveShadow = core.castShadow = true; core.userData.role = 'skip'; scene.add(core);
+  const boulders = [];
+  for (let i = 0; i < 46; i++) {
+    const a = r() * Math.PI * 2, ring = r();
+    const rad = ring < 0.5 ? 6.2 + r() * 1.2 : ring < 0.8 ? 4.6 + r() * 1.0 : 3.2 + r() * 1.0;
+    const y = ring < 0.5 ? 0 : ring < 0.8 ? Y0 * 0.45 : Y0 * 0.82;
+    boulders.push([BODHI.x + Math.cos(a) * rad, BODHI.z + Math.sin(a) * rad, 2.2 + r() * 2.2, r() * 6.28, 0.6 + r() * 0.4, y]);
+  }
+  ring('/temple/assets/env/rocks.glb', boulders, 0.25, true, (parts) => { const m = parts[0].mat; core.material = new THREE.MeshStandardMaterial({ map: m.map, normalMap: m.normalMap, roughness: 1, color: 0x8a9478 }); });
+
+  // ---- shared bits: glow sprite, the little Buddha geometry ----
+  const glowTex = canvasTex(64, 64, (c, w) => { const g = c.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(255,240,205,1)'); g.addColorStop(0.3, 'rgba(255,205,150,0.5)'); g.addColorStop(1, 'rgba(255,190,130,0)'); c.fillStyle = g; c.fillRect(0, 0, w, w); });
+  const glow = (pos, size, opacity, color = 0xffe2b0) => {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity }));
+    s.position.copy(pos); s.scale.setScalar(size); s.userData.role = 'skip'; scene.add(s); return s;
+  };
+  let figGeo = null;
+  const figReady = new Promise((res) => gl.load('/temple/assets/env/figurine.glb', (g) => {
     let geo = null; g.scene.updateMatrixWorld(true);
     g.scene.traverse((o) => { if (o.isMesh && !geo) { geo = o.geometry.clone(); geo.applyMatrix4(o.matrixWorld); } });
-    if (!geo) return;
     for (const n of ['position', 'normal']) {
       const at = geo.attributes[n]; if (!at || at.array instanceof Float32Array) continue;
       const f = new Float32Array(at.count * at.itemSize); for (let i = 0; i < at.count; i++) for (let k = 0; k < at.itemSize; k++) f[i * at.itemSize + k] = at.getComponent(i, k);
       geo.setAttribute(n, new THREE.BufferAttribute(f, at.itemSize));
     }
     geo.computeBoundingBox(); const b = geo.boundingBox, c = b.getCenter(new THREE.Vector3()), h = b.max.y - b.min.y;
-    geo.translate(-c.x, -b.min.y, -c.z); geo.scale(0.42 / h, 0.42 / h, 0.42 / h);      // 42 cm, hanging from its cord
-    geo.computeVertexNormals(); geo.computeBoundingSphere();
-    cells.geometry.dispose(); cells.geometry = geo;
-  }, undefined, () => {});
-  gl.load('/temple/assets/env/bodhi.glb', (g) => {
-    g.scene.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(g.scene), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
-    const t = g.scene; t.scale.setScalar(BODHI.h / size.y);
-    t.position.set(BODHI.x - c.x * t.scale.x, -box.min.y * t.scale.y - 1.0, BODHI.z - c.z * t.scale.z);   // roots sunk into the ground
+    geo.translate(-c.x, -b.min.y, -c.z); geo.scale(1 / h, 1 / h, 1 / h); geo.computeVertexNormals(); geo.computeBoundingSphere();
+    figGeo = geo;
+    cells.geometry.dispose(); cells.geometry = geo.clone().scale(0.55, 0.55, 0.55);      // 55 cm, hanging from its cord
+    res();
+  }, undefined, () => res()));
+
+  // ---- the tree: one great old tree ("Island Tree 01", Poly Haven, CC0), twisted trunk set into the mound ----
+  gl.load('/temple/assets/env/greattree.glb', async (g) => {
+    const t = g.scene; t.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(t), size = box.getSize(new THREE.Vector3());
+    const S = H / size.y;
+    t.scale.setScalar(S); t.rotation.y = BODHI.yaw;
+    t.position.set(BODHI.x, Y0 - 0.8 - box.min.y * S, BODHI.z);          // roots sunk into the mound
+    let leafMat = null, trunkMat = null;
     t.traverse((o) => {
       if (!o.isMesh) return;
       o.castShadow = o.receiveShadow = true;
-      if (o.material.transparent || o.material.alphaTest) { o.material.transparent = false; o.material.alphaTest = 0.45; o.material.depthWrite = true; o.material.side = THREE.DoubleSide; }
+      if (o.material.alphaTest || o.material.transparent) { o.material.transparent = false; o.material.alphaTest = 0.5; o.material.side = THREE.DoubleSide; leafMat = o.material; }
+      else if (!/branch/.test(o.material.name)) trunkMat = o.material;
     });
     t.userData.role = 'skip'; scene.add(t);
-    // hang every Buddha from a real branch: sample bark points out along the limbs, well spread apart
     t.updateMatrixWorld(true);
-    const pts = [], v = new THREE.Vector3();
+    // sample the bark: trunk points facing the lake (for alcoves), limb points (for hanging things)
+    const trunk = [], limbs = [], v = new THREE.Vector3(), nrm = new THREE.Vector3(), nm = new THREE.Matrix3();
     t.traverse((o) => {
-      if (!o.isMesh || o.material.transparent || o.material.alphaTest) return;
-      const pa = o.geometry.attributes.position;
-      for (let i = 0; i < pa.count; i += 7) {
+      if (!o.isMesh || o.material === leafMat) return;
+      const isTrunk = o.material === trunkMat;
+      const pa = o.geometry.attributes.position, na = o.geometry.attributes.normal; nm.getNormalMatrix(o.matrixWorld);
+      for (let i = 0; i < pa.count; i += 3) {
         v.fromBufferAttribute(pa, i).applyMatrix4(o.matrixWorld);
-        const d = Math.hypot(v.x - BODHI.x, v.z - BODHI.z);
-        if (v.y > 4.0 && v.y < 8.2 && d > 1.4 && d < 6.5) pts.push(v.clone());
+        const d = Math.hypot(v.x - BODHI.x, v.z - BODHI.z), hy = v.y - Y0;
+        if (na) nrm.fromBufferAttribute(na, i).applyMatrix3(nm).normalize();
+        if (isTrunk && hy > 0.8 && hy < H * 0.28 && na && nrm.x > 0.45 && Math.abs(nrm.y) < 0.45) trunk.push([v.clone(), nrm.clone()]);
+        if (hy > H * 0.28 && hy < H * 0.62 && d > 4 && d < H * 0.5) limbs.push(v.clone());
       }
     });
-    let s2 = 77; const r2 = () => ((s2 = (s2 * 16807) % 2147483647) / 2147483647);
-    for (let i = pts.length - 1; i > 0; i--) { const j = (r2() * (i + 1)) | 0; [pts[i], pts[j]] = [pts[j], pts[i]]; }
-    const anchors = [];
-    for (const p of pts) { if (anchors.length >= slots.length) break; if (anchors.every((a) => a.distanceTo(p) > 0.55)) anchors.push(p); }
-    if (anchors.length < slots.length) return;                            // keep the fallback layout
-    // lowest anchors first, so the reachable ones are the ones handed out first
-    anchors.sort((a, b) => a.y - b.y);
-    const order = slots.map((_, i) => i).sort((a, b) => slots[a].pos.y - slots[b].pos.y);
-    order.forEach((si, k) => {
-      const a = anchors[k], len = 0.45 + r2() * 0.6, top = a.y - len;
-      slots[si].pos.set(a.x, top - 0.42, a.z);
-      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(a.x - BODHI.x, a.z - BODHI.z));   // facing outward
-      cells.setMatrixAt(si, m4.compose(slots[si].pos, q, one));
-      cords.setMatrixAt(si, m4.compose(new THREE.Vector3(a.x, top, a.z), q, new THREE.Vector3(1, len, 1)));
-    });
-    cells.instanceMatrix.needsUpdate = cords.instanceMatrix.needsUpdate = true;
-    for (const o of lampLabels) if (o.userData.slot != null) o.position.copy(slots[o.userData.slot].pos).add(new THREE.Vector3(0, 0.6, 0));
+    const spread = (pts, n, minD, key = (p) => p) => {
+      for (let i = pts.length - 1; i > 0; i--) { const j = (r() * (i + 1)) | 0; [pts[i], pts[j]] = [pts[j], pts[i]]; }
+      const out = []; for (const p of pts) { if (out.length >= n) break; if (out.every((o) => key(o).distanceTo(key(p)) > minD)) out.push(p); }
+      return out;
+    };
+    await figReady;
+    // alcoves with glowing Buddhas in the trunk and roots, facing the lake and the courtyard
+    const alcoves = spread(trunk, 9, 2.6, (p) => p[0]);
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x1a1008, roughness: 1, emissive: 0x6a3a10, emissiveIntensity: 0.55, side: THREE.BackSide });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xf2d08a, metalness: 0.4, roughness: 0.35, emissive: 0xffc070, emissiveIntensity: 0.9 });
+    for (const [p, n] of alcoves) {
+      const hgt = 1.0 + r() * 0.7;
+      const niche = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), darkMat);
+      niche.scale.set(hgt * 0.5, hgt * 0.4, hgt * 0.75);                      // a rounded arch, deeper than it is wide
+      niche.position.copy(p).addScaledVector(n, -0.12); niche.lookAt(niche.position.clone().add(n)); niche.rotateX(-Math.PI / 2);
+      niche.userData.role = 'skip'; scene.add(niche);
+      if (figGeo) {
+        const b = new THREE.Mesh(figGeo, goldMat); b.scale.setScalar(hgt * 0.6);
+        b.position.copy(p).addScaledVector(n, -0.2).add(new THREE.Vector3(0, -hgt * 0.32, 0));
+        b.rotation.y = Math.atan2(n.x, n.z); b.userData.role = 'skip'; scene.add(b);
+      }
+      glow(p.clone().addScaledVector(n, 0.15), hgt * 1.5, 0.45);
+    }
+    // hang every blessing Buddha from a real limb, spread out, lowest anchors given out first
+    const anchors = spread(limbs.slice(), N + 60, 0.9).sort((a, b) => a.y - b.y);
+    if (anchors.length >= N) {
+      const order = slots.map((_, i) => i).sort((a, b) => slots[a].pos.y - slots[b].pos.y);
+      order.forEach((si, k) => {
+        const a = anchors[k], len = 0.7 + r() * 1.4, top = a.y - len;
+        slots[si].pos.set(a.x, top - 0.55, a.z);
+        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(a.x - BODHI.x, a.z - BODHI.z));
+        cells.setMatrixAt(si, m4.compose(slots[si].pos, q, one));
+        cords.setMatrixAt(si, m4.compose(new THREE.Vector3(a.x, top, a.z), q, new THREE.Vector3(1, len, 1)));
+      });
+      cells.instanceMatrix.needsUpdate = cords.instanceMatrix.needsUpdate = true;
+      for (const o of lampLabels) if (o.userData.slot != null) o.position.copy(slots[o.userData.slot].pos).add(new THREE.Vector3(0, 0.9, 0));
+      // glowing orbs hanging among them (the anchors left over)
+      const orbs = anchors.slice(N, N + 56);
+      const orbMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.16, 12, 8), new THREE.MeshStandardMaterial({ color: 0xfff1d0, emissive: 0xffd28a, emissiveIntensity: 2.2 }), orbs.length);
+      const threads = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.006, 0.006, 1, 3).translate(0, 0.5, 0), new THREE.MeshBasicMaterial({ color: 0x3a3020 }), orbs.length);
+      const orbGlows = orbs.map((a, i) => {
+        const len = 0.8 + r() * 2.2, p = a.clone().setY(a.y - len);
+        orbMesh.setMatrixAt(i, m4.compose(p, q.identity(), one)); threads.setMatrixAt(i, m4.compose(p, q, new THREE.Vector3(1, len, 1)));
+        return { s: glow(p, 1.1 + r() * 0.6, 0.6), ph: r() * 6.28 };
+      });
+      for (const m of [orbMesh, threads]) { m.userData.role = 'skip'; scene.add(m); }
+      let T = 0;
+      ticks.push((dt) => { T += dt; for (const o of orbGlows) o.s.material.opacity = 0.5 + Math.sin(T * 1.3 + o.ph) * 0.12; });
+    }
   }, undefined, () => {});
+
+  // ---- water spilling from the roots into the lake: three falls, foam and mist at their feet ----
+  const fallTex = canvasTex(64, 256, (c, w, h) => {
+    let s2 = 9; const rr = () => ((s2 = (s2 * 16807) % 2147483647) / 2147483647);
+    c.clearRect(0, 0, w, h);
+    for (let i = 0; i < 90; i++) {
+      const x = rr() * w, y = rr() * h, len = 30 + rr() * 120, a = 0.15 + rr() * 0.5;
+      const g = c.createLinearGradient(0, y, 0, y + len); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, `rgba(235,250,255,${a})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+      c.fillStyle = g; c.fillRect(x, y, 1.5 + rr() * 3, len); c.fillRect(x, y - h, 1.5 + rr() * 3, len);
+    }
+  }, [1, 1]);
+  fallTex.wrapT = THREE.RepeatWrapping;
+  const fallMat = new THREE.MeshBasicMaterial({ map: fallTex, color: 0xe8fbff, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide });
+  const lakeWestX = lakeAt(Math.PI, 1)[0];
+  for (const [dz, w, top] of [[-2.2, 1.6, Y0 * 0.95], [0.6, 2.4, Y0 * 0.75], [2.9, 1.2, Y0 * 0.85]]) {
+    const z = BODHI.z + dz, x0 = BODHI.x + 4.6, x1 = Math.max(x0 + 1.0, lakeWestX + 0.6);
+    // a curved sheet: over the lip, then falling, slightly spreading
+    const geo = new THREE.PlaneGeometry(w, 1, 1, 12), p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const k = 0.5 - p.getY(i);                                         // 0 at the lip .. 1 at the lake
+      const x = x0 + (x1 - x0) * Math.sqrt(k), y = top + (LAKE.y - top) * k * k, spreadW = 1 + k * 0.3;
+      p.setXYZ(i, x, y, z + p.getX(i) * spreadW);
+    }
+    geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, fallMat); m.userData.role = 'skip'; m.renderOrder = 2; scene.add(m);
+    for (let f = 0; f < 3; f++) glow(new THREE.Vector3(x1 + 0.2, LAKE.y + 0.15, z + (f - 1) * w * 0.3), 1.6, 0.35, 0xf0faff);   // foam
+  }
+  ticks.push((dt) => { fallTex.offset.y += dt * 0.9; });
+  // mist drifting low round the foot of the falls and the mound
+  const mistTex = canvasTex(128, 128, (c, w) => { const g = c.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,0.55)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, w, w); });
+  const mists = [];
+  for (let i = 0; i < 22; i++) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: mistTex, color: 0xeef4f2, transparent: true, depthWrite: false, opacity: 0.32 }));
+    const p = new THREE.Vector3(BODHI.x + 4 + r() * 5, LAKE.y + 0.4 + r() * 1.2, BODHI.z + (r() - 0.5) * 12);
+    s.position.copy(p); s.scale.setScalar(3 + r() * 4); s.userData.role = 'skip'; scene.add(s);
+    mists.push({ s, p, ph: r() * 6.28 });
+  }
+  // petals: drifting down from the crown, and floating on the lake
+  const petalTex = canvasTex(32, 32, (c, w) => { c.fillStyle = 'hsl(78, 42%, 46%)'; c.beginPath(); c.ellipse(w / 2, w / 2, w * 0.42, w * 0.2, 0.5, 0, 7); c.fill(); });
+  const PN = 260, petals = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.09, 0.09), new THREE.MeshStandardMaterial({ map: petalTex, alphaTest: 0.4, side: THREE.DoubleSide, emissive: 0x141a08 }), PN);
+  const pst = [];
+  for (let i = 0; i < PN; i++) {
+    const floating = i < 110;
+    let x, z; if (floating) { do { x = LAKE.x + (r() - 0.5) * 2 * LAKE.rx; z = LAKE.z + (r() - 0.5) * 2 * LAKE.rz; } while (!inLake(x, z, 0.9)); }
+    else { const a = r() * 6.28, rad = 2 + r() * 13; x = BODHI.x + Math.cos(a) * rad + 4; z = BODHI.z + Math.sin(a) * rad; }
+    pst.push({ x, z, y: floating ? LAKE.y + 0.012 : Y0 + 4 + r() * 18, floating, ph: r() * 6.28, sp: 0.25 + r() * 0.35, rot: r() * 6.28 });
+  }
+  petals.userData.role = 'skip'; petals.frustumCulled = false; scene.add(petals);
+  let T = 0;
+  const pe = new THREE.Euler(), pv = new THREE.Vector3();
+  ticks.push((dt) => {
+    T += dt;
+    for (const m of mists) { m.s.position.set(m.p.x + Math.sin(T * 0.07 + m.ph) * 1.5, m.p.y + Math.sin(T * 0.2 + m.ph) * 0.15, m.p.z + Math.cos(T * 0.05 + m.ph) * 1.5); }
+    pst.forEach((k, i) => {
+      if (k.floating) { k.x += Math.sin(T * 0.05 + k.ph) * 0.02 * dt; k.z += Math.cos(T * 0.04 + k.ph) * 0.02 * dt; pe.set(-Math.PI / 2, 0, k.rot); }
+      else {
+        k.y -= k.sp * dt; k.x += (0.18 + Math.sin(T * 0.6 + k.ph) * 0.25) * dt; k.z += Math.cos(T * 0.5 + k.ph) * 0.15 * dt;
+        pe.set(T * 1.3 + k.ph, T * 0.9 + k.ph, 0);
+        if (k.y < 0.3) { const a = r() * 6.28, rad = 2 + r() * 13; k.x = BODHI.x + Math.cos(a) * rad + 4; k.z = BODHI.z + Math.sin(a) * rad; k.y = Y0 + 16 + r() * 14; }
+      }
+      petals.setMatrixAt(i, m4.compose(pv.set(k.x, k.y, k.z), q.setFromEuler(pe), one));
+    });
+    petals.instanceMatrix.needsUpdate = true;
+  });
   return { cells, slots };
 })();
-OBSTACLES.push([BODHI.x, BODHI.z, 1.4]);             // walk round the trunk
 const LW = world.lamps;
 const lampLabels = [];
 const myLamps = store.get('lamps', []);
@@ -2046,7 +2196,7 @@ function lightSlot(i, mine, name) {
 function freeSlot() {
   const free = LW.slots.map((s, i) => (!s.lit ? i : -1)).filter((i) => i >= 0);
   if (!free.length) { const i = Math.random() * LW.slots.length | 0; return i; }
-  const eye = (i) => { const p = LW.slots[i].pos; return Math.abs(p.y - 3.0) + (p.x > BODHI.x ? 2.5 : 0) + Math.random() * 0.8; };   // low, facing the courtyard
+  const eye = (i) => { const p = LW.slots[i].pos; return Math.abs(p.y - (BODHI.mound + BODHI.h * 0.32)) * 0.5 + (p.x < BODHI.x ? 6 : 0) + Math.random() * 0.8; };   // lower limbs, on the lake side
   free.sort((a, b) => eye(a) - eye(b));
   return free[Math.random() * Math.min(12, free.length) | 0];
 }
@@ -2206,9 +2356,10 @@ const ACTS = {
     store.set('year', year); store.set('lampName', nm);
     const b = branchOf(year), clash = TAISUI_2027[b];
     const slot = freeSlot(), p = lampWorld(slot);
-    const out = new THREE.Vector3(p.x - BODHI.x, 0, p.z - BODHI.z).normalize();       // stand just outside your Buddha, facing it
-    const stand = clampWalk({ x: p.x + out.x * 1.6, z: p.z + out.z * 1.6 });
-    await walkTo(stand.x, stand.z, Math.atan2(p.x - stand.x, p.z - stand.z));
+    // the great tree stands across the lotus lake: go to the shore, face it, and look up to your Buddha
+    const stand = clampWalk({ x: -18.6, z: THREE.MathUtils.clamp(p.z, -2, 10) });
+    await walkTo(stand.x, stand.z, Math.atan2(BODHI.x - stand.x, BODHI.z - stand.z));
+    director = { pos: new THREE.Vector3(stand.x + 2.6, 2.4, stand.z + 1.2), look: p.clone(), speed: 1.4 };
     me.play('palms'); await wait(1.2);
     sfx.bell();
     lightSlot(slot, true, nm);
@@ -2225,6 +2376,7 @@ const ACTS = {
       <p class="muted">${t('zodiacNote')}</p>
       <div class="row"><a class="btn primary" href="/?utm_source=temple&utm_medium=lamp" target="_blank" rel="noopener">${t('bazi2027')}</a></div>
       <div class="row"><button class="btn ghost" data-v="share">${t('shareFamily')}</button><button class="btn ghost" data-v="ok">${t('ok')}</button></div>`);
+    director = null;                                   // hand the camera back
     if (s === 'share') share(t('shareLamp', nm, kind));
   },
 };
@@ -2251,7 +2403,7 @@ $('#credits').onclick = () => modal(`
   <p class="muted">${EN ? 'Stone lions, dragon pillars and drum stones' : '石獅、龍柱、抱鼓石'}: "Stone Big Lion 01", "Stone Dragon Pillar 02", "Stone Old Sculpture Drum 01" by zhengzhangxun (Sketchfab), CC BY 4.0.</p>
   <p class="muted">${EN ? 'Offerings' : '供品'}: "Mandarin Scan", "Pineapple Scan" by Franco Pizzani; "White Orchid" by gottalovehana; "Chrystanthemum flower" by Lassi Kaukonen (recoloured) — Sketchfab, CC BY 4.0.</p>
   <p class="muted">${EN ? 'Bamboo' : '竹林'}: "Free Bamboo Set" by JonhGillessen — Sketchfab, CC BY 4.0.</p>
-  <p class="muted">${EN ? 'Bodhi tree' : '菩提樹'}: "Bodhi Tree" by Ashim Shakya — Sketchfab, CC BY 4.0.</p>
+  <p class="muted">${EN ? 'Great tree' : '祈福古樹'}: "Island Tree 01" — Poly Haven, CC0.</p>
   <p class="muted">${EN ? 'Pond' : '放生池'}: "Lilypads" by sligocreatures; "Water Lily, Nymphaea cv." by ffish.asia / floraZia.com; "Koi Fish" by SDPM Esare; "Cattails" by AlkaliDragon — Sketchfab, CC BY 4.0.</p>
   <div class="row"><button class="btn ghost" data-v="ok">${t('ok')}</button></div>`);
 
@@ -2343,8 +2495,11 @@ function frame() {
   // camera follows
   followCam(dt, intro.on);           // during the intro: where the camera will end up (snapped), the flight eases toward it
   introTick(dt);
-  for (let i = 0; i < benchIcons.length; i++) benchIcons[i].visible = !seated && !intro.on && Math.hypot(me.root.position.x - BENCHES[i].x, me.root.position.z - BENCHES[i].z) < 16;
-  for (const o of lampLabels) o.visible = Math.hypot(me.root.position.x - BODHI.x, me.root.position.z - BODHI.z) < 18;
+  for (let i = 0; i < benchIcons.length; i++) {               // only from the same side of the gate (labels draw over walls)
+    const mp = me.root.position, sameSide = BENCHES[i].look === POND ? mp.z > GATE[1] : mp.z < GATE[0] && mp.z > HALL.front;
+    benchIcons[i].visible = !seated && !intro.on && sameSide && Math.hypot(mp.x - BENCHES[i].x, mp.z - BENCHES[i].z) < 16;
+  }
+  for (const o of lampLabels) o.visible = me.root.position.x < -4 && me.root.position.z > -8 && me.root.position.z < 20;   // from the lake side of the courtyard
 
   sendT += dt;
   if (sendT > 0.15) { sendT = 0; net.pos(me.root.position.x, me.root.position.z, me.root.rotation.y); }
@@ -2355,7 +2510,7 @@ function frame() {
   updateSticks();
   updateWisps(dt);
   const t = clock.elapsedTime;
-  pondTick?.(dt); lakeTick?.(dt);
+  pondTick?.(dt); lakeTick?.(dt); bodhiTick?.(dt);
   for (const l of world.lanterns) l.rotation.z = Math.sin(t * 0.8 + l.userData.swing) * 0.04;
   for (const f of flames) {
     const k = 1 + Math.sin(t * 13 + f.seed) * 0.07 + Math.sin(t * 29 + f.seed * 2) * 0.05 + Math.sin(t * 61 + f.seed) * 0.03;
