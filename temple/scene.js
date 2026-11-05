@@ -1017,36 +1017,6 @@ function mainHall() {
   cushion.receiveShadow = true; cushion.name = 'cushions';
   g.add(cushion, trim);
 
-  // ---- hanging incense coils (塔香) and palace lanterns (宮燈) ----
-  const coilPts = [];
-  for (let i = 0; i <= 120; i++) { const t = i / 120; coilPts.push(new THREE.Vector3(Math.cos(t * Math.PI * 16) * (0.05 + t * 0.45), -t * 0.9, Math.sin(t * Math.PI * 16) * (0.05 + t * 0.45))); }
-  const coilGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(coilPts), 400, 0.03, 4);
-  const coilPos = [];
-  for (const x of [-2.8, 2.8]) for (let z = -11; z > -26; z -= 6.4) coilPos.push([x, F + 10.4 + Math.random() * 0.8, z]);   // a few, not a forest
-  const coils = new THREE.InstancedMesh(coilGeo, std(0x8a5a3a, { roughness: 0.9 }), coilPos.length);
-  const tags = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.2, 0.9), new THREE.MeshBasicMaterial({ color: 0xd42a1c, side: THREE.DoubleSide }), coilPos.length);
-  const strings = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.008, 0.008, 1), std(0x222222), coilPos.length);
-  coilPos.forEach(([x, y, z], i) => {
-    coils.setMatrixAt(i, m4.makeTranslation(x, y, z));
-    tags.setMatrixAt(i, m4.makeTranslation(x, y - 1.4, z));
-    const len = F + C - 0.9 - y;
-    strings.setMatrixAt(i, m4.compose(new THREE.Vector3(x, y + len / 2, z), new THREE.Quaternion(), new THREE.Vector3(1, len, 1)));
-  });
-  g.add(coils, tags, strings);
-
-  const lanPos = [];
-  for (const x of [-11, 11]) for (const z of [-14, -26]) lanPos.push([x, F + 10.6, z]);
-  const lanGeo = new THREE.CylinderGeometry(0.42, 0.42, 1.1, 6);
-  const lanMat = new THREE.MeshStandardMaterial({ color: 0xd42a1c, emissive: 0xff7a4a, emissiveIntensity: 0.35, map: lanternTex(), emissiveMap: lanternTex() });
-  const lans = new THREE.InstancedMesh(lanGeo, lanMat, lanPos.length);
-  const lanCaps = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.5, 0.5, 0.14, 6), gold, lanPos.length * 2);
-  lanPos.forEach(([x, y, z], i) => {
-    lans.setMatrixAt(i, m4.makeTranslation(x, y, z));
-    lanCaps.setMatrixAt(i * 2, m4.makeTranslation(x, y + 0.6, z));
-    lanCaps.setMatrixAt(i * 2 + 1, m4.makeTranslation(x, y - 0.6, z));
-  });
-  g.add(lans, lanCaps);
-
   // ---- exterior: front facade brackets, roofs, ridges, plaques ----
   const brackets = new THREE.InstancedMesh(new THREE.BoxGeometry(0.36, 0.3, 0.5), gold, 60);
   for (let i = 0; i < 60; i++) brackets.setMatrixAt(i, m4.makeTranslation(-HW + 0.3 + i * (HW * 2 - 0.6) / 59, F + C + 0.15, ZF - 1.1));
@@ -1062,7 +1032,7 @@ function mainHall() {
   g.add(roof({ halfW: HW * 0.78, zFront: ridgeZ + 8.2, zBack: ridgeZ - 8.2, yEave: F + C + 6.8, yRidge: F + C + 10.2, lift: 1.1, mat: tiles2, gableMat: BRICK(0.35, 0.35) }));
   g.add(ridge({ halfW: HW * 0.78, y: F + C + 10.2, z: ridgeZ, s: 1.6 }));
 
-  return { group: g, table, tube, tableBurnerPos: new THREE.Vector3(0, F + 1.8, -27.6), lamps: { cells, slots }, cushions: { mesh: cushion, spots }, coilTips: coilPos.map(([x, y, z]) => new THREE.Vector3(x + 0.5, y - 0.9, z)), altar: { center, sides, backdrop, murals, group: g } };
+  return { group: g, table, tube, tableBurnerPos: new THREE.Vector3(0, F + 1.8, -27.6), lamps: { cells, slots }, cushions: { mesh: cushion, spots }, altar: { center, sides, backdrop, murals, group: g } };
 }
 
 function sideCorridor(sx) {
@@ -1219,7 +1189,7 @@ export function buildWorld(scene) {
     lanterns, luLight,
     luPos: new THREE.Vector3(0, lu.userData.ashY * 1.3, 8),
     table: hall.table, tube: hall.tube, tableBurnerPos: hall.tableBurnerPos,
-    lamps: hall.lamps, cushions: hall.cushions, altar: hall.altar, coilTips: hall.coilTips, lu,
+    lamps: hall.lamps, cushions: hall.cushions, altar: hall.altar, lu,
     occluders: [gateG],
   };
 }

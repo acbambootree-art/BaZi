@@ -426,6 +426,24 @@ gl.load('/temple/assets/statue_side.glb', (g) => {
 }, undefined, () => {});
 
 // ---------------- photoscanned props (replace the code-built stand-ins once loaded) ----------------
+// the scans' texture atlases have pure-white padding round each island; it bled in as white specks. Paint it the
+// atlas's average stone colour (once per texture).
+const cleanMaps = new Map();
+function cleanScanMap(map) {
+  if (!map?.image) return map;
+  if (cleanMaps.has(map)) return cleanMaps.get(map);
+  if ([...cleanMaps.values()].includes(map)) return map;
+  const img = map.image, c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+  const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height), p = d.data;
+  let sr = 0, sg = 0, sb = 0, n = 0;
+  for (let i = 0; i < p.length; i += 4) if (p[i] < 225 || p[i + 1] < 225 || p[i + 2] < 225) { sr += p[i]; sg += p[i + 1]; sb += p[i + 2]; n++; }
+  if (n) for (let i = 0; i < p.length; i += 4) if (p[i] >= 225 && p[i + 1] >= 225 && p[i + 2] >= 225) { p[i] = sr / n; p[i + 1] = sg / n; p[i + 2] = sb / n; }
+  g.putImageData(d, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = map.colorSpace; t.flipY = map.flipY; t.anisotropy = 8;
+  t.wrapS = map.wrapS; t.wrapT = map.wrapT;
+  cleanMaps.set(map, t); return t;
+}
 function placeProp(src, { x, y = 0, z, h, yaw = 0, mirror = false, girthOf = h }) {   // girthOf: size its thickness as if it were this tall
   const m = src.clone(true);
   m.rotation.y = yaw; if (mirror) m.scale.x = -1;
@@ -443,6 +461,8 @@ function placeProp(src, { x, y = 0, z, h, yaw = 0, mirror = false, girthOf = h }
       if (!o.geometry.attributes.normal) o.geometry.computeVertexNormals();   // unlit scans ship without normals
       o.material = new THREE.MeshStandardMaterial({ map: o.material.map, roughness: 0.85, metalness: 0 });
     }
+    if (o.material.map) o.material.map = cleanScanMap(o.material.map);
+    o.material.side = THREE.DoubleSide;                // a crack in the scanned shell shows dark stone, not the bright sky behind
   });
   m.userData.role = 'occ';
   scene.add(m);
@@ -1268,13 +1288,6 @@ function updateSmoke(dt) {
 }
 const luSmoke = emitter(world.luPos.clone().add(new THREE.Vector3(0, 0.4, 0)), 2.5, 0.8);
 emitter(world.tableBurnerPos.clone(), 1.2, 0.2);
-// the hanging incense coils (塔香) burn from their outer end: a glowing ember and a thin thread of smoke
-const coilEmbers = world.coilTips.map((p) => {
-  const e = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff5a10, toneMapped: false }));
-  e.position.copy(p); e.userData.role = 'skip'; scene.add(e);
-  emitter(p.clone().add(new THREE.Vector3(0, 0.05, 0)), 1.4, 0.04);
-  return e;
-});
 
 // incense sticks planted in the 天公爐 (burn down over 3 min). A real joss stick: a pale bamboo handle, a brown
 // coat of incense paste that burns down from the top, a short cap of grey ash and a glowing ember point.
@@ -1448,7 +1461,7 @@ class Pilgrim {
     this.body = new THREE.Group(); this.root.add(this.body);
     // lower robe (skirt), squashes when kneeling
     this.skirt = new THREE.Group(); this.body.add(this.skirt);
-    this.skirt.add(lathe([[0, 0.02], [0.3, 0.02], [0.33, 0.06], [0.3, 0.2], [0.25, 0.36], [0, 0.36]], robe));
+    this.skirt.add(lathe([[0, 0.05], [0.35, 0.05], [0.37, 0.08], [0.33, 0.16], [0.28, 0.27], [0.25, 0.36], [0, 0.36]], robe));   // a long robe, flaring at the hem
     this.skirt.add(lathe([[0.315, 0.1], [0.3, 0.2], [0.255, 0.35]], sash, -1.25, 2.5));            // ochre apron front
     this.feet = [-1, 1].map((sx) => { const f = M(new THREE.SphereGeometry(0.075, 12, 8), S(0xf3efe6, 0.8), sx * 0.11, 0.04, 0.16); f.scale.set(1, 0.6, 1.4); this.body.add(f); return f; });
     // upper body bends at the waist
@@ -1474,7 +1487,7 @@ class Pilgrim {
       const sh = new THREE.Group(); sh.position.set(sx * 0.22, 0.24, 0); this.spine.add(sh);
       sh.add(M(new THREE.CapsuleGeometry(0.065, 0.1, 4, 10), robe, 0, -0.09, 0));
       const el = new THREE.Group(); el.position.y = -0.18; el.rotation.order = 'YXZ'; sh.add(el);
-      const sleeve = M(new THREE.CylinderGeometry(0.06, 0.1, 0.17, 12, 1, true), robe, 0, -0.085, 0);
+      const sleeve = M(new THREE.CylinderGeometry(0.065, 0.13, 0.2, 14, 1, true), robe, 0, -0.1, 0);   // wide bell sleeves
       sleeve.material = robe.clone(); sleeve.material.side = THREE.DoubleSide; el.add(sleeve);
       const hand = M(new THREE.SphereGeometry(0.058, 12, 10), skin, 0, -0.2, 0); hand.scale.set(0.85, 1.15, 0.7); el.add(hand);
       sh.userData.sx = sx;
@@ -1527,7 +1540,7 @@ class Pilgrim {
     if (this.walking) this.kneel = this.praying = false;
     const damp = (cur, want, rate) => cur + (want - cur) * (1 - Math.exp(-dt * rate));
     this.kn = damp(this.kn, this.kneel ? 1 : 0, 5);
-    const spd = this.speed ?? (this.walking ? 3 : 0);
+    const spd = (this.speed ?? (this.walking ? 3 : 0)) + Math.min(1.2, (this.turnSpd || 0) * 0.35);   // turning on the spot takes small steps
     this.phase = (this.phase || 0) + spd * dt * 3.4;          // ~one stride cycle per 1.8 m
     this.walkAmt = damp(this.walkAmt, Math.min(1, spd / 2.4), 8);
 
@@ -1564,8 +1577,12 @@ class Pilgrim {
     this.body.position.y = Math.abs(Math.sin(ph)) * 0.035 * w - this.kn * 0.16;
     this.body.rotation.z = Math.sin(ph) * 0.035 * w;
     this.skirt.scale.y = 1 - this.kn * 0.45;
+    // the robe moves with the body: it trails a little behind as he walks and sways with each stride
+    this.skirt.rotation.x = damp(this.skirt.rotation.x, -0.07 * w, 6) + Math.sin(ph * 2) * 0.012 * w;
+    this.skirt.rotation.z = Math.sin(ph) * 0.05 * w;
+    this.skirt.scale.x = this.skirt.scale.z = 1 + Math.abs(Math.sin(ph)) * 0.05 * w;
     this.spine.position.y = 0.34 - this.kn * 0.16;
-    this.feet.forEach((f, i) => { f.position.z = 0.16 + Math.sin(ph + i * Math.PI) * 0.07 * w - this.kn * 0.3; f.visible = this.kn < 0.6; });
+    this.feet.forEach((f, i) => { f.position.z = 0.2 + Math.sin(ph + i * Math.PI) * 0.12 * w - this.kn * 0.3; f.visible = this.kn < 0.6; });   // toes peek out from under the hem
   }
   get handPos() {
     return this.root.localToWorld(new THREE.Vector3(0, 0.95, 0.4));
@@ -1576,7 +1593,7 @@ class Pilgrim {
 // outside plaza (z>24.5) → gate door bays → courtyard → stairs → hall floor (y = HALL.floor)
 const F = HALL.floor, DOORS = [-6, 0, 6], GATE = [19.4, 24.6];
 const OBSTACLES = [
-  [0, 8, 2.4],                                                         // 天公爐 (planPath relies on index 0)
+  [0, 8, 2.4],                                                         // 天公爐
   ...[-11, -5.5, 5.5, 11].flatMap((x) => [-8, -14].filter((z) => z === -8 || Math.abs(x) > 8).map((z) => [x, z, z === -8 && Math.abs(x) < 6 ? 1.35 : 0.8])),   // scanned dragon pillars have wide bases; no columns nearer the altar
   ...[-10, -7.4, -4.6, -1.6, 1.6, 4.6, 7.4, 10].map((x) => [x, 24.2, Math.abs(x) < 2 ? 0.7 : 0.5]),
   [-12, 30, 1.3], [13, 31, 1.1], [-13.5, 12, 1.1],
@@ -1616,31 +1633,62 @@ function groundY(x, z) {
   if (z >= -4.5) return 0;
   return F * (-4.5 - z) / 2;
 }
+// ---- route finding ----
+// A* over a 0.3 m grid of the walkable ground (a spot is walkable if clampWalk leaves it where it is), stepping
+// round the prayer cushions too, then pulled taut so the monk walks in straight lines and turns only at corners.
+// Nobody walks through a pillar, a lion, the burner or a cushion row any more.
+const NAV = { x0: -48, z0: -40, cell: 0.3, nx: 340, nz: 275 };
+const navCache = new Int8Array(NAV.nx * NAV.nz);                     // 0 unknown, 1 free, 2 blocked
+let navSoft = null;                                                   // the cushions: step round them, but you may kneel on one
+const onGround = (x, z) => { const c = { x, z }; clampWalk(c); return Math.abs(c.x - x) + Math.abs(c.z - z) < 0.02; };
+const offCushions = (x, z, ignore) => {
+  navSoft ||= world.cushions.spots.map((p) => [p.x, p.z]);
+  return !navSoft.some(([cx, cz], i) => i !== ignore[0] && i !== ignore[1] && Math.abs(x - cx) < 0.78 && Math.abs(z - cz) < 0.62);
+};
+const walkable = (x, z, ignore) => onGround(x, z) && offCushions(x, z, ignore);
+function cellFree(i, j, ignore) {
+  if (i < 0 || j < 0 || i >= NAV.nx || j >= NAV.nz) return false;
+  const k = j * NAV.nx + i, x = NAV.x0 + i * NAV.cell, z = NAV.z0 + j * NAV.cell;
+  if (!navCache[k]) navCache[k] = onGround(x, z) ? 1 : 2;
+  return navCache[k] === 1 && offCushions(x, z, ignore);
+}
+function clearLine(a, b, ignore) {                                    // can you walk straight from a to b?
+  const d = Math.hypot(b.x - a.x, b.z - a.z), n = Math.ceil(d / 0.12);
+  for (let s = 1; s < n; s++) { const t = s / n; if (!walkable(a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t, ignore)) return false; }
+  return true;
+}
 function planPath(from, to) {
-  const a = { x: from.x, z: from.z }, pts = [];
-  const side = (z) => (z >= GATE[1] ? 1 : z <= GATE[0] ? -1 : 0);
-  const sa = side(a.z), sb = side(to.z);
-  if (sa !== sb) {                                     // pass through the nearest gate door
-    const d = nearestDoor((a.x + to.x) / 2);
-    const out = { x: d, z: GATE[1] + 0.6 }, inn = { x: d, z: GATE[0] - 0.6 };
-    if (sa >= 0 && sb <= 0) pts.push(...(sa === 1 ? [out] : []), inn);
-    else pts.push(...(sa === -1 ? [inn] : []), out);
-  }
-  pts.push({ x: to.x, z: to.z });
-  // go around the big burner instead of through it
-  const res = [];
-  let prev = a;
-  for (const p of pts) {
-    const [cx, cz, r] = OBSTACLES[0];
-    const dx = p.x - prev.x, dz = p.z - prev.z, L2 = dx * dx + dz * dz || 1;
-    const t = THREE.MathUtils.clamp(((cx - prev.x) * dx + (cz - prev.z) * dz) / L2, 0, 1);
-    if (Math.hypot(prev.x + dx * t - cx, prev.z + dz * t - cz) < r + 0.2) {
-      const s = Math.sign(prev.x + p.x) || 1;
-      res.push({ x: cx + s * (r + 0.8), z: cz + (prev.z > cz ? 1.4 : -1.4) }, { x: cx + s * (r + 0.8), z: cz + (p.z > cz ? 1.4 : -1.4) });
+  const cush = (p) => (navSoft || []).findIndex(([cx, cz]) => Math.abs(p.x - cx) < 0.78 && Math.abs(p.z - cz) < 0.62);
+  walkable(0, 0, [-1, -1]);                                          // make sure navSoft exists
+  const ignore = [cush(from), cush(to)];
+  const a = { x: from.x, z: from.z }, b = { x: to.x, z: to.z };
+  if (clearLine(a, b, ignore)) return [b];
+  const toCell = (p) => [Math.round((p.x - NAV.x0) / NAV.cell), Math.round((p.z - NAV.z0) / NAV.cell)];
+  const [si, sj] = toCell(a), [gi, gj] = toCell(b), N = NAV.nx * NAV.nz;
+  const g = new Float32Array(N).fill(Infinity), came = new Int32Array(N).fill(-1), shut = new Uint8Array(N);
+  const heap = [], push = (k, f) => { heap.push([f, k]); let i = heap.length - 1; while (i) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top[1]; };
+  const h = (i, j) => { const dx = Math.abs(i - gi), dz = Math.abs(j - gj); return Math.max(dx, dz) + 0.414 * Math.min(dx, dz); };
+  const s0 = sj * NAV.nx + si, goal = gj * NAV.nx + gi;
+  g[s0] = 0; push(s0, h(si, sj));
+  let found = false, n = 0;
+  while (heap.length && n++ < 90000) {
+    const k = pop(); if (shut[k]) continue; shut[k] = 1;
+    if (k === goal) { found = true; break; }
+    const i = k % NAV.nx, j = (k / NAV.nx) | 0;
+    for (const [di, dj, c] of [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.414], [1, -1, 1.414], [-1, 1, 1.414], [-1, -1, 1.414]]) {
+      const ni = i + di, nj = j + dj, nk = nj * NAV.nx + ni;
+      if (nk !== goal && !cellFree(ni, nj, ignore)) continue;
+      if (di && dj && (!cellFree(i + di, j, ignore) || !cellFree(i, j + dj, ignore))) continue;   // no cutting corners
+      const ng = g[k] + c; if (ng < g[nk]) { g[nk] = ng; came[nk] = k; push(nk, ng + h(ni, nj)); }
     }
-    res.push(p); prev = p;
   }
-  return res;
+  if (!found) return [b];                                            // nowhere better: walk straight (clampWalk still keeps us out)
+  const cells = []; for (let k = goal; k !== -1 && k !== s0; k = came[k]) cells.unshift({ x: NAV.x0 + (k % NAV.nx) * NAV.cell, z: NAV.z0 + ((k / NAV.nx) | 0) * NAV.cell });
+  cells[cells.length - 1] = b;
+  const out = []; let cur = a, i = 0;                                // pull the route taut: go to the farthest point in plain sight
+  while (i < cells.length) { let j = cells.length - 1; while (j > i && !clearLine(cur, cells[j], ignore)) j--; out.push(cells[j]); cur = cells[j]; i = j + 1; }
+  return out;
 }
 
 // ---------------- me ----------------
@@ -1657,13 +1705,16 @@ scene.add(me.root);
 let path = [], arrive = null;
 function walkTo(x, z, faceRy) {
   const t = clampWalk({ x, z });
+  me.kneel = me.praying = false;                     // get up off the cushion before going anywhere
   path = planPath(me.root.position, t);
   return new Promise((res) => { arrive = () => { if (faceRy !== undefined) turnTo(faceRy); res(); }; });
 }
 async function turnTo(ry) {
   const from = me.root.rotation.y;
   let d = ((ry - from + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
-  await animate(0.35, (k) => { me.root.rotation.y = from + d * ease(k); });
+  me.turnSpd = Math.abs(d) / (0.3 + Math.abs(d) * 0.22);              // a few small steps while turning round
+  await animate(0.3 + Math.abs(d) * 0.22, (k) => { me.root.rotation.y = from + d * ease(k); });
+  me.turnSpd = 0;
 }
 // keyboard: arrows / WASD walk relative to the camera (↑ = away from you on screen)
 const KEYS = { ArrowUp: [0, 1], KeyW: [0, 1], ArrowDown: [0, -1], KeyS: [0, -1], ArrowLeft: [-1, 0], KeyA: [-1, 0], ArrowRight: [1, 0], KeyD: [1, 0] };
@@ -1697,6 +1748,8 @@ function locomotion(dt) {
     me.root.rotation.y -= manual.turn * TURN_RATE * dt * (Math.abs(manual.fwd) > 0.2 ? 0.85 : 1);
     const ry = me.root.rotation.y, sp = manual.fwd * MAX_SPEED * (manual.fwd < 0 ? 0.5 : 1);   // backing up is slower
     wx = Math.sin(ry) * sp; wz = Math.cos(ry) * sp;
+  } else if (path.length && me.kn > 0.3) {
+    // still rising from the cushion: stand up fully before the first step
   } else if (path.length) {
     const p = path[0], dx = p.x - pos.x, dz = p.z - pos.z, d = Math.hypot(dx, dz), last = path.length === 1;
     if (last && d < 0.05) {
@@ -1704,8 +1757,16 @@ function locomotion(dt) {
       const a = arrive; arrive = null; a?.();
     } else if (!last && d < 0.45) path.shift();               // round corners instead of stopping at them
     else {
-      const s = MAX_SPEED * (last ? Math.min(1, 0.25 + d / 1.1) : 1);   // ease in to the stop
+      // a person turns toward where they are going, then walks forward: facing away, they turn on the spot;
+      // a little off, they curve in at reduced speed
+      const off = d > 0.2 ? Math.abs(angDiff(Math.atan2(dx, dz), me.root.rotation.y)) : 0;
+      const align = off > 1.3 ? 0 : Math.cos(off) ** 2;
+      const s = MAX_SPEED * (last ? Math.min(1, 0.25 + d / 1.1) : 1) * align;   // ease in to the stop
       wx = dx / d * s; wz = dz / d * s;
+      if (d > 0.2) {
+        const turn = angDiff(Math.atan2(dx, dz), me.root.rotation.y), step = THREE.MathUtils.clamp(turn * (1 - Math.exp(-dt * 7)), -5 * dt, 5 * dt);
+        me.root.rotation.y += step; me.turnSpd = Math.abs(step) / Math.max(dt, 1e-4);
+      }
     }
   }
   const k = 1 - Math.exp(-dt * (wx || wz ? 6 : 10));         // accelerate a little slower than we brake
@@ -1721,8 +1782,8 @@ function locomotion(dt) {
         if (Math.hypot(c.x - want.x, c.z - want.z) < 0.6 * Math.hypot(ax, az)) { pos.x = c.x; pos.z = c.z; break; }
       }
     } else { pos.x += sx; pos.z += sz; clampWalk(pos); }
-    if (!manual && path.length && loco.speed > 0.15) me.root.rotation.y   // face the way tap-to-walk goes; never spin round after backing up += angDiff(Math.atan2(loco.vx, loco.vz), me.root.rotation.y) * (1 - Math.exp(-dt * 9));
   }
+  if (!path.length && !manual) me.turnSpd = Math.max(0, (me.turnSpd || 0) - dt * 8);
   me.speed = loco.speed;
   me.walking = loco.speed > 0.25;
   if (me.walking && prayBtn().classList.contains('on')) endPrayer();   // walking away ends a prayer
@@ -2474,7 +2535,44 @@ world.lamps = (() => {
     const geo = mergeGeometries(parts); geo.scale(0.47, 0.47, 0.47);
     cells.geometry.dispose(); cells.geometry = geo;
   }
-  return { cells, slots };
+  // a Buddha holding someone's blessing glows: brighter gilding that shimmers, and a soft gold halo of light round it.
+  // aGlow per niche: 0 waiting, 1 someone's blessing, 1.8 yours.
+  const uT = { value: 0 };
+  const glow = new THREE.InstancedBufferAttribute(new Float32Array(N), 1);
+  slots.forEach((s, k) => glow.setX(k, s.lit ? 1 : 0));
+  cells.geometry.setAttribute('aGlow', glow);
+  cells.material.onBeforeCompile = (sh) => {
+    sh.uniforms.uT = uT;
+    sh.vertexShader = 'attribute float aGlow;\nvarying float vGlow;\nvarying float vPh;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vGlow = aGlow; vPh = instanceMatrix[3].x * 3.1 + instanceMatrix[3].z * 1.7;');
+    sh.fragmentShader = 'uniform float uT;\nvarying float vGlow;\nvarying float vPh;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>',
+      '#include <emissivemap_fragment>\n  totalEmissiveRadiance *= 1.0 + vGlow * (2.0 + 0.9 * sin(uT * 2.2 + vPh) + 0.5 * sin(uT * 5.3 + vPh * 2.0));');
+  };
+  cells.material.customProgramCacheKey = () => 'blessingBuddha';
+  const hp = new Float32Array(N * 3), on = new Float32Array(N);
+  slots.forEach((s, k) => { hp.set([s.pos.x, s.pos.y + 0.02, s.pos.z], k * 3); on[k] = glow.getX(k); });
+  const hgeo = new THREE.BufferGeometry();
+  hgeo.setAttribute('position', new THREE.BufferAttribute(hp, 3)); hgeo.setAttribute('aOn', new THREE.BufferAttribute(on, 1));
+  const halos = new THREE.Points(hgeo, new THREE.ShaderMaterial({
+    uniforms: { uT },
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `attribute float aOn; uniform float uT; varying float vA;
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        float pulse = 0.85 + 0.15 * sin(uT * 2.2 + position.x * 3.1 + position.z * 1.7);
+        gl_PointSize = aOn > 0.0 ? (260.0 + 120.0 * (aOn - 1.0)) * pulse / -mv.z : 0.0;
+        vA = min(aOn, 1.5) * pulse;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `varying float vA;
+      void main() {
+        float d = length(gl_PointCoord - 0.5) * 2.0;
+        float a = pow(max(0.0, 1.0 - d), 2.2) * 0.42 * vA;
+        gl_FragColor = vec4(1.0, 0.84, 0.5, a);
+      }`,
+  }));
+  halos.frustumCulled = false; halos.userData.role = 'skip'; scene.add(halos);
+  const setGlow = (i, v) => { glow.setX(i, v); glow.needsUpdate = true; on[i] = v; hgeo.attributes.aOn.needsUpdate = true; };
+  return { cells, slots, setGlow, uT };
 })();
 
 // ---------------- meadow: grass tufts and small wildflowers swaying in a light breeze ----------------
@@ -2489,7 +2587,7 @@ let grassTick = null;
     const blade = (x, top, bend, wd, dry) => {
       const g = c.createLinearGradient(0, h, 0, top);
       if (dry) { g.addColorStop(0, '#5a5430'); g.addColorStop(1, '#c8b77a'); }
-      else { const hue = 80 + r() * 28; g.addColorStop(0, `hsl(${hue}, 40%, 12%)`); g.addColorStop(0.55, `hsl(${hue}, ${38 + r() * 18}%, ${28 + r() * 10}%)`); g.addColorStop(1, `hsl(${hue - 12}, ${35 + r() * 15}%, ${48 + r() * 14}%)`); }
+      else { const hue = 80 + r() * 28; g.addColorStop(0, `hsl(${hue}, 38%, 24%)`); g.addColorStop(0.55, `hsl(${hue}, ${38 + r() * 18}%, ${28 + r() * 10}%)`); g.addColorStop(1, `hsl(${hue - 12}, ${35 + r() * 15}%, ${48 + r() * 14}%)`); }
       c.fillStyle = g;
       c.beginPath(); c.moveTo(x - wd, h); c.quadraticCurveTo(x + bend * 0.35, (h + top) / 2, x + bend, top); c.quadraticCurveTo(x + bend * 0.35 + wd * 0.3, (h + top) / 2, x + wd, h); c.fill();
     };
@@ -2520,6 +2618,8 @@ let grassTick = null;
   const uT = { value: 0 };
   const sway = (m) => { m.onBeforeCompile = (sh) => {
     sh.uniforms.uT = uT;
+    // both faces of a blade keep the up-facing normal (the back face was flipped to point down and rendered black)
+    sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', THREE.ShaderChunk.normal_fragment_begin.replace('normal *= faceDirection;', ''));
     sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       vec4 wp = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
       float bendK = uv.y * uv.y;
@@ -2528,7 +2628,9 @@ let grassTick = null;
   }; return m; };
   const mat = (flowers) => sway(new THREE.MeshStandardMaterial({ map: bladeTex(flowers), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.95 }));
   const paved = (x, z) => (pavedAt(x, z) || (Math.abs(x) < 17.5 && z > -33 && z < -6)) && !inLake(x, z, 1.45);   // on the stones (and never under the hall)
-  const ok = (x, z) => onPlateau(x, z, 0.98) && !paved(x, z) && !inLake(x, z, 1.12) && !inPond(x, z, 1.2) && Math.hypot(x - BANYAN.x, z - BANYAN.z) > BANYAN.r0 + 0.3 && Math.hypot(x - BODHI.x, z - BODHI.z) > 7.6;
+  // never on a raised floor (hall, its steps, the gate platform, the altar's ends): tall tufts poked up through the stone
+  const raised = (x, z) => [[0, 0], [0.8, 0], [-0.8, 0], [0, 0.8], [0, -0.8]].some(([dx, dz]) => groundY(x + dx, z + dz) > 0.01) || (Math.abs(x) < 18.9 && z > -36 && z < -27.7);
+  const ok = (x, z) => onPlateau(x, z, 0.98) && !paved(x, z) && !raised(x, z) && !inLake(x, z, 1.12) && !inPond(x, z, 1.2) && Math.hypot(x - BANYAN.x, z - BANYAN.z) > BANYAN.r0 + 0.3 && Math.hypot(x - BODHI.x, z - BODHI.z) > 7.6;
   const spots = [];
   const near = (cx, cz, r0, r1, n) => { for (let i = 0, t = 0; i < n && t < n * 6; t++) { const a = r() * 6.28, d = r0 + Math.sqrt(r()) * (r1 - r0), x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d; if (ok(x, z)) { spots.push([x, z]); i++; } } };
   const k = isMobile ? 0.3 : 1;
@@ -2562,6 +2664,7 @@ function lightSlot(i, mine, name) {
   LW.slots[i].lit = true; LW.slots[i].mine = mine;
   LW.cells.setColorAt(i, lampCol.set(mine ? 0xffffff : 0xffe2b8));
   LW.cells.instanceColor.needsUpdate = true;
+  LW.setGlow(i, mine ? 1.8 : 1);                     // a named blessing: the Buddha lights up
   if (mine) {
     const tag = document.createElement('div');
     tag.className = 'nametag'; tag.textContent = '🪷 ' + (name || t('myLamp'));
@@ -2902,7 +3005,6 @@ function frame() {
   sfx.chant(me.kneel && me.praying && !seated && !atMuyu, dt);   // kneel, then Pray: the mantra; end the prayer or stand and it fades away
   updatePeers(dt);
   updateSmoke(dt);
-  coilEmbers.forEach((e, i) => e.material.color.setRGB(1, 0.3 + 0.12 * Math.sin(clock.elapsedTime * 2.3 + i * 1.7), 0.06));   // the ember breathes
   updateSticks();
   updateWisps(dt);
   const t = clock.elapsedTime;
@@ -2915,6 +3017,7 @@ function frame() {
     f.glow.material.opacity = 0.7 + (k - 1) * 1.5;
   }
   world.luLight.intensity = 7 + Math.sin(t * 7) * 0.8 + Math.sin(t * 13) * 0.5;
+  LW.uT.value = t;                                   // blessed Buddhas shimmer
   // my lamps breathe
   for (const l of myLamps) { LW.cells.setColorAt(l.slot, lampCol.set(0xfff0c0).multiplyScalar(0.9 + Math.sin(t * 2 + l.slot) * 0.1)); }
   if (myLamps.length) LW.cells.instanceColor.needsUpdate = true;
