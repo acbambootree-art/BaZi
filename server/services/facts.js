@@ -373,7 +373,63 @@ function computeReadingFacts(input, dateStr) {
   };
 }
 
+/**
+ * A temple fortune lot read against a natal chart. Each of the 60 lots carries a sexagenary pillar
+ * (lot 1 is 甲子); that pillar meets the chart the way any pillar does: its stem is a ten god to the
+ * day master, its elements are favorable or not for this chart, and its branch may clash or combine
+ * with the natal day and year branches.
+ *
+ * lot: { n, gz } (gz: two characters, stem + branch). Returns facts plus a cache key: every fact the
+ * generated text uses is fixed by the key (dm + strength level fix the favorable elements and the ten
+ * god; the clash/combo partners of the lot branch are unique, so the relation bits fix the branches).
+ */
+function computeLotFacts(input, lot) {
+  const stemIdx = T.STEMS.findIndex(s => s.zh === lot.gz[0]);
+  const branchIdx = T.BRANCHES.findIndex(b => b.zh === lot.gz[1]);
+  if (stemIdx < 0 || branchIdx < 0) throw new RangeError(`bad lot pillar ${lot.gz}`);
+  const chart = computeNatalChart(input);
+  const strength = analyzeStrength(chart);
+  const dm = chart.pillars.day.stem, dmIdx = dm.index;
+  const dayBr = chart.pillars.day.branch, yearBr = chart.pillars.year.branch;
+  const stem = T.STEMS[stemIdx], branch = T.BRANCHES[branchIdx];
+
+  const fav = (el) => (strength.favorable.includes(el) ? 1 : strength.unfavorable.includes(el) ? -1 : 0);
+  const dayClash = clashPartner(branchIdx) === dayBr.index;
+  const yearClash = !dayClash && clashPartner(branchIdx) === yearBr.index;
+  const dayCombo = comboPartner(branchIdx) === dayBr.index;
+  const yearCombo = !dayCombo && comboPartner(branchIdx) === yearBr.index;
+  const stemCombo = STEM_COMBOS.some(c => (c.a === stemIdx && c.b === dmIdx) || (c.b === stemIdx && c.a === dmIdx));
+
+  let score = fav(stem.element) + fav(branch.element);
+  if (dayClash) score -= 2; else if (yearClash) score -= 1;
+  if (dayCombo) score += 1.5; else if (yearCombo) score += 1;
+  if (stemCombo) score += 1;
+  const resonance = score >= 2 ? 'in tune' : score <= -2 ? 'testing' : 'mixed';
+
+  const key = ['lot1', `n${lot.n}`, `dm${dmIdx}`, `s${strength.level}`,
+    `r${dayClash ? 'D' : yearClash ? 'Y' : '-'}${dayCombo ? 'd' : yearCombo ? 'y' : '-'}${stemCombo ? 'S' : '-'}`].join('|');
+
+  return {
+    key, resonance, score,
+    lot: { n: lot.n, gz: lot.gz,
+      stem: { zh: stem.zh, element: stem.element, polarity: stem.polarity },
+      branch: { zh: branch.zh, element: branch.element, animal: branch.animal } },
+    dayMaster: { zh: dm.zh, element: dm.element, polarity: dm.polarity, strength: strength.strength,
+      favorable: strength.favorable, unfavorable: strength.unfavorable },
+    tenGod: tenGodInfo(dmIdx, stemIdx),
+    elements: { stem: fav(stem.element), branch: fav(branch.element) },
+    relations: {
+      dayClash: dayClash ? { lot: branch.zh, natal: dayBr.zh } : null,
+      yearClash: yearClash ? { lot: branch.zh, natal: yearBr.zh, animal: yearBr.animal } : null,
+      dayCombo: dayCombo ? { lot: branch.zh, natal: dayBr.zh } : null,
+      yearCombo: yearCombo ? { lot: branch.zh, natal: yearBr.zh, animal: yearBr.animal } : null,
+      stemCombo: stemCombo ? { lot: stem.zh, dayMaster: dm.zh } : null,
+    },
+  };
+}
+
 module.exports = {
+  computeLotFacts,
   computeNatalChart,
   analyzeStrength,
   computeDailyFacts,

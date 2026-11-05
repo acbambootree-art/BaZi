@@ -2895,6 +2895,95 @@ const share = async (text) => {
   try { await navigator.clipboard.writeText(text + ' ' + url); toast(t('copied')); } catch {}
 };
 
+// ---------------- drawing a fortune stick, first person ----------------
+// The bamboo tumbler (籤筒) is held in both hands in front of your eyes. You tilt it forward and shake; the sticks
+// rattle and jostle, one slowly works its way out ahead of the rest, then slips free and clatters onto the floor.
+let pov = null;
+function makePov() {
+  const g = new THREE.Group();
+  const bamboo = new THREE.MeshStandardMaterial({ color: 0x9a6a34, roughness: 0.55 });
+  const tubeM = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.3, 24, 1, true), bamboo); tubeM.material.side = THREE.DoubleSide; g.add(tubeM);
+  const bottom = new THREE.Mesh(new THREE.CircleGeometry(0.075, 24), bamboo); bottom.rotation.x = Math.PI / 2; bottom.position.y = -0.15; g.add(bottom);
+  for (const y of [-0.1, 0.11]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(0.087, 0.006, 6, 32), new THREE.MeshStandardMaterial({ color: 0x5a3416, roughness: 0.6 })); ring.rotation.x = Math.PI / 2; ring.position.y = y; g.add(ring); }
+  const label = new THREE.Mesh(new THREE.CylinderGeometry(0.0865, 0.0815, 0.12, 24, 1, true, -0.7, 1.4), new THREE.MeshStandardMaterial({ roughness: 0.6, map: canvasTex(128, 128, (c, w, h) => {
+    c.fillStyle = '#b5261c'; c.fillRect(0, 0, w, h); c.fillStyle = '#f2c14e'; c.font = '78px "TempleKai", "Noto Serif TC", serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('籤', w / 2, h / 2 + 4);
+  }, null, true) }));
+  label.rotation.y = Math.PI; g.add(label);
+  const stickM = new THREE.MeshStandardMaterial({ color: 0xdcbc7c, roughness: 0.6 }), tipM = new THREE.MeshStandardMaterial({ color: 0xb5261c, roughness: 0.5 });
+  const sticks = [];
+  for (let i = 0; i < 26; i++) {
+    const a = (i * 2.39996) % (Math.PI * 2), r = 0.012 + Math.sqrt(i / 26) * 0.058;
+    const st = new THREE.Group();
+    st.add(new THREE.Mesh(new THREE.BoxGeometry(0.019, 0.42, 0.005), stickM));
+    const tip = new THREE.Mesh(new THREE.BoxGeometry(0.0195, 0.05, 0.0055), tipM); tip.position.y = 0.185; st.add(tip);   // red-painted ends
+    st.position.set(Math.cos(a) * r, 0.04, Math.sin(a) * r); st.rotation.set((Math.random() - 0.5) * 0.12, Math.random() * 3, (Math.random() - 0.5) * 0.12);
+    st.userData = { y0: 0.04 + Math.random() * 0.02, ph: Math.random() * 6.28 };
+    g.add(st); sticks.push(st);
+  }
+  // your hands round the tube, in the robe's wide grey sleeves
+  const skin = new THREE.MeshStandardMaterial({ color: 0xe9b38a, roughness: 0.6 }), robe = new THREE.MeshStandardMaterial({ color: 0x8f979c, roughness: 0.9 });
+  for (const sx of [-1, 1]) {
+    const hp = new THREE.Vector3(sx * 0.088, -0.05, 0.02);              // each hand grips the side of the tube
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.042, 16, 12), skin); hand.scale.set(0.75, 1.15, 1); hand.position.copy(hp); g.add(hand);
+    for (let f = 0; f < 3; f++) {                                      // fingers curled round the front
+      const fg = new THREE.Mesh(new THREE.CapsuleGeometry(0.009, 0.03, 4, 8), skin); fg.position.set(sx * (0.07 - f * 0.012), -0.03 - f * 0.022, 0.06 - f * 0.004); fg.rotation.set(0, 0, sx * 1.2); g.add(fg);
+    }
+    // the forearm, in a slim grey sleeve, running from the wrist back and down out of view
+    const from = hp.clone().add(new THREE.Vector3(sx * 0.02, -0.03, 0.03)), to = new THREE.Vector3(sx * 0.2, -0.32, 0.36);
+    const len = from.distanceTo(to), sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.058, len, 14, 1, true), robe); sleeve.material.side = THREE.DoubleSide;
+    sleeve.position.copy(from).add(to).multiplyScalar(0.5);
+    sleeve.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), from.clone().sub(to).normalize()); g.add(sleeve);
+  }
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+  g.userData.role = 'skip'; g.visible = false;
+  camera.add(g); if (!camera.parent) scene.add(camera);
+  return { g, sticks };
+}
+async function shakeForStick() {
+  pov ||= makePov();
+  const { g, sticks } = pov;
+  // the eyes: just above his head, looking toward the altar and a little down at the hands
+  const p = me.root.position, ry = me.root.rotation.y, fwd = new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry));
+  const eye = p.clone().add(new THREE.Vector3(0, 1.5, 0));            // standing tall before the altar: over the table to the Buddha
+  director = { pos: eye, look: eye.clone().addScaledVector(fwd, 6).add(new THREE.Vector3(0, 2.2, 0)), speed: 4 };
+  me.root.visible = false; world.tube.visible = false; if (me.label) me.label.visible = false;
+  g.visible = true; g.position.set(0, -0.3, -0.6); g.rotation.set(0, 0, 0);
+  const chosen = sticks[(Math.random() * sticks.length) | 0];
+  sticks.forEach((st) => { st.position.y = st.userData.y0; st.visible = true; });
+  await animate(0.5, (k) => { g.position.y = -0.3 + ease(k) * 0.1; g.rotation.x = -ease(k) * 1.0; g.rotation.z = ease(k) * 0.22; });   // lift it and tip it forward, a little to one side
+  let lastRattle = -1;
+  await animate(2.6, (k) => {
+    const t = k * 2.6;
+    if (Math.floor(t / 0.55) !== lastRattle) { lastRattle = Math.floor(t / 0.55); sfx.rattle(); }
+    const shake = Math.sin(t * 22) * (0.08 + 0.04 * Math.sin(t * 3));
+    g.rotation.x = -1.0 + shake; g.position.y = -0.2 + Math.sin(t * 22 + 1) * 0.012; g.rotation.z = 0.22 + Math.sin(t * 17) * 0.03;
+    for (const st of sticks) st.position.y = st.userData.y0 + Math.abs(Math.sin(t * 22 + st.userData.ph)) * 0.012;   // they jostle
+    chosen.position.y = chosen.userData.y0 + ease(Math.min(1, k * 1.1)) * 0.24;   // one works its way out ahead of the rest
+  });
+  // it slips free and drops to the floor in front of him
+  const world0 = chosen.getWorldPosition(new THREE.Vector3()), q0 = chosen.getWorldQuaternion(new THREE.Quaternion());
+  chosen.userData.home = chosen.position.clone(); chosen.userData.rot = chosen.rotation.clone();
+  g.remove(chosen); scene.add(chosen); chosen.position.copy(world0); chosen.quaternion.copy(q0); chosen.scale.setScalar(1);
+  const side = new THREE.Vector3(Math.cos(ry), 0, -Math.sin(ry)), floorY = groundY(p.x, p.z) + 0.006, land = p.clone().addScaledVector(fwd, 0.85).addScaledVector(side, -0.3); land.y = floorY;   // ahead and a little aside: in plain view
+  const spin = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, Math.random() * 3, 0));
+  director.look = land.clone(); director.pos = p.clone().addScaledVector(fwd, 0.25).add(new THREE.Vector3(0, 1.05, 0));   // lean down to see it
+  await animate(0.55, (k) => {
+    g.position.y = -0.2 - ease(k) * 0.45;                           // lower the tumbler to watch the stick fall
+    chosen.position.lerpVectors(world0, land, k); chosen.position.y = THREE.MathUtils.lerp(world0.y, floorY, k * k) + Math.sin(k * Math.PI) * 0.08;
+    chosen.quaternion.slerpQuaternions(q0, spin, k);
+  });
+  sfx.clack(); sfx.clack(0.09);
+  await animate(0.35, (k) => { g.rotation.x = -1.0 * (1 - ease(k)); g.rotation.z = 0.22 * (1 - ease(k)); });   // set the tumbler upright, out of the way
+  pov.dropped = chosen;
+}
+function endShakeView() {
+  if (!pov) return;
+  pov.g.visible = false; world.tube.visible = true; me.root.visible = true; director = null;
+  const st = pov.dropped; if (st) { scene.remove(st); pov.g.add(st); st.position.copy(st.userData.home); st.rotation.copy(st.userData.rot); pov.dropped = null; }
+  if (me.label) me.label.visible = true;
+  pov.sticks.forEach((s2) => { s2.position.y = s2.userData.y0; });
+}
+
 const ACTS = {
   async muyu() {
     if (!atMuyu) {
@@ -2970,20 +3059,10 @@ const ACTS = {
     await toAltar();
     me.play('palms'); await wait(1.4);
     for (let tries = 1; ; tries++) {
-      me.play('shake'); net.act('qian'); sfx.rattle();
-      const tube = world.tube, base = tube.rotation.clone();
-      await animate(1.6, (k) => { tube.rotation.x = Math.sin(k * 40) * 0.18 * (1 - k); tube.rotation.z = Math.cos(k * 33) * 0.1 * (1 - k); });
-      tube.rotation.copy(base);
-      // one stick pops out
+      net.act('qian');
+      // through his eyes: he takes up the bamboo tumbler, tilts it and shakes until one stick works its way out and drops
       const n = 1 + (Math.random() * 60 | 0);
-      const stick = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.8, 0.015), new THREE.MeshStandardMaterial({ color: 0xe6c98a }));
-      const start = tube.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.3, 0));
-      scene.add(stick);
-      await animate(0.7, (k) => { stick.position.copy(start).add(new THREE.Vector3(0, ease(k) * 0.9, ease(k) * 0.5)); stick.rotation.z = k * 0.6; });
-      sfx.clack();
-      toast(t('lotN', n));
-      await wait(0.8);
-      scene.remove(stick);
+      try { await shakeForStick(); toast(t('lotN', n)); await wait(0.6); } finally { endShakeView(); }
       const { v: c } = await modal(`
         <h2>${t('drew', n)}</h2>
         <p>${t('confirmAsk')}</p>
@@ -3055,9 +3134,66 @@ async function showLot(n) {
     ${en ? `<p style="font-style:italic;line-height:1.75">${en.poem.map(esc).join('<br>')}</p>` : ''}
     ${(en?.meaning || lot?.meaning) ? `<p>${esc(en?.meaning || lot.meaning)}</p>` : ''}
     <p class="muted">${t('lotNote')}</p>
-    <div class="row"><a class="btn primary" href="/?utm_source=temple&utm_medium=qian" target="_blank" rel="noopener">${t('baziLot')}</a></div>
+    <div class="row"><button class="btn primary" data-v="bazi">${t('baziLot')}</button></div>
     <div class="row"><button class="btn ghost" data-v="share">${t('sharePoem')}</button><button class="btn ghost" data-v="ok">${t('keep')}</button></div>`);
   if (v === 'share') share(t('shareLot', n, en ? en.poem[0] : lot?.poem[0]));
+  if (v === 'bazi') await lotWithBazi(n);
+}
+
+// ---------------- the lot, read with your BaZi chart ----------------
+// The lot's sexagenary pillar (lot 1 is 甲子) is set against your chart on the server (/api/lot-reading):
+// the ten god it brings your Day Master, whether its elements help or strain you, any clash or harmony with
+// your day and year branches; then a short reading ties the poem to those facts. Birth details are asked
+// once and kept on this device only.
+const HOURS = [['子', '23:00–00:59'], ['丑', '01:00–02:59'], ['寅', '03:00–04:59'], ['卯', '05:00–06:59'], ['辰', '07:00–08:59'], ['巳', '09:00–10:59'],
+  ['午', '11:00–12:59'], ['未', '13:00–14:59'], ['申', '15:00–16:59'], ['酉', '17:00–18:59'], ['戌', '19:00–20:59'], ['亥', '21:00–22:59']];
+async function askBirth(prev) {
+  const p = prev || {};
+  const { v, form } = await modal(`
+    <h2>${EN ? 'Your birth details' : '你的生辰'}</h2>
+    <p class="muted">${EN ? 'To read this lot with your BaZi chart. Kept on this device only.' : '用來配合你的八字解這支籤。只存在這部裝置上。'}</p>
+    <label>${EN ? 'Date of birth' : '出生日期（西曆）'}</label><input type="date" name="date" min="1900-01-01" max="2100-12-31" value="${p.date || ''}">
+    <label>${EN ? 'Hour of birth' : '出生時辰'}</label><select name="hour"><option value="-1">${EN ? "I don't know" : '不清楚'}</option>${HOURS.map(([b, tm], i) => `<option value="${i}" ${String(p.hour) === String(i) ? 'selected' : ''}>${b}${EN ? ' hour' : '時'} · ${tm}</option>`).join('')}</select>
+    <label>${EN ? 'Gender (for luck pillars)' : '性別（排大運用）'}</label><select name="gender"><option value="">${EN ? 'Prefer not to say' : '不提供'}</option><option value="female" ${p.gender === 'female' ? 'selected' : ''}>${EN ? 'Female' : '女'}</option><option value="male" ${p.gender === 'male' ? 'selected' : ''}>${EN ? 'Male' : '男'}</option></select>
+    <div class="row"><button class="btn ghost" data-v="no">${t('no')}</button><button class="btn primary" data-v="go">${EN ? 'Read my lot' : '解我的籤'}</button></div>`);
+  if (v !== 'go') return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(form.date || '')) { toast(EN ? 'Please enter your date of birth' : '請填寫出生日期'); return askBirth(p); }
+  const b = { date: form.date, hour: +form.hour, gender: form.gender || '' };
+  store.set('birth', b);
+  return b;
+}
+async function lotWithBazi(n, forceAsk = false) {
+  let b = store.get('birth', null);
+  if (!b || forceAsk) b = await askBirth(b);
+  if (!b) return;
+  const [y, m, d] = b.date.split('-').map(Number);
+  modal(`<div style="text-align:center;padding:26px 0"><div class="poem" style="font-size:18px">${EN ? 'Reading your lot with your chart…' : '正在配合你的八字解籤…'}</div></div>`);
+  let r = null;
+  try {
+    const res = await fetch('/api/lot-reading', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ birthYear: y, birthMonth: m, birthDay: d, hourBranch: b.hour, gender: b.gender || undefined, lot: n, lang: EN ? 'en' : 'zh' }) });
+    r = res.ok ? await res.json() : null;
+  } catch {}
+  if (!r) {
+    const { v } = await modal(`<h2>${EN ? 'Could not read it just now' : '暫時無法解籤'}</h2><p class="muted">${EN ? 'The reading service did not answer. Please try again in a moment.' : '解籤服務沒有回應，請稍後再試。'}</p>
+      <div class="row"><button class="btn ghost" data-v="ok">${t('ok')}</button><button class="btn primary" data-v="again">${t('again')}</button></div>`);
+    if (v === 'again') return lotWithBazi(n);
+    return;
+  }
+  const EL = { wood: ['Wood', '木'], fire: ['Fire', '火'], earth: ['Earth', '土'], metal: ['Metal', '金'], water: ['Water', '水'] }, el = (e) => EL[e][EN ? 0 : 1];
+  const RES = { 'in tune': [EN ? 'In tune with your chart' : '與你的八字相應', '#2f7a4d'], mixed: [EN ? 'Gifts and lessons' : '有助力也有功課', '#a0742a'], testing: [EN ? 'Go gently' : '宜放慢腳步', '#a8461f'] }[r.resonance];
+  const chip = (txt) => `<span class="tag" style="margin:3px 4px 3px 0">${esc(txt)}</span>`;
+  const { v } = await modal(`
+    <div style="text-align:center"><span class="tag" style="background:${RES[1]}1c;color:${RES[1]}">${RES[0]}</span></div>
+    <h2 style="text-align:center;margin-top:10px">${t('lotN', n)} · ${esc(r.lot.gz)} ${EN ? 'with your chart' : '配合你的八字'}</h2>
+    <div style="text-align:center">${chip((EN ? 'Your Day Master ' : '日主 ') + r.dayMaster.zh + ' ' + el(r.dayMaster.element) + (EN ? ' · ' + r.dayMaster.strength : ''))}${chip((EN ? 'Lot stem ' : '籤干 ') + r.lot.stem.zh + (EN ? ' = your ' + r.tenGod.en : ' = 你的' + r.tenGod.zh))}</div>
+    <div class="poem" style="font-size:19px;margin-top:12px">${esc(r.headline)}</div>
+    <p>${esc(r.reading)}</p>
+    <p><b>${EN ? 'How to act on it: ' : '怎麼做：'}</b>${esc(r.advice)}</p>
+    <p class="muted">${t('lotNote')}</p>
+    <div class="row"><a class="btn primary" style="color:#fff" href="/?utm_source=temple&utm_medium=qian_bazi" target="_blank" rel="noopener">${EN ? 'See your full chart' : '看完整八字命盤'}</a></div>
+    <div class="row"><button class="btn ghost" data-v="edit">${EN ? 'Change birth details' : '修改生辰'}</button><button class="btn ghost" data-v="ok">${t('keep')}</button></div>`);
+  if (v === 'edit') return lotWithBazi(n, true);
 }
 
 $('#credits').onclick = () => modal(`
@@ -3174,14 +3310,18 @@ function frame() {
   // first step into the hall: the camera rises by the doorway and tilts slowly up the statues, so the first thing
   // you see is their whole height. Once per visit; any tap or drag hands the camera back.
   if (reveal.t < 0 && !intro.on && !director && !busy && inHall(me.root.position.z)) {
-    reveal.t = 0; director = { pos: new THREE.Vector3(0, F + 3.2, -8.2), look: new THREE.Vector3(0, F + 2.5, -30), speed: 0.9 };
+    reveal.t = 0; director = reveal.dir = { pos: new THREE.Vector3(0, F + 3.2, -8.2), look: new THREE.Vector3(0, F + 2.5, -30), speed: 0.9 };
     addEventListener('pointerdown', () => { reveal.t = Math.max(reveal.t, 7.5); }, { once: true });
   }
   if (reveal.t >= 0 && reveal.t < 8) {
     reveal.t += dt;
-    const u = THREE.MathUtils.smootherstep(reveal.t, 0.8, 6);
-    director.pos.set(0, F + 3.2 + u * 1.6, -8.2 - u * 2.5); director.look.set(0, F + 2.5 + u * 10.5, -30);
-    if (reveal.t >= 7.5) { director = null; reveal.t = 8; }
+    if (director !== reveal.dir) reveal.t = 8;                          // a ritual took the camera: the overview gives way, and never touches its shot
+    else if (busy) { director = null; reveal.t = 8; }                    // a ritual started: hand the camera back
+    else {
+      const u = THREE.MathUtils.smootherstep(reveal.t, 0.8, 6);
+      director.pos.set(0, F + 3.2 + u * 1.6, -8.2 - u * 2.5); director.look.set(0, F + 2.5 + u * 10.5, -30);
+      if (reveal.t >= 7.5) { director = null; reveal.t = 8; }
+    }
   }
   const praying = me.kneel && me.praying && !seated && !atMuyu;
   sfx.chant(praying, dt);                                         // kneel, then Pray: the mantra; end the prayer or stand and it fades away
@@ -3444,4 +3584,4 @@ async function partClouds() {
 }
 partClouds();
 
-window.__temple = { sitBench, sfx, geomStamp, exportStamp, composer, get floorMirror() { return floorMirror; }, exportBake, me, walkTo, ACTS, peers, scene, camera, controls, renderer };
+window.__temple = { showLot, sitBench, sfx, geomStamp, exportStamp, composer, get floorMirror() { return floorMirror; }, exportBake, me, walkTo, ACTS, peers, scene, camera, controls, renderer };

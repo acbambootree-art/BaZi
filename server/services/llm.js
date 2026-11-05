@@ -119,6 +119,62 @@ async function generateDailyForecast(facts) {
   };
 }
 
+// ─── Temple fortune lot read with the chart (Haiku, cached per key) ───
+
+const LOT_SYSTEM = `You read a temple fortune lot (籤詩) against a person's BaZi chart for the online temple 歇腳廟 on Purpose-Star Astrology. You receive the lot's poem and meaning, and verified facts about how the lot's sexagenary pillar meets their chart.
+
+Voice: a kind, plain-spoken temple elder who also knows BaZi. Calm and warm, never dramatic. The house motto is "The stars incline, they do not compel": tendencies and timing, never fixed fate. Never predict specific events, health outcomes, money results, or other people's private behaviour.
+
+Rules:
+- Use ONLY the facts given. Never invent pillars, elements, ten gods or relations.
+- Tie the poem's image to the chart: name the lot's pillar, the ten god it brings to their Day Master, whether its elements help or strain this chart, and any clash or harmony with their day or year branch (with the Chinese characters).
+- "headline": the lot's message for this person in at most 9 words.
+- "reading": 3-4 sentences: what the poem means for this particular chart.
+- "advice": 1-2 sentences: one practical way to act on it.
+- Write in the language requested ("zh" = Traditional Chinese, natural and warm; "en" = British/Singapore English).`;
+
+const LOT_SCHEMA = {
+  type: 'object',
+  properties: {
+    headline: { type: 'string', description: "The lot's message for this chart, at most 9 words" },
+    reading: { type: 'string', description: '3-4 sentences tying the poem to the chart facts' },
+    advice: { type: 'string', description: '1-2 sentences of practical advice' },
+  },
+  required: ['headline', 'reading', 'advice'],
+  additionalProperties: false,
+};
+
+async function generateLotReading(facts, lot, lang) {
+  const c = getClient();
+  if (!c) return null;
+  const payload = {
+    language: lang,
+    lot: { number: lot.n, grade: lot.grade, poem: lot.poem, meaning: lot.meaning, poemEnglish: lot.poemEn || undefined },
+    lotPillar: `${facts.lot.gz}: stem ${facts.lot.stem.zh} (${facts.lot.stem.polarity} ${facts.lot.stem.element}), branch ${facts.lot.branch.zh} (${facts.lot.branch.element}, ${facts.lot.branch.animal})`,
+    dayMaster: `${facts.dayMaster.zh} ${facts.dayMaster.polarity} ${facts.dayMaster.element}, ${facts.dayMaster.strength}`,
+    favorableElements: facts.dayMaster.favorable,
+    unfavorableElements: facts.dayMaster.unfavorable,
+    tenGodOfLotStem: `${facts.tenGod.zh} ${facts.tenGod.en}`,
+    lotElementsForThisChart: { stem: ['strains', 'neutral', 'helps'][facts.elements.stem + 1], branch: ['strains', 'neutral', 'helps'][facts.elements.branch + 1] },
+    relations: facts.relations,
+    overallResonance: facts.resonance,
+  };
+  const response = await c.messages.create({
+    model: DAILY_MODEL,
+    max_tokens: 1024,
+    system: LOT_SYSTEM,
+    output_config: { format: { type: 'json_schema', schema: LOT_SCHEMA } },
+    messages: [{ role: 'user', content: JSON.stringify(payload) }],
+  });
+  const parsed = JSON.parse(firstText(response));
+  return {
+    headline: String(parsed.headline || '').slice(0, 140),
+    reading: String(parsed.reading || ''),
+    advice: String(parsed.advice || ''),
+    model: DAILY_MODEL,
+  };
+}
+
 // ─── Decision Reading (Opus, per paid order) ────────────────
 
 const READING_SYSTEM = `You are the reader behind Purpose-Star Astrology's Focused Decision Reading — a paid, one-question written BaZi consultation (S$48). A customer has asked one real question about a decision; you answer it against their full Four Pillars chart, which is provided as verified JSON facts.
@@ -172,4 +228,4 @@ async function generateDecisionReading({ name, question, language }, readingFact
   return { text, model: READING_MODEL };
 }
 
-module.exports = { isConfigured, generateDailyForecast, generateDecisionReading };
+module.exports = { isConfigured, generateDailyForecast, generateLotReading, generateDecisionReading };
