@@ -33,14 +33,64 @@ function pbr(id, rx, ry, o = {}) {
   };
   return new THREE.MeshStandardMaterial({ map: noDiff ? null : load('diff', true), normalMap: load('nor'), roughnessMap: load('rough'), roughness: 1, ...rest });
 }
-const LACQUER = (ry = 3) => pbr('lacquered_cherry_wood', 1, ry, { noDiff: true, color: 0x7e1a12, roughness: 0.75 });
+const LACQUER = (ry = 3) => pbr('lacquered_cherry_wood', 1, ry, { noDiff: true, color: 0x6a2c24, roughness: 0.82 });   // aged cinnabar, not fresh lacquer
+const DARK_LACQUER = (ry = 3) => pbr('lacquered_cherry_wood', 1, ry, { noDiff: true, color: 0x33241c, roughness: 0.8 });   // plain dark wood
 const BRICK = (rx, ry) => pbr('large_red_bricks', rx, ry, { color: 0xe8a090 });
-const PLASTER = (rx, ry) => pbr('red_plaster_weathered', rx, ry, { color: 0x9a3a2c });
+const PLASTER = (rx, ry) => pbr('red_plaster_weathered', rx, ry, { color: 0xa0806a });   // aged earth plaster
 const WOOD = (rx = 2, ry = 1) => pbr('dark_wooden_planks', rx, ry);
 const GRANITE = (rx, ry) => pbr('granite_tile_02', rx, ry);
 const TILES = (rx, ry) => pbr('clay_roof_tiles_02', rx, ry, { side: THREE.DoubleSide });
 const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.75, ...o });
 const GOLD_MAT = () => std(0xd6a548, { metalness: 0.85, roughness: 0.28 });
+// deity seat (神座): red lacquer with gilded carving — key-fret friezes, framed panels, cloud scrolls, a lotus.
+// Drawn twice from one routine: once in colour, once as a gold-only mask that becomes the metalness map.
+const THRONE_MAT = (() => {
+  let mat;
+  const draw = (c, w, h, k) => {
+    const gold = k.gold, line = (x, y, x2, y2) => { c.beginPath(); c.moveTo(x, y); c.lineTo(x2, y2); c.stroke(); };
+    c.fillStyle = k.bg; c.fillRect(0, 0, w, h);
+    c.strokeStyle = c.fillStyle = gold;
+    c.lineWidth = 12; c.strokeRect(6, 6, w - 12, h - 12);
+    c.lineWidth = 3; c.strokeRect(22, 22, w - 44, h - 44);
+    // 回紋 key-fret friezes top and bottom
+    c.lineWidth = 5;
+    for (const y0 of [30, h - 66]) for (let x = 34; x < w - 60; x += 40) {
+      const u = 30; c.beginPath();
+      c.moveTo(x, y0 + u); c.lineTo(x, y0); c.lineTo(x + u, y0); c.lineTo(x + u, y0 + u * 0.75); c.lineTo(x + u * 0.3, y0 + u * 0.75); c.lineTo(x + u * 0.3, y0 + u * 0.35); c.lineTo(x + u * 0.65, y0 + u * 0.35);
+      c.stroke(); line(x, y0 + u, x + 40, y0 + u);
+    }
+    // three recessed panels
+    const py = 80, ph = h - 160, pw = (w - 120) / 3;
+    for (let i = 0; i < 3; i++) {
+      const px = 40 + i * (pw + 20);
+      c.fillStyle = k.panel; c.fillRect(px, py, pw, ph);
+      c.strokeStyle = gold; c.lineWidth = 6; c.strokeRect(px + 6, py + 6, pw - 12, ph - 12);
+      c.lineWidth = 2; c.strokeRect(px + 16, py + 16, pw - 32, ph - 32);
+      const cx = px + pw / 2, cy = py + ph / 2;
+      c.fillStyle = gold;
+      if (i === 1) {                                   // lotus
+        for (let j = -3; j <= 3; j++) {
+          c.save(); c.translate(cx, cy + 34); c.rotate(j * 0.36);
+          c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(-26, -40, 0, -78 + Math.abs(j) * 8); c.quadraticCurveTo(26, -40, 0, 0); c.fill(); c.restore();
+        }
+        c.fillRect(cx - 70, cy + 34, 140, 6);
+      } else {                                         // 祥雲 cloud scrolls
+        c.lineWidth = 6;
+        for (const [ox, oy, r, d] of [[-60, 6, 22, 1], [0, -14, 30, -1], [60, 6, 22, 1], [-28, 30, 16, -1], [30, 30, 16, 1]]) {
+          c.beginPath(); c.arc(cx + ox, cy + oy, r, 0, Math.PI * 1.6 * d, d < 0); c.stroke();
+          c.beginPath(); c.arc(cx + ox, cy + oy, r * 0.45, Math.PI, Math.PI * 2.6); c.stroke();
+        }
+        line(cx - 92, cy + 50, cx + 92, cy + 50);
+      }
+    }
+  };
+  return () => mat || (mat = (() => {
+    const map = canvasTex(1024, 330, (c, w, h) => draw(c, w, h, { bg: '#5e0c09', panel: '#7a140f', gold: '#e8b850' }));
+    const metal = canvasTex(1024, 330, (c, w, h) => draw(c, w, h, { bg: '#000', panel: '#000', gold: '#666' }));
+    metal.colorSpace = THREE.NoColorSpace;
+    return new THREE.MeshStandardMaterial({ map, metalnessMap: metal, metalness: 1, roughness: 0.33 });
+  })());
+})();
 
 function mesh(geo, mat, x = 0, y = 0, z = 0, opts = {}) {
   const m = new THREE.Mesh(geo, mat);
@@ -131,13 +181,14 @@ const bracketTex = canvasTex(512, 64, (c, w, h) => {
 });
 
 const cofferTex = () => canvasTex(256, 256, (c, w, h) => {
-  c.fillStyle = '#d9a441'; c.fillRect(0, 0, w, h);
+  // faded mineral pigments on old wood (bright saturated paint makes a ceiling feel low and busy)
+  c.fillStyle = '#b9a27a'; c.fillRect(0, 0, w, h);
   for (let r = 0; r < 2; r++) for (let k = 0; k < 2; k++) {
     const x = k * 128, y = r * 128;
-    c.fillStyle = '#1f4f6b'; c.fillRect(x + 8, y + 8, 112, 112);
-    c.fillStyle = '#2f8f74'; c.fillRect(x + 22, y + 22, 84, 84);
-    c.fillStyle = '#e0b04f'; c.beginPath(); c.arc(x + 64, y + 64, 22, 0, 7); c.fill();
-    c.fillStyle = '#a8261e'; c.beginPath(); c.arc(x + 64, y + 64, 10, 0, 7); c.fill();
+    c.fillStyle = '#5d7177'; c.fillRect(x + 8, y + 8, 112, 112);
+    c.fillStyle = '#7f9686'; c.fillRect(x + 22, y + 22, 84, 84);
+    c.fillStyle = '#c8b086'; c.beginPath(); c.arc(x + 64, y + 64, 22, 0, 7); c.fill();
+    c.fillStyle = '#8f5a4a'; c.beginPath(); c.arc(x + 64, y + 64, 10, 0, 7); c.fill();
   }
 }, [8, 7]);
 
@@ -421,7 +472,7 @@ function deity(scale, robeColor = 0xffffff) {
   const face = std(0xe9c48a, { metalness: 0.55, roughness: 0.35 });
   const lathe = (pts, mat) => mesh(new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), 32), mat);
   // throne
-  g.add(mesh(new THREE.BoxGeometry(2.8, 0.9, 2.0), WOOD(1.4, 0.5), 0, 0.45, -0.1));
+  g.add(mesh(new THREE.BoxGeometry(2.8, 0.9, 2.0), THRONE_MAT(), 0, 0.45, -0.1));
   g.children[g.children.length - 1].add(mesh(new THREE.BoxGeometry(2.86, 0.07, 2.06), gold, 0, 0.42, 0, { cast: false }));
   g.add(mesh(new THREE.BoxGeometry(3.0, 3.3, 0.3), std(0x7a1712, { metalness: 0.2 }), 0, 2.3, -1.05));
   g.add(mesh(new THREE.BoxGeometry(3.2, 0.3, 0.4), gold, 0, 4.0, -1.05));
@@ -489,7 +540,7 @@ function mainHall() {
   plinth.userData.role = 'occ';     // its top is under the floor; not worth lightmap space
   g.add(plinth);
   for (let i = 0; i < 4; i++) g.add(mesh(new THREE.BoxGeometry(HW * 2, F * (i + 1) / 4, 0.5), stone, 0, F * (i + 1) / 8, ZF + 1.75 - i * 0.5));
-  const fl = mesh(new THREE.PlaneGeometry(HW * 2, ZF - ZB), pbr('terracotta_floor_tiles', 12, 11, { roughness: 0.75 }), 0, F + 0.01, (ZF + ZB) / 2, { cast: false });
+  const fl = mesh(new THREE.PlaneGeometry(HW * 2, ZF - ZB), pbr('granite_tile_02', 16, 14, { roughness: 0.6, color: 0xd8d4cc }), 0, F + 0.01, (ZF + ZB) / 2, { cast: false });   // grey stone: a calm field under the red
   fl.rotation.x = -Math.PI / 2; fl.name = 'hallFloor'; g.add(fl);
 
   // walls: back + sides
@@ -504,11 +555,11 @@ function mainHall() {
   }
 
   // columns: front row is carved dragon pillars, the rest lacquered red
-  const colH = C - 0.3, colGeo = new THREE.CylinderGeometry(0.5, 0.55, colH, 18);
+  const colH = C - 0.3, colGeo = new THREE.CylinderGeometry(0.5, 0.55, colH, 18), darkWood = DARK_LACQUER(3);
   const rows = [-8, -14, -20, -26, -31];
   for (const z of rows) for (const x of [-11, -5.5, 5.5, 11]) {
     if (z === -8 && Math.abs(x) < 6) g.add(dragonColumn(x, F, z, colH, 0.5));
-    else g.add(mesh(colGeo, red, x, F + colH / 2, z));
+    else g.add(mesh(colGeo, Math.abs(x) > 8 ? darkWood : red, x, F + colH / 2, z));   // outer rows plain wood: red only along the aisle
     g.add(mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.35, 16), stone, x, F + 0.17, z));
   }
   // beams
@@ -661,8 +712,8 @@ function mainHall() {
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       const p = new THREE.Vector3(x - sx * 0.27, F + 1.5 + r * cell, z0 + cell / 2 + c * cell);
       cells.setMatrixAt(k, m4.compose(p, q, one));
-      const lit = Math.random() < 0.6;
-      cells.setColorAt(k, col.set(lit ? 0xffe2b8 : 0x2e1d14).multiplyScalar(lit ? 0.75 + Math.random() * 0.25 : 1));
+      const lit = Math.random() < 0.22;                                   // a scattering of lit lamps, not a wall of light
+      cells.setColorAt(k, col.set(lit ? 0xffe2b8 : 0x3a2c22).multiplyScalar(lit ? 0.5 + Math.random() * 0.15 : 1));
       slots.push({ pos: p, side: sx, lit });
       k++;
     }
@@ -697,7 +748,7 @@ function mainHall() {
   for (let i = 0; i <= 120; i++) { const t = i / 120; coilPts.push(new THREE.Vector3(Math.cos(t * Math.PI * 16) * (0.05 + t * 0.45), -t * 0.9, Math.sin(t * Math.PI * 16) * (0.05 + t * 0.45))); }
   const coilGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(coilPts), 400, 0.03, 4);
   const coilPos = [];
-  for (const x of [-8.3, -2.8, 2.8, 8.3]) for (let z = -10; z > -26; z -= 3.2) coilPos.push([x, F + 10.4 + Math.random() * 0.8, z]);
+  for (const x of [-2.8, 2.8]) for (let z = -11; z > -26; z -= 6.4) coilPos.push([x, F + 10.4 + Math.random() * 0.8, z]);   // a few, not a forest
   const coils = new THREE.InstancedMesh(coilGeo, std(0x8a5a3a, { roughness: 0.9 }), coilPos.length);
   const tags = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.2, 0.9), new THREE.MeshBasicMaterial({ color: 0xd42a1c, side: THREE.DoubleSide }), coilPos.length);
   const strings = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.008, 0.008, 1), std(0x222222), coilPos.length);
@@ -710,9 +761,9 @@ function mainHall() {
   g.add(coils, tags, strings);
 
   const lanPos = [];
-  for (const x of [-11, 11, -5.5, 5.5]) for (const z of [-11, -17, -23, -29]) lanPos.push([x, F + 10.6, z]);
+  for (const x of [-11, 11]) for (const z of [-14, -26]) lanPos.push([x, F + 10.6, z]);
   const lanGeo = new THREE.CylinderGeometry(0.42, 0.42, 1.1, 6);
-  const lanMat = new THREE.MeshStandardMaterial({ color: 0xd42a1c, emissive: 0xff5a2a, emissiveIntensity: 0.9, map: lanternTex, emissiveMap: lanternTex });
+  const lanMat = new THREE.MeshStandardMaterial({ color: 0xd42a1c, emissive: 0xff7a4a, emissiveIntensity: 0.35, map: lanternTex, emissiveMap: lanternTex });
   const lans = new THREE.InstancedMesh(lanGeo, lanMat, lanPos.length);
   const lanCaps = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.5, 0.5, 0.14, 6), gold, lanPos.length * 2);
   lanPos.forEach(([x, y, z], i) => {
@@ -845,8 +896,8 @@ export function buildWorld(scene) {
   }
 
   // lights
-  scene.add(new THREE.HemisphereLight(0xdfe8ee, 0x46553c, 0.4));
-  const sun = new THREE.DirectionalLight(0xfff0dc, 1.7);
+  scene.add(new THREE.HemisphereLight(0xe8efe8, 0x8a8a78, 0.75));      // pale sky over warm-grey ground
+  const sun = new THREE.DirectionalLight(0xfff4e3, 1.9);
   sun.position.set(-35, 45, 30);
   sun.castShadow = true;
   const S = sun.shadow, small = window.innerWidth < 800;
@@ -856,11 +907,12 @@ export function buildWorld(scene) {
   scene.add(sun);
   const F = HALL.floor;
   const addLight = (c, i, d, x, y, z) => { const l = new THREE.PointLight(c, i, d, 1.5); l.position.set(x, y, z); scene.add(l); return l; };
-  addLight(0xffb060, 70, 30, 0, F + 11, -25);         // altar
-  addLight(0xffc77a, 34, 26, 0, F + 13.5, HALL.domeZ); // dome
-  addLight(0xff9a50, 26, 20, -9, F + 8, -15);
-  addLight(0xff9a50, 26, 20, 9, F + 8, -15);
-  addLight(0xff7040, 34, 24, 0, 10, -3);              // hall porch
+  // soft near-white daylight in the hall (clerestory and doors), only the altar a touch warmer
+  addLight(0xffe6c8, 55, 30, 0, F + 11, -25);         // altar
+  addLight(0xfff4e3, 34, 28, 0, F + 13.5, HALL.domeZ); // dome / clerestory
+  addLight(0xfff0e0, 18, 22, -9, F + 8, -15);
+  addLight(0xfff0e0, 18, 22, 9, F + 8, -15);
+  addLight(0xfff2e6, 24, 24, 0, 10, -3);              // hall porch: light from the open doors
   const luLight = addLight(0xff8a3a, 10, 9, 0, 3.5, 8);
   scene.traverse((o) => { if (o.isMesh && o.material?.map?.userData?.text) o.userData.role = 'occ'; });
 

@@ -24,7 +24,7 @@
     --red: #b8231a; --gold: #c9952f; --muted: #7a6a5c;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #1d1a17; color: var(--ink);
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #e4e7e6; color: var(--ink);
     font-family: var(--brush); }
   #app { position: fixed; inset: 0; touch-action: none; }
   #app canvas { display: block; }
@@ -97,11 +97,19 @@
   #rest { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
     background: #d9d4c8; color: var(--ink); font-size: 15px; }
   #rest.on { display: flex; }
-  #loading { position: fixed; inset: 0; display: grid; place-items: center; background: #1d1a17; color: #e9dcc7;
-    font-family: var(--brush); letter-spacing: 4px; transition: opacity .8s; }
+  /* while the world loads you float in clouds (drawn in three.js); this is only the quiet title over them */
+  #intro { position: fixed; inset: 0; z-index: 50; pointer-events: none; display: grid; place-items: center; transition: opacity 2.5s; }
+  #intro .t { font: 13vmin/1 var(--brush); letter-spacing: 3vmin; color: rgba(110, 86, 60, .55); text-shadow: 0 0 24px rgba(255,255,255,.9); translate: 1.5vmin 0; }
+  #intro .msg { position: absolute; left: 50%; bottom: 12%; translate: -50% 0; text-align: center; color: rgba(90, 76, 60, .7);
+    font: 14px/1.6 var(--brush); letter-spacing: 3px; white-space: nowrap; }
+  #intro .bar { width: 160px; height: 1px; margin: 8px auto 0; background: rgba(90,76,60,.18); }
+  #intro .bar i { display: block; height: 100%; width: 0; background: rgba(90,76,60,.6); transition: width .5s; }
+  #intro.out { opacity: 0; }
+  body.intro #top, body.intro #bar, body.intro #hint, body.intro #credits, body.intro #joy, body.intro .nametag { opacity: 0; pointer-events: none; }
+  #top, #bar, #hint, #credits, #joy { transition: opacity 1.5s; }
 </style>
 </head>
-<body>
+<body class="intro">
 <div id="app"></div>
 
 <div id="top">
@@ -125,7 +133,7 @@
 <div id="toast" class="glass"></div>
 <div id="modal"><div class="card" id="card"></div></div>
 <div id="rest"><div>你在廟裡歇著</div><button class="btn primary" id="wake" style="flex:none;padding:10px 22px">回到廟裡</button></div>
-<div id="loading">開 廟 門 中</div>
+<div id="intro"><div class="t">歇腳廟</div><div class="msg"><span id="gateMsg">雲 開 中</span><div class="bar"><i id="gateBar"></i></div></div></div>
 
 <script type="importmap">
 { "imports": {

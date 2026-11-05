@@ -10,6 +10,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { Water } from 'three/addons/objects/Water.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { connectPresence } from './presence.js';
 
@@ -36,7 +37,7 @@ const TX = {
   brand: ['歇腳廟', 'Xiejiao Temple'],
   room: [(n) => `第 ${n} 殿`, (n) => `Hall ${n}`],
   hint: [matchMedia('(pointer: coarse)').matches ? '搖桿走路轉向・拖曳看看・雙指拉近' : '↑↓ 走路・←→ 轉向・拖曳看看・滾輪拉近（第一人稱）', matchMedia('(pointer: coarse)').matches ? 'Joystick to walk & turn · drag to look · pinch to zoom' : '↑↓ walk · ←→ turn · drag to look · scroll in for first person'],
-  loading: ['開 廟 門 中', 'Opening the temple gates'],
+  loading: ['雲 開 中', 'Parting the clouds'],
   rest: ['你在廟裡歇著', 'You are resting in the temple'],
   wake: ['回到廟裡', 'Come back in'],
   acts: [['拜拜', '坐下', '上香', '擲筊', '求籤', '點燈', '木魚'], ['Pray', 'Kneel', 'Incense', 'Blocks', 'Fortune', 'Lamp', 'Muyu']],
@@ -110,7 +111,15 @@ if (EN) document.title = 'Xiejiao Temple · a quiet online Taiwanese temple';
 $('#brand b').textContent = t('brand');
 $('#room').textContent = t('room', 1);
 $('#hint').textContent = t('hint');
-$('#loading').textContent = t('loading');
+$('#gateMsg').textContent = t('loading');
+const intro = { on: true, parting: false, k: 0 };          // the cloud intro (built further down)
+// every three.js loader reports to the default manager: the gates stay shut until all of it has arrived
+const loadState = { done: 0, total: 0, idle: null };
+THREE.DefaultLoadingManager.onProgress = (url, done, total) => {
+  loadState.done = done; loadState.total = total;
+  if (!intro.on) { (window.__lateLoads ||= []).push(url); return; }
+  $('#gateBar').style.width = Math.max(parseFloat($('#gateBar').style.width) || 0, (done / total) * 92) + '%';   // never runs backwards
+};
 $('#rest div').textContent = t('rest');
 $('#wake').textContent = t('wake');
 document.querySelectorAll('#bar button').forEach((b, i) => { b.lastChild.textContent = TX.acts[+EN][i]; });
@@ -126,7 +135,7 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.85;
+renderer.toneMappingExposure = 0.95;
 app.appendChild(renderer.domElement);
 
 const labels = new CSS2DRenderer();
@@ -155,7 +164,7 @@ const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(
   innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(),
   { type: THREE.HalfFloatType, samples: DBG.has('nomsaa') ? 0 : isMobile ? 2 : 4 }));
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight).multiplyScalar(isMobile ? 0.5 : 1), 0.32, 0.5, 0.97);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight).multiplyScalar(isMobile ? 0.5 : 1), 0.1, 0.4, 0.98);   // barely any glow: halos read as glare, not calm
 const HQ = !isMobile;
 // (no screen-space AO: the baked lighting already has soft contact shadows, and AO crawled as you moved)
 composer.addPass(bloom);
@@ -374,7 +383,8 @@ gl.load(PROPS + 'pillar_dragon_02.glb', (g) => {
     if (o.name !== 'dragonCol') return;
     const s = o.userData.spot;
     o.visible = false;
-    placeProp(g.scene, { x: s.x, y: s.y, z: s.z, h: s.h, yaw: -Math.PI / 2 });   // the scan only has a carved front
+    // the scan only has a carved front; pairs are mirrored so the two dragons of each pair face each other
+    placeProp(g.scene, { x: s.x, y: s.y, z: s.z, h: s.h, yaw: -Math.PI / 2, mirror: s.x < 0 });
   });
 }, undefined, () => {});
 gl.load(PROPS + 'lion_stone_big.glb', (g) => {
@@ -389,19 +399,15 @@ gl.load(PROPS + 'drum_stone.glb', (g) => {
 }, undefined, () => {});
 gl.load(PROPS + 'censer_ding_cleveland.glb', (g) => {
   world.lu.visible = false;
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.85, 0.6, 8), new THREE.MeshStandardMaterial({ color: 0x8a857c, roughness: 0.9 }));
-  base.position.set(0, 0.3, 8); base.castShadow = base.receiveShadow = true; base.userData.role = 'occ'; scene.add(base);
-  const ding = placeProp(g.scene, { x: 0, y: 0.6, z: 8, h: 2.7 });
+  const ding = placeProp(g.scene, { x: 0, y: 0, z: 8, h: 2.6 });   // a 天公爐 stands on its own three legs
   const top = new THREE.Box3().setFromObject(ding).max.y;
   world.luPos.y = top - 0.45;                      // incense goes into the ash just below the rim
   luSmoke.pos.y = top - 0.1;
 }, undefined, () => {});
 
 // ---------------- offerings on the altar table: real scanned fruit and flowers ----------------
-// The code-built fruit and vases (named 'standIn') are hidden; their baked copies are hidden in loadBaked().
-const standIns = [];
-world.table.updateWorldMatrix(true, true);
-world.table.traverse((o) => { if (o.name === 'standIn') { o.visible = false; standIns.push(new THREE.Box3().setFromObject(o).getCenter(new THREE.Vector3())); } });
+// The code-built fruit and vases (named 'standIn') are hidden; loadBaked() hides their baked copies too.
+world.table.traverse((o) => { if (o.name === 'standIn') o.visible = false; });
 // a clone scaled to height h, sitting on y=0 and centred, as a child of the table (table-local coordinates)
 function offer(src, h, x, y, z, yaw = 0) {
   const m = src.clone(true), w = new THREE.Group();
@@ -484,6 +490,183 @@ Promise.all(['mandarin', 'apple', 'pineapple', 'bananas', 'vase', 'mum', 'orchid
   })
   .catch((e) => console.warn('offerings unavailable', e));
 
+// ---------------- 放生池: a stone-edged lotus pond on the plaza, right of the approach ----------------
+const POND = { x: 11.6, z: 34.0, rx: 4.3, rz: 2.5, y: 0.3 };
+const pondK = (a) => 1 + 0.07 * Math.sin(3 * a + 1.3) + 0.04 * Math.sin(5 * a + 0.4);           // organic, not an ellipse
+const pondAt = (a, k = 1) => [POND.x + Math.cos(a) * POND.rx * pondK(a) * k, POND.z + Math.sin(a) * POND.rz * pondK(a) * k];
+const inPond = (x, z, k = 1) => { const a = Math.atan2((z - POND.z) / POND.rz, (x - POND.x) / POND.rx), K = pondK(a) * k; return ((x - POND.x) / (POND.rx * K)) ** 2 + ((z - POND.z) / (POND.rz * K)) ** 2 < 1; };
+let pondTick = null, pondBank = null;
+const KOI_YAW = Math.PI / 2;    // the koi model's head points along -x (tall tail fin at +x)
+{
+  const N = 72, shape = new THREE.Shape();
+  for (let i = 0; i <= N; i++) { const [x, z] = pondAt((i / N) * Math.PI * 2); i ? shape.lineTo(x - POND.x, -(z - POND.z)) : shape.moveTo(x - POND.x, -(z - POND.z)); }
+  const flat = (geo, y, mat) => { const m = new THREE.Mesh(geo, mat); m.rotation.x = -Math.PI / 2; m.position.set(POND.x, y, POND.z); m.userData.role = 'skip'; scene.add(m); return m; };
+  // dark silty basin, then a bank sloping from the paving up to the waterline (rocks sit on it)
+  flat(new THREE.ShapeGeometry(shape), 0.03, new THREE.MeshStandardMaterial({ color: 0x1a1f17, roughness: 1 }));
+  const pos = [], uvs = [], idx = [];
+  for (let i = 0; i <= N; i++) {
+    const a = (i / N) * Math.PI * 2, [ox, oz] = pondAt(a, 1.16), [ix, iz] = pondAt(a, 0.97);
+    pos.push(ox, 0.005, oz, ix, POND.y + 0.06, iz); uvs.push(ox * 0.6, oz * 0.6, ix * 0.6, iz * 0.6);
+    if (i < N) { const b = i * 2; idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
+  }
+  const bank = new THREE.BufferGeometry(); bank.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); bank.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); bank.setIndex(idx); bank.computeVertexNormals();
+  const bm = new THREE.Mesh(bank, new THREE.MeshStandardMaterial({ color: 0x3b3a2c, roughness: 0.95, side: THREE.DoubleSide }));
+  bm.receiveShadow = true; bm.userData.role = 'skip'; scene.add(bm); pondBank = bm;
+  // the water: real planar reflections of the trees and sky, rippled by a slowly drifting normal map
+  const normals = new THREE.TextureLoader().load('/temple/assets/env/waternormals.jpg', (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
+  const res = isMobile ? 256 : 512;
+  const water = new Water(new THREE.ShapeGeometry(shape), {
+    textureWidth: res, textureHeight: res, waterNormals: normals,
+    sunDirection: new THREE.Vector3(-35, 45, 30).normalize(), sunColor: 0x8a7a64,
+    waterColor: 0x123a30, distortionScale: 0.3, fog: true, alpha: 0.9,
+  });
+  water.material.uniforms.size.value = 6;
+  water.rotation.x = -Math.PI / 2; water.position.set(POND.x, POND.y, POND.z); water.userData.role = 'skip';
+  scene.add(water);
+  water.material.transparent = true; water.material.uniforms.alpha.value = 0.62;   // just clear enough to see koi below
+  water.renderOrder = 1;
+  // only render the water (and its reflection pass) when you're out on the plaza: from the hall it's lost in the
+  // fog, and the hall's floor mirror would otherwise draw the pond's mirror again inside its own
+  const ticks = [(dt) => { water.material.uniforms.time.value += dt * 0.3; water.visible = camera.position.z > 8; }];
+  pondTick = (dt) => ticks.forEach((f) => f(dt));
+
+  // ---- life in the pond: real scanned / modelled lotus, water lily, koi, cattails ----
+  const PD = '/temple/assets/pond/';
+  const put = (src, size, x, y, z, yaw = 0, by = 'w') => {      // clone, size it (w = widest side, h = height), sit it on y
+    const m = src.clone(true), w = new THREE.Group(); w.add(m);
+    const b = new THREE.Box3().setFromObject(m), sz = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3());
+    m.position.sub(new THREE.Vector3(c.x, b.min.y, c.z));
+    w.scale.setScalar(size / (by === 'h' ? sz.y : Math.max(sz.x, sz.z)));
+    w.position.set(x, y, z); w.rotation.y = yaw;
+    w.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; } });
+    w.userData.role = 'skip'; scene.add(w); return w;
+  };
+  const at = (u, v, y) => [POND.x + u * POND.rx, y, POND.z + v * POND.rz];   // pond-relative spot, u/v in -1..1
+  gl.load(PD + 'lotus.glb', (g) => {
+    g.scene.traverse((o) => { if (o.isMesh && /glass|transparent/.test(o.material.name)) o.visible = false; });   // the model's display jar
+    for (const [u, v, w, yaw] of [[0.5, 0.3, 2.4, 0.4], [-0.55, 0.45, 1.8, 2.2], [0.05, 0.6, 1.5, 4.1], [0.78, -0.2, 1.4, 5.3]]) put(g.scene, w, ...at(u, v, POND.y - 0.25), yaw);
+  }, undefined, () => {});
+  gl.load(PD + 'lily.glb', (g) => {
+    for (const [u, v, w, yaw] of [[-0.15, -0.35, 1.0, 1.0], [0.45, -0.45, 0.8, 3.9], [-0.6, -0.05, 0.85, 5.0]]) put(g.scene, w, ...at(u, v, POND.y - 0.3), yaw);
+  }, undefined, () => {});
+  gl.load(PD + 'cattails.glb', (g) => {
+    for (const [u, v, h, yaw] of [[0.85, 0.55, 1.5, 0], [0.98, 0.15, 1.2, 1.7], [0.6, 0.85, 1.35, 3.1], [-0.95, 0.4, 1.1, 0.8]]) put(g.scene, h, ...at(u, v, POND.y - 0.1), yaw, 'h');
+  }, undefined, () => {});
+  // koi: each swims a slow loop under the surface; the body flexes in a travelling wave (vertex shader), tail most
+  gl.load(PD + 'koi.glb', (g) => {
+    const flex = { value: 0 };
+    g.scene.traverse((o) => {
+      if (!o.isMesh) return;
+      o.material = o.material.clone();
+      o.material.onBeforeCompile = (sh) => {
+        sh.uniforms.uFlex = flex;
+        sh.vertexShader = 'uniform float uFlex;\n' + sh.vertexShader.replace('#include <begin_vertex>',
+          `#include <begin_vertex>
+           float along = clamp((transformed.x + 0.45) / 0.95, 0.0, 1.0);            // 0 head .. 1 tail
+           transformed.z += sin(uFlex * 6.0 - along * 5.0) * 0.06 * along * along;`);
+      };
+    });
+    const fish = [];
+    for (let i = 0; i < 5; i++) {
+      const f = put(g.scene, 0.4 + (i % 3) * 0.06, POND.x, 0.06 + (i % 2) * 0.03, POND.z);   // the pond is ~27 cm deep: stay under
+      fish.push({ f, ph: i * 1.27, sp: 0.09 + i * 0.012, ru: 0.55 - (i % 3) * 0.12, rv: 0.5 - (i % 2) * 0.12, dir: i % 2 ? 1 : -1 });
+    }
+    let T = 0;
+    ticks.push((dt) => {
+      T += dt; flex.value = T;
+      for (const k of fish) {
+        const a = T * k.sp * k.dir + k.ph, w = 1 + 0.15 * Math.sin(T * 0.3 + k.ph);
+        const x = POND.x + Math.cos(a) * POND.rx * k.ru * w, z = POND.z + Math.sin(a) * POND.rz * k.rv * w;
+        const dx = x - k.f.position.x, dz = z - k.f.position.z;
+        if (dx || dz) k.f.rotation.y = Math.atan2(dx, dz) + KOI_YAW;
+        k.f.position.x = x; k.f.position.z = z;
+      }
+    });
+  }, undefined, () => {});
+}
+// rim stones and ferns, from the same CC0 scans as the forest floor. Each part is re-centred and sized in metres
+// (the files store their pieces spread apart), then instanced along the bank.
+// split a mesh into its separate pieces (triangles joined by shared positions), e.g. single rocks out of a rock set
+function islands(geo) {
+  const pos = geo.attributes.position, idx = geo.index.array, key = new Map(), root = [];
+  const vid = new Int32Array(pos.count);
+  for (let i = 0; i < pos.count; i++) {
+    const k = `${Math.round(pos.getX(i) * 1e3)},${Math.round(pos.getY(i) * 1e3)},${Math.round(pos.getZ(i) * 1e3)}`;
+    if (!key.has(k)) { key.set(k, root.length); root.push(root.length); }
+    vid[i] = key.get(k);
+  }
+  const find = (x) => { while (root[x] !== x) x = root[x] = root[root[x]]; return x; };
+  for (let t = 0; t < idx.length; t += 3) { const a = find(vid[idx[t]]); root[find(vid[idx[t + 1]])] = a; root[find(vid[idx[t + 2]])] = a; }
+  const groups = new Map();
+  for (let t = 0; t < idx.length; t += 3) { const g = find(vid[idx[t]]); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(idx[t], idx[t + 1], idx[t + 2]); }
+  // each piece gets only its own vertices (so its bounds are its own)
+  return [...groups.values()].filter((tris) => tris.length > 600).map((tris) => {
+    const remap = new Map(), used = [];
+    const index = tris.map((v) => { if (!remap.has(v)) { remap.set(v, used.length); used.push(v); } return remap.get(v); });
+    const g = new THREE.BufferGeometry();
+    for (const [n, at] of Object.entries(geo.attributes)) {
+      const out = new at.array.constructor(used.length * at.itemSize);
+      used.forEach((v, i) => { for (let c = 0; c < at.itemSize; c++) out[i * at.itemSize + c] = at.array[v * at.itemSize + c]; });
+      g.setAttribute(n, new THREE.BufferAttribute(out, at.itemSize, at.normalized));
+    }
+    g.setIndex(index);
+    return g;
+  });
+}
+function ring(url, list, sink = 0, split = false, onParts) {
+  gl.load(url, (g) => {
+    g.scene.updateMatrixWorld(true);
+    const parts = [];
+    g.scene.traverse((o) => {
+      if (!o.isMesh) return;
+      const whole = o.geometry.clone();
+      for (const n of ['position', 'normal', 'tangent']) {           // quantized (int16/int8) attributes can't take a transform in place
+        const at = whole.attributes[n]; if (!at || at.array instanceof Float32Array) continue;
+        const f = new Float32Array(at.count * at.itemSize);
+        for (let i = 0; i < at.count; i++) for (let c = 0; c < at.itemSize; c++) f[i * at.itemSize + c] = at.getComponent(i, c);
+        whole.setAttribute(n, new THREE.BufferAttribute(f, at.itemSize));
+      }
+      whole.applyMatrix4(o.matrixWorld);
+      for (const geo of split ? islands(whole) : [whole]) {
+        geo.computeBoundingBox();
+        const b = geo.boundingBox, c = b.getCenter(new THREE.Vector3()), size = b.getSize(new THREE.Vector3());
+        geo.translate(-c.x, -b.min.y, -c.z);
+        parts.push({ geo, mat: o.material, w: Math.max(size.x, size.z), h: size.y });
+      }
+    });
+    const per = parts.map(() => []);
+    list.forEach((it, i) => per[i % parts.length].push(it));
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+    parts.forEach((p, k) => {
+      if (!per[k].length) return;
+      const im = new THREE.InstancedMesh(p.geo, p.mat, per[k].length);
+      per[k].forEach(([x, z, w, yaw, flat = 1, y0 = 0], i) => { const s = w / p.w; im.setMatrixAt(i, m4.compose(v.set(x, y0 - sink * p.h * s * flat, z), q.setFromAxisAngle(up, yaw), sc.set(s, s * flat, s))); });
+      im.castShadow = im.receiveShadow = true; im.userData.role = 'skip';
+      scene.add(im);
+    });
+    onParts?.(parts);
+  }, undefined, () => {});
+}
+{
+  let seed = 4242; const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const stones = [];
+  // stones sit on the bank slope (which rises from the paving at k=1.16 to the waterline at k=0.97), almost touching
+  for (let i = 0; i < 70; i++) {
+    const a = (i / 70) * Math.PI * 2 + r() * 0.05, k = 0.99 + r() * 0.08, [x, z] = pondAt(a, k);
+    stones.push([x, z, 0.6 + r() * 0.5, r() * 6.28, 0.5 + r() * 0.3, (POND.y + 0.06) * (1.16 - k) / 0.19]);
+  }
+  ring('/temple/assets/env/rocks.glb', stones, 0.3, true, (parts) => {      // the bank wears the same mossy stone
+    const m = parts[0].mat; pondBank.material = new THREE.MeshStandardMaterial({ map: m.map, normalMap: m.normalMap, roughness: 1, color: 0x9a9a90 });
+  });
+  const ferns = [];
+  for (let i = 0; i < 16; i++) {
+    const a = r() * Math.PI * 2;
+    if (Math.abs(((a - Math.PI + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 0.8) continue;   // keep the path side open to the water
+    const [x, z] = pondAt(a, 1.22 + r() * 0.12); ferns.push([x, z, 1.3 + r() * 0.6, r() * 6.28]);
+  }
+  ring('/temple/assets/env/fern.glb', ferns);
+}
+
 function scatter(url, count, place, scaleRange, role = 'skip') {
   gl.load(url, (g) => {
     const parts = []; g.scene.updateMatrixWorld(true);
@@ -508,6 +691,7 @@ const outsideWalls = (rnd) => {
   const x = (rnd() - 0.5) * 120, z = -90 + rnd() * 150;
   if (Math.abs(x) < 21 && z > -40 && z < 20) return null;            // temple
   if (Math.abs(x) < 5 && z > 20) return null;                        // keep the approach path clear
+  if (inPond(x, z, 1.4)) return null;
   return [x, z];
 };
 scatter('/temple/assets/env/fern.glb', 260, outsideWalls, [0.8, 1.6]);
@@ -879,6 +1063,9 @@ function clampWalk(p) {
     const dx = p.x - ox, dz = p.z - oz, d = Math.hypot(dx, dz);
     if (d < r && d > 1e-4) { p.x = ox + dx / d * r; p.z = oz + dz / d * r; }
   }
+  if (inPond(p.x, p.z, 1.12)) {                      // the pond's stone rim: stand at its edge, not in the water
+    const a = Math.atan2((p.z - POND.z) / POND.rz, (p.x - POND.x) / POND.rx); [p.x, p.z] = pondAt(a, 1.13);
+  }
   return p;
 }
 function groundY(x, z) {
@@ -942,7 +1129,7 @@ async function turnTo(ry) {
 const KEYS = { ArrowUp: [0, 1], KeyW: [0, 1], ArrowDown: [0, -1], KeyS: [0, -1], ArrowLeft: [-1, 0], KeyA: [-1, 0], ArrowRight: [1, 0], KeyD: [1, 0] };
 const held = new Set();
 addEventListener('keydown', (e) => {
-  if (!KEYS[e.code] || e.target.closest?.('input,select,textarea') || $('#modal').classList.contains('on')) return;
+  if (!KEYS[e.code] || e.target.closest?.('input,select,textarea') || $('#modal').classList.contains('on') || intro.on) return;
   e.preventDefault(); held.add(e.code); hideHint();
 });
 addEventListener('keyup', (e) => held.delete(e.code));
@@ -1031,6 +1218,7 @@ marker.rotation.x = -Math.PI / 2; scene.add(marker);
 let down = null;
 const touches = new Map();
 renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (intro.on) return;
   down = { x: e.clientX, y: e.clientY, t: performance.now(), n: e.isPrimary }; poke();
   touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
   try { renderer.domElement.setPointerCapture(e.pointerId); } catch {}
@@ -1496,6 +1684,7 @@ $('#credits').onclick = () => modal(`
   <p class="muted">${EN ? 'Statues, paintings and textures are public-domain (CC0) works from' : '佛像、畫作與材質為公共領域（CC0）作品，來自'} Minneapolis Institute of Art, Cleveland Museum of Art, Poly Haven.</p>
   <p class="muted">${EN ? 'Stone lions, dragon pillars and drum stones' : '石獅、龍柱、抱鼓石'}: "Stone Big Lion 01", "Stone Dragon Pillar 02", "Stone Old Sculpture Drum 01" by zhengzhangxun (Sketchfab), CC BY 4.0.</p>
   <p class="muted">${EN ? 'Offerings' : '供品'}: "Mandarin Scan", "Pineapple Scan" by Franco Pizzani; "White Orchid" by gottalovehana; "Chrystanthemum flower" by Lassi Kaukonen (recoloured) — Sketchfab, CC BY 4.0.</p>
+  <p class="muted">${EN ? 'Pond' : '放生池'}: "Lilypads" by sligocreatures; "Water Lily, Nymphaea cv." by ffish.asia / floraZia.com; "Koi Fish" by SDPM Esare; "Cattails" by AlkaliDragon — Sketchfab, CC BY 4.0.</p>
   <p class="muted">${EN ? 'Wooden fish sound' : '木魚聲'}: "Mokugyo drum sounds" by George_Papargyris (Freesound), CC BY 4.0.</p>
   <div class="row"><button class="btn ghost" data-v="ok">${t('ok')}</button></div>`);
 
@@ -1585,7 +1774,8 @@ function frame() {
   me.root.position.y = groundY(me.root.position.x, me.root.position.z) + (me.kn || 0) * 0.22;
   me.update(dt);
   // camera follows
-  followCam(dt);
+  followCam(dt, intro.on);           // during the intro: where the camera will end up (snapped), the flight eases toward it
+  introTick(dt);
   for (const o of lampLabels) o.visible = inHall(me.root.position.z);
 
   sendT += dt;
@@ -1596,6 +1786,7 @@ function frame() {
   updateSmoke(dt);
   updateSticks();
   const t = clock.elapsedTime;
+  pondTick?.(dt);
   for (const l of world.lanterns) l.rotation.z = Math.sin(t * 0.8 + l.userData.swing) * 0.04;
   for (const f of flames) {
     const k = 1 + Math.sin(t * 13 + f.seed) * 0.07 + Math.sin(t * 29 + f.seed * 2) * 0.05 + Math.sin(t * 61 + f.seed) * 0.03;
@@ -1621,8 +1812,6 @@ function frame() {
 }
 frame();
 document.fonts?.ready.then(() => {});
-const loading = $('#loading');
-setTimeout(() => { loading.style.opacity = 0; setTimeout(() => loading.remove(), 900); }, 300);
 
 // debug handle for testing in the console
 // ---------------- light-bake export (dev only: run __temple.exportBake() in the console) ----------------
@@ -1681,13 +1870,21 @@ async function exportBake() {
 // The static temple is replaced by the baked copy. Its materials keep live reflections (env + specular)
 // but take diffuse light only from the lightmap, so nothing is lit twice.
 const LM_GAIN = 3.3 * Math.PI;            // lightmaps are stored as value/4; three divides diffuse by π
-function bakedMaterial(mat, lm) {
+// The bake was lit by amber lamps. For a calmer, daylit hall the baked light is pulled toward a neutral white
+// (`neutral`, 0..1), lifted a little and given a soft floor so dark corners don't fall below ~15% of the walls.
+const LM_LOOK = { hall: { neutral: 0.88, lift: 1.15, floor: 0.22 }, out: { neutral: 0.3, lift: 1.0, floor: 0.0 } };
+function bakedMaterial(mat, lm, look = LM_LOOK.out) {
   const m2 = mat.clone();
   m2.lightMap = lm; m2.lightMapIntensity = LM_GAIN; m2.envMapIntensity = 0.5;
   m2.onBeforeCompile = (sh) => {
     sh.fragmentShader = sh.fragmentShader.replace('#include <lights_fragment_maps>',
-      'irradiance = vec3(0.0); reflectedLight.directDiffuse = vec3(0.0);\n#include <lights_fragment_maps>');
+      `irradiance = vec3(0.0); reflectedLight.directDiffuse = vec3(0.0);
+       #include <lights_fragment_maps>
+       float lmY = dot(irradiance, vec3(0.2126, 0.7152, 0.0722));
+       irradiance = mix(irradiance, vec3(lmY) * vec3(1.0, 0.975, 0.94), ${look.neutral.toFixed(2)}) * ${look.lift.toFixed(2)}
+                  + vec3(0.97, 0.98, 1.0) * ${look.floor.toFixed(2)};`);
   };
+  m2.customProgramCacheKey = () => 'baked-' + look.neutral + look.floor;
   return m2;
 }
 const NO_BAKE = new URLSearchParams(location.search).has('nobake');
@@ -1706,20 +1903,124 @@ async function loadBaked() {
   ['hall', 'out'].forEach((n, i) => { const t = lms[i]; t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.channel = 1; LM[n] = t; });
   const hide = [];
   scene.traverse((o) => { if (o.isMesh && bakeRole(o) === 'bake') hide.push(o); });
+  // Each baked copy follows its live twin (matched by position): the twin's current material, and hidden if the twin
+  // is hidden. Lightmaps hold light only, so restyling or removing pieces in code needs no rebake.
+  const centre = (o) => { o.geometry.computeBoundingBox(); return o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld).getCenter(new THREE.Vector3()); };
+  const shown = (o) => { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true; };
+  const twins = [];
+  scene.updateMatrixWorld(true);
+  scene.traverse((o) => {
+    if (!o.isMesh || o.isInstancedMesh || o.material?.isMeshBasicMaterial || o.geometry?.type === 'TubeGeometry') return;
+    let role = null; for (let p = o; p && !role; p = p.parent) role = p.userData.role;
+    if (!role || role === 'bake') twins.push({ c: centre(o), o, on: shown(o) });
+  });
   hide.forEach((o) => (o.visible = false));
-  // the bake still holds the code-built fruit and vases: drop those copies (matched by position)
-  const near = (o) => { const c = new THREE.Box3().setFromObject(o).getCenter(new THREE.Vector3()); return standIns.some((s) => s.distanceTo(c) < 0.03); };
-  const drop = []; g.scene.updateMatrixWorld(true); g.scene.traverse((o) => { if (o.isMesh && near(o)) drop.push(o); });
-  drop.forEach((o) => (o.visible = false));
+  g.scene.updateMatrixWorld(true);
   g.scene.traverse((o) => {
     if (!o.isMesh) return;
-    const which = o.userData.lm || o.parent?.userData.lm;
-    if (LM[which]) o.material = bakedMaterial(o.material, LM[which]);
+    const which = o.userData.lm || o.parent?.userData.lm, c = centre(o);
+    let twin = null, best = 0.03;
+    for (const t of twins) { const d = t.c.distanceTo(c); if (d < best) { best = d; twin = t; } }
+    if (twin) { o.material = twin.o.material; if (!twin.on) o.visible = false; }
+    if (LM[which]) o.material = bakedMaterial(o.material, LM[which], LM_LOOK[which]);
     o.castShadow = true; o.receiveShadow = false;
   });
   g.scene.userData.role = 'skip';
   scene.add(g.scene);
 }
-loadBaked().catch((e) => console.warn('baked lighting unavailable', e));
+const bakeDone = loadBaked().catch((e) => console.warn('baked lighting unavailable', e));
+
+// ---------------- intro: you arrive in the clouds; when everything has loaded they part ----------------
+// The camera waits high above the approach inside soft clouds, then glides down to its place behind your monk
+// at the temple entrance while the clouds drift apart. Nothing is visible until all of it is ready.
+const INTRO = { from: new THREE.Vector3(0, 30, 82), look: new THREE.Vector3(0, 6, 20), dur: 7 };
+{
+  // soft cloud puffs: fractal noise under a round falloff, lit from above (a few variants for variety)
+  const puff = (seed) => canvasTex(256, 256, (c, w, h) => {
+    let s = seed; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+    const G = 9, grid = Array.from({ length: 5 }, (_, o) => { const n = G << o; return Array.from({ length: (n + 1) * (n + 1) }, rnd); });
+    const noise = (x, y) => {
+      let v = 0, a = 0.5;
+      for (let o = 0; o < 5; o++) {
+        const n = G << o, gx = x * n, gy = y * n, ix = Math.floor(gx), iy = Math.floor(gy), fx = gx - ix, fy = gy - iy, g = grid[o];
+        const at = (i, j) => g[Math.min(n, j) * (n + 1) + Math.min(n, i)], sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+        v += a * ((at(ix, iy) * (1 - sx) + at(ix + 1, iy) * sx) * (1 - sy) + (at(ix, iy + 1) * (1 - sx) + at(ix + 1, iy + 1) * sx) * sy); a *= 0.5;
+      }
+      return v;
+    };
+    const img = c.createImageData(w, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const u = x / w, v = y / h, r = Math.hypot(u - 0.5, (v - 0.55) * 1.25) * 2;
+      const fall = Math.max(0, 1 - r * r) ** 1.5, d = noise(u, v);
+      const a = Math.min(1, Math.max(0, (d * 1.4 - 0.45) * 2.6) * fall), shade = 0.52 + 0.48 * (1 - v) ** 1.2 + (d - 0.5) * 0.2;   // sunlit tops, blue-grey bellies
+      const i = (y * w + x) * 4; img.data[i] = 255 * shade; img.data[i + 1] = 252 * shade; img.data[i + 2] = 246 * Math.min(1, shade + 0.06); img.data[i + 3] = 255 * a;
+    }
+    c.putImageData(img, 0, 0);
+  });
+  const maps = [puff(11), puff(29), puff(47)];
+  let s = 99; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  const group = new THREE.Group(); group.userData.role = 'skip';
+  const dir = INTRO.look.clone().sub(INTRO.from).normalize(), side = new THREE.Vector3(1, 0, 0), up = side.clone().cross(dir).normalize();
+  const n = isMobile ? 90 : 150;
+  for (let i = 0; i < n; i++) {
+    const mat = new THREE.SpriteMaterial({ map: maps[i % 3], transparent: true, depthWrite: false, fog: false, opacity: 0.5 + rnd() * 0.35 });
+    const sp = new THREE.Sprite(mat);
+    // a thick bank ahead of the camera (it hides the world while it loads), thinner further down the flight path
+    const along = i < n * 0.55 ? 7 + rnd() * 18 : 22 + rnd() * 45;      // a layered bank: separate puffs, no gaps through it
+    const spread = 2.5 + along * 0.5;
+    const p = INTRO.from.clone().addScaledVector(dir, along).addScaledVector(side, (rnd() - 0.5) * 2 * spread).addScaledVector(up, (rnd() - 0.5) * 1.4 * spread);
+    sp.position.copy(p); sp.scale.setScalar(4 + rnd() * 6 + along * 0.2);
+    mat.rotation = rnd() * 6.28;
+    sp.userData = { p0: p.clone(), side: Math.sign(p.x - INTRO.from.x) || (rnd() < 0.5 ? -1 : 1), o0: mat.opacity, drift: rnd() * 6.28 };
+    sp.renderOrder = 10;
+    group.add(sp);
+  }
+  scene.add(group);
+  intro.clouds = group;
+}
+let introLook = new THREE.Vector3();
+function introTick(dt) {
+  if (!intro.on || !intro.clouds) return;           // the first frame runs before the clouds are built
+  const t = clock.elapsedTime;
+  if (intro.parting) intro.k = Math.min(1, intro.k + dt / INTRO.dur);
+  const k = intro.k, e = k * k * k * (k * (6 * k - 15) + 10);          // smootherstep: a slow start and a soft landing
+  // clouds drift while you wait; as they part each one slides off to its side and thins away
+  for (const c of intro.clouds.children) {
+    const u = c.userData, open = Math.min(1, k * 1.6) ** 1.6;
+    c.position.copy(u.p0);
+    c.position.x += Math.sin(t * 0.12 + u.drift) * 3 + t * 0.25 * u.side + u.side * open * (30 + Math.abs(u.p0.x - INTRO.from.x));   // a slow, visible drift
+    c.position.y += Math.sin(t * 0.09 + u.drift) * 0.8 + open * 6;
+    c.material.rotation += dt * 0.01 * u.side;
+    c.material.opacity = u.o0 * (1 - THREE.MathUtils.smoothstep(k, 0.35, 0.85));
+  }
+  // camera: from the sky to where the follow camera is this frame (followCam ran just before, snapped)
+  const target = camera.position.clone(), look = camLook.clone();
+  const sway = new THREE.Vector3(Math.sin(t * 0.11) * 1.2, Math.sin(t * 0.09) * 0.5, 0).multiplyScalar(1 - e);
+  camera.position.lerpVectors(INTRO.from, target, e).add(sway);
+  introLook.lerpVectors(INTRO.look, look, e);
+  camera.lookAt(introLook);
+  if (k >= 1) {
+    intro.on = false;
+    scene.remove(intro.clouds); intro.clouds.children.forEach((c) => c.material.dispose());
+    document.body.classList.remove('intro');
+    $('#intro').remove();
+  }
+}
+
+// Wait until no loader has been busy for half a second (loads chain: a model's callback can start another),
+// plus the baked lighting swap, then compile every shader so nothing hitches as the clouds part.
+async function partClouds() {
+  const quiet = () => new Promise((res) => {
+    const tick = () => (loadState.total && loadState.done >= loadState.total ? setTimeout(() => (loadState.done >= loadState.total ? res() : tick()), 500) : setTimeout(tick, 150));
+    tick();
+  });
+  await Promise.race([Promise.all([quiet(), bakeDone]).then(quiet), new Promise((res) => setTimeout(res, 30000))]);   // never keep anyone in the clouds
+  $('#gateBar').style.width = '100%';
+  try { await renderer.compileAsync(scene, camera); } catch {}
+  await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+  intro.parting = true;
+  $('#intro').classList.add('out');
+}
+partClouds();
 
 window.__temple = { sfx, geomStamp, exportStamp, composer, get floorMirror() { return floorMirror; }, exportBake, me, walkTo, ACTS, peers, scene, camera, controls, renderer };
