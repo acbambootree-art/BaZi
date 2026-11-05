@@ -43,6 +43,7 @@ const TX = {
   acts: [['拜拜', '坐下', '上香', '擲筊', '求籤', '點燈', '木魚'], ['Pray', 'Kneel', 'Incense', 'Blocks', 'Fortune', 'Lamp', 'Muyu']],
   muyuHint: ['再點「木魚」或按空白鍵，敲一聲', 'Tap Muyu again (or press Space) to strike'],
   kneel: ['跪在拜墊上，靜靜待一會兒', 'Kneeling on the cushion. Stay as long as you like.'],
+  bench: ['坐在池邊，看看水、看看魚。想走時動一下就好', 'Sitting by the pond. Watch the water and the koi. Move whenever you like to get up.'],
   toBurner: ['走到天公爐前…', 'Walking to the Heaven burner…'],
   incenseDone: [(n) => `香已插上，心意神明收到了（第 ${n} 炷）`, (n) => `Your incense is offered. The gods received it (stick no. ${n}).`],
   copied: ['已複製，貼給朋友吧', 'Link copied. Paste it to a friend.'],
@@ -490,6 +491,92 @@ Promise.all(['mandarin', 'apple', 'pineapple', 'bananas', 'vase', 'mum', 'orchid
   })
   .catch((e) => console.warn('offerings unavailable', e));
 
+// ---------------- the close-up trees: a real 3D broadleaf (Poly Haven "Jacaranda Tree", CC0, leaves reduced) ----------------
+// replaces the crossed-card stand-ins that read as cardboard up close
+gl.load('/temple/assets/env/broadleaf.glb', (g) => {
+  const cards = scene.getObjectByName('nearTrees'); if (!cards) return;
+  g.scene.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = true; o.receiveShadow = true;
+    if (/leaves/.test(o.material.name)) {                 // thin leaves: lit from both sides, a little translucent-bright
+      o.material.transparent = false; o.material.depthWrite = true; o.material.side = THREE.DoubleSide;
+      o.material.color.setRGB(1.5, 1.6, 1.35); o.material.roughness = 0.75;
+      o.material.emissive = new THREE.Color(0x1c2a12); o.material.emissiveIntensity = 1;
+    }
+  });
+  const box = new THREE.Box3().setFromObject(g.scene), h = box.max.y - box.min.y;
+  cards.userData.spots.forEach(([x, z, sc], i) => {
+    const t = g.scene.clone(); t.scale.setScalar((sc * 4.4) / h);           // about as tall as the card tree it replaces
+    t.position.set(x, -box.min.y * t.scale.y, z); t.rotation.y = i * 1.9;
+    t.userData.role = 'skip'; scene.add(t);
+  });
+  cards.visible = false;
+}, undefined, () => {});
+
+// ---------------- bamboo groves (Guanyin's 紫竹林): "Free Bamboo Set" by JonhGillessen, CC BY 4.0 ----------------
+// The set holds 9 whole plants (culm + branches + leaf cards). Each becomes a template; hundreds of stalks are drawn as
+// instances in three groves: lining the approach path, framing the plaza, and rising behind the courtyard walls.
+gl.load('/temple/assets/env/bamboo.glb', (g) => {
+  g.scene.updateMatrixWorld(true);
+  const meshes = []; g.scene.traverse((o) => { if (o.isMesh) meshes.push(o); });
+  const box = (o) => new THREE.Box3().setFromObject(o);
+  const culms = meshes.filter((o) => /bamboo(Mat|old)/.test(o.material.name) && box(o).getSize(new THREE.Vector3()).y > 20);
+  const plants = culms.map((c) => {
+    const cb = box(c), base = new THREE.Vector3((cb.min.x + cb.max.x) / 2, cb.min.y, (cb.min.z + cb.max.z) / 2);
+    const parts = meshes.filter((o) => { const b = box(o), m = b.getCenter(new THREE.Vector3()); return Math.hypot(m.x - base.x, m.z - base.z) < 4 && b.max.y > cb.min.y + 5; });
+    let top = 0;
+    const geos = parts.map((o) => {
+      const geo = o.geometry.clone();
+      for (const n of ['position', 'normal']) {                     // dequantize before moving (meshopt-packed)
+        const at = geo.attributes[n]; if (!at || at.array instanceof Float32Array) continue;
+        const f = new Float32Array(at.count * at.itemSize);
+        for (let i = 0; i < at.count; i++) for (let k = 0; k < at.itemSize; k++) f[i * at.itemSize + k] = at.getComponent(i, k);
+        geo.setAttribute(n, new THREE.BufferAttribute(f, at.itemSize));
+      }
+      geo.applyMatrix4(o.matrixWorld); geo.translate(-base.x, -base.y, -base.z);
+      geo.computeBoundingBox(); top = Math.max(top, geo.boundingBox.max.y);
+      const mat = o.material.clone();
+      if (mat.transparent) { mat.transparent = false; mat.alphaTest = 0.45; mat.depthWrite = true; mat.side = THREE.DoubleSide; }
+      return { geo, mat, culm: o === c };
+    });
+    return { geos, top };
+  });
+  if (!plants.length) return;
+  // where: dense bands, seeded so every visitor sees the same grove
+  let seed = 1717; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const spots = [];
+  const band = (n, x0, x1, z0, z1) => { for (let i = 0; i < n; i++) spots.push([x0 + rnd() * (x1 - x0), z0 + rnd() * (z1 - z0)]); };
+  const many = isMobile ? 0.45 : 0.8;                    // ponytail: fixed density; add distance-based thinning if phones struggle
+  for (const sx of [-1, 1]) {
+    band(40 * many, sx * 6.5, sx * 13, 46, 72);        // lining the approach path
+    band(26 * many, sx * 18.5, sx * 23, 20, 44);       // framing the plaza
+    band(38 * many, sx * 18.2, sx * 23.5, -40, 18);    // behind the courtyard walls
+  }
+  const keep = spots.filter(([x, z]) => !inPond(x, z, 1.6) && Math.hypot(x - 13, z - 31) > 2.5 && Math.hypot(x + 12, z - 30) > 2.5);
+  // each spot is a little clump of 2–3 culms of mixed heights, leaning slightly
+  const per = plants.map(() => []);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3();
+  for (const [x, z] of keep) {
+    const n = 2 + (rnd() < 0.4 ? 1 : 0);
+    for (let k = 0; k < n; k++) {
+      const pi = (rnd() * plants.length) | 0, h = 7.5 + rnd() * 4.5, s = h / plants[pi].top;
+      e.set((rnd() - 0.5) * 0.12, rnd() * 6.28, (rnd() - 0.5) * 0.12);
+      per[pi].push(m4.compose(v.set(x + (rnd() - 0.5) * 1.2, -0.05, z + (rnd() - 0.5) * 1.2), q.setFromEuler(e), sc.setScalar(s)).clone());
+    }
+  }
+  const purple = new THREE.Color(0x6a4d5e);              // 紫竹: a share of the culms in purple-black
+  plants.forEach((pl, pi) => {
+    const list = per[pi]; if (!list.length) return;
+    for (const { geo, mat, culm } of pl.geos) {
+      const im = new THREE.InstancedMesh(geo, mat, list.length);
+      list.forEach((m, i) => { im.setMatrixAt(i, m); if (culm) im.setColorAt(i, rnd() < 0.3 ? purple : new THREE.Color(1, 1, 1)); });
+      im.castShadow = false; im.receiveShadow = true; im.userData.role = 'skip';
+      im.computeBoundingSphere();
+      scene.add(im);
+    }
+  });
+}, undefined, () => {});
+
 // ---------------- 放生池: a stone-edged lotus pond on the plaza, right of the approach ----------------
 const POND = { x: 11.6, z: 34.0, rx: 4.3, rz: 2.5, y: 0.3 };
 const pondK = (a) => 1 + 0.07 * Math.sin(3 * a + 1.3) + 0.04 * Math.sin(5 * a + 0.4);           // organic, not an ellipse
@@ -667,6 +754,58 @@ function ring(url, list, sink = 0, split = false, onParts) {
   ring('/temple/assets/env/fern.glb', ferns);
 }
 
+// ---------------- benches on the pond bank: sit and watch the water ----------------
+// Two old painted wooden benches (Poly Haven, CC0) face the pond. Tap one: your monk walks over and sits, and the
+// camera settles into a slow view across the water over his shoulder. Moving gets him up again.
+const BENCHES = [-1.9, 2.55].map((a) => {
+  const [x, z] = pondAt(a, 1.5);
+  return { x, z, yaw: Math.atan2(POND.x - x, POND.z - z) };     // facing the middle of the pond
+});
+const benchMeshes = [];
+gl.load('/temple/assets/pond/bench.glb', (g) => {
+  g.scene.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(g.scene), size = box.getSize(new THREE.Vector3());
+  const k = 1.5 / Math.max(size.x, size.z);
+  BENCHES.forEach((b, i) => {
+    const m = g.scene.clone(); m.scale.setScalar(k);
+    const c = box.getCenter(new THREE.Vector3());
+    m.position.set(-c.x * k, -box.min.y * k, -c.z * k);
+    const w = new THREE.Group(); w.add(m); w.position.set(b.x, 0, b.z); w.rotation.y = b.yaw + BENCH_YAW;
+    w.userData = { role: 'skip', bench: i };
+    w.traverse((o) => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; benchMeshes.push(o); o.userData.bench = i; } });
+    scene.add(w);
+    b.seatY = size.y * k * SEAT_FRAC;
+  });
+}, undefined, () => {});
+const BENCH_YAW = 0, SEAT_FRAC = 0.45;            // model faces +z; its seat is a little under half its height
+let seated = null;                                // the bench you're sitting on, or null
+async function sitBench(i) {
+  const b = BENCHES[i];
+  if (busy) return;
+  setBusy(true);
+  try {
+    const fx = Math.sin(b.yaw), fz = Math.cos(b.yaw);
+    await walkTo(b.x + fx * 0.75, b.z + fz * 0.75, b.yaw + Math.PI);   // step up to the bench, back to it
+    await wait(0.2);
+    await animate(0.6, (k) => {                                          // turn and sit down onto the seat
+      me.root.position.x = b.x + fx * 0.75 * (1 - k); me.root.position.z = b.z + fz * 0.75 * (1 - k);
+      me.seatY = (b.seatY || 0.45) * smooth(k);
+      me.root.rotation.y = b.yaw + Math.PI * (1 - smooth(k));
+    });
+    me.root.rotation.y = b.yaw; me.kneel = true; seated = b;
+    toast(t('bench'), 4200);
+  } finally { setBusy(false); }
+}
+// over-the-shoulder view across the pond, breathing very slowly
+function pondView(t) {
+  if (!seated) return null;
+  if (me.walking) { seated = null; me.seatY = 0; return null; }      // got up
+  const b = seated, fx = Math.sin(b.yaw), fz = Math.cos(b.yaw), rx = fz, rz = -fx;
+  const pos = new THREE.Vector3(b.x - fx * 2.8 + rx * 1.1 + Math.sin(t * 0.07) * 0.25, 2.35 + Math.sin(t * 0.05) * 0.06, b.z - fz * 2.8 + rz * 1.1);
+  const look = new THREE.Vector3(POND.x + Math.sin(t * 0.04) * 0.8, POND.y - 0.6, POND.z + 0.4);
+  return { pos, look };
+}
+
 function scatter(url, count, place, scaleRange, role = 'skip') {
   gl.load(url, (g) => {
     const parts = []; g.scene.updateMatrixWorld(true);
@@ -812,21 +951,42 @@ function updateSmoke(dt) {
 const luSmoke = emitter(world.luPos.clone().add(new THREE.Vector3(0, 0.4, 0)), 2.5, 0.8);
 emitter(world.tableBurnerPos.clone(), 1.2, 0.2);
 
-// incense sticks planted in the 天公爐 (burn down over 3 min)
+// incense sticks planted in the 天公爐 (burn down over 3 min). A real joss stick: a pale bamboo handle, a brown
+// coat of incense paste that burns down from the top, a short cap of grey ash and a glowing ember point.
 const sticks = [];
-const stickGeo = new THREE.CylinderGeometry(0.012, 0.012, 1, 5);
-const stickMat = new THREE.MeshStandardMaterial({ color: 0x8a2a1a });
-const emberMat = new THREE.MeshBasicMaterial({ color: 0xff6a20 });
+const unitRod = (r) => new THREE.CylinderGeometry(r, r, 1, 6).translate(0, 0.5, 0);   // grows upward from y=0
+const HANDLE = 0.24, BODY = 0.52;                                 // metres (the 天公爐 is a giant, so are its sticks)
+const stickParts = {
+  handle: unitRod(0.0055), body: unitRod(0.0095), ash: unitRod(0.0085),
+  ember: new THREE.SphereGeometry(0.009, 8, 6),
+};
+const bambooMat = new THREE.MeshStandardMaterial({ color: 0xcaa874, roughness: 0.7 });
+const pasteMat = new THREE.MeshStandardMaterial({ color: 0x40362e, roughness: 1 });   // sandalwood-and-charcoal brown
+const ashMat = new THREE.MeshStandardMaterial({ color: 0x9e9890, roughness: 1 });
+const emberMat = new THREE.MeshBasicMaterial({ color: 0xff7a30 });
+function jossStick(scale = 1) {
+  const g = new THREE.Group();
+  const handle = new THREE.Mesh(stickParts.handle, bambooMat); handle.scale.y = HANDLE * scale;
+  const body = new THREE.Mesh(stickParts.body, pasteMat); body.position.y = HANDLE * scale;
+  const ash = new THREE.Mesh(stickParts.ash, ashMat); ash.scale.y = 0.012 * scale;
+  const ember = new THREE.Mesh(stickParts.ember, emberMat); ember.scale.setScalar(scale);
+  g.add(handle, body, ash, ember);
+  g.userData = { body, ash, ember, scale };
+  setBurn(g, 0);
+  return g;
+}
+function setBurn(g, k) {                            // k: 0 fresh .. 1 burnt down to the handle
+  const { body, ash, ember, scale } = g.userData, L = BODY * scale * (1 - k * 0.92);
+  body.scale.y = L;
+  ash.position.y = HANDLE * scale + L;
+  ember.position.y = ash.position.y + 0.012 * scale;
+}
 function plantIncense(n = 3) {
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, r = Math.random() * 0.55;
-    const g = new THREE.Group();
-    const st = new THREE.Mesh(stickGeo, stickMat); st.position.y = 0.5;
-    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 6), emberMat); tip.position.y = 1;
-    g.add(st, tip);
+    const g = jossStick();
     g.position.set(world.luPos.x + Math.cos(a) * r, world.luPos.y, world.luPos.z + Math.sin(a) * r);
     g.rotation.set((Math.random() - 0.5) * 0.2, 0, (Math.random() - 0.5) * 0.2);
-    g.scale.y = 0.75;
     g.userData.born = performance.now();
     scene.add(g); sticks.push(g);
   }
@@ -838,9 +998,45 @@ function updateSticks() {
   for (let i = sticks.length - 1; i >= 0; i--) {
     const k = (now - sticks[i].userData.born) / 180000;
     if (k >= 1) { scene.remove(sticks[i]); sticks.splice(i, 1); continue; }
-    sticks[i].scale.y = 0.75 * (1 - k * 0.8);
+    setBurn(sticks[i], k);
   }
   luSmoke.rate = Math.min(14, 2.5 + sticks.length * 0.35);
+}
+
+// thin smoke wisps rising from each burning tip: narrow at the ember, curling and widening as they climb
+const wisps = [];
+const wispTex = canvasTex(64, 64, (g, w) => {          // very soft round puff: no edge anywhere
+  const grd = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
+  grd.addColorStop(0, 'rgba(255,255,255,0.65)'); grd.addColorStop(0.45, 'rgba(255,255,255,0.28)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, w, w);
+});
+const tipPos = new THREE.Vector3();
+function emitWisp(ember, acc, dt, rate = 16) {
+  acc.v = (acc.v || 0) + rate * dt;
+  while (acc.v > 1 && wisps.length < 500) {
+    acc.v--;
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: wispTex, color: 0xc8ccd2, transparent: true, depthWrite: false, opacity: 0 }));   // incense smoke is a soft blue-grey
+    ember.getWorldPosition(s.position);
+    s.userData = { age: 0, life: 2.4 + Math.random() * 1.2, ph: Math.random() * 6.28, x0: s.position.x, z0: s.position.z };
+    scene.add(s); wisps.push(s);
+  }
+}
+function updateWisps(dt) {
+  // the newest sticks in the urn, and incense held by anyone mid-offering
+  for (const g of sticks.slice(-12)) emitWisp(g.userData.ember, g.userData, dt);
+  for (const pg of [me, ...peers.values()]) if (pg.incense?.visible) for (const e of pg.incenseEmbers) emitWisp(e, e.userData, dt, 12);
+  for (let i = wisps.length - 1; i >= 0; i--) {
+    const s = wisps[i], u = s.userData;
+    u.age += dt;
+    const k = u.age / u.life;
+    s.position.y += (0.18 + u.age * 0.12) * dt;                     // rises, a little faster as it warms away
+    const sway = Math.sin(u.age * 1.7 + u.ph) * 0.05 * u.age + Math.sin(u.age * 0.6 + u.ph * 2) * 0.03 * u.age;
+    s.position.x = u.x0 + sway; s.position.z = u.z0 + Math.cos(u.age * 1.3 + u.ph) * 0.03 * u.age;
+    const w = 0.02 + u.age * 0.07;
+    s.scale.set(w, w * 1.6, 1);                                       // many small overlapping puffs read as one soft thread
+    s.material.opacity = Math.min(1, k * 8) * (1 - k) ** 1.4 * 0.9;
+    if (k >= 1) { scene.remove(s); s.material.dispose(); wisps.splice(i, 1); }
+  }
 }
 
 // ---------------- pilgrims (chibi avatars) ----------------
@@ -887,6 +1083,8 @@ function actKeys(act, kneeling) {
     case 'shake': return [[0, base], [0.3, 'palms'], [1.5, 'palms'], [1.8, base]];
     case 'strike': return [[0, base], [0.5, base]];
     case 'throw': return [[0, base], [0.3, 'palms'], [0.48, 'wind'], [0.62, 'release'], [0.9, 'release'], [1.25, base]];
+    case 'jiaoHold': return [[0, base], [0.45, 'palms'], [2.6, 'palms']];                                 // blocks held at the chest
+    case 'jiaoPray': return [[0, 'palms'], [0.6, 'high'], [1.2, 'bowHigh'], [1.9, 'high'], [2.5, 'bowHigh'], [3.1, 'high'], [3.4, 'palms']];
   }
   return null;
 }
@@ -949,9 +1147,10 @@ class Pilgrim {
     });
     // incense sticks held in the right hand
     this.incense = new THREE.Group();
+    this.incenseEmbers = [];
     for (let i = -1; i <= 1; i++) {
-      this.incense.add(M(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4), S(0x8a2a1a), i * 0.03, -0.05, 0));
-      this.incense.add(M(new THREE.SphereGeometry(0.016, 6, 6), emberMat, i * 0.03, 0.2, 0));
+      const st = jossStick(0.62); st.position.set(i * 0.03, -0.3, 0); st.rotation.z = -i * 0.04;
+      this.incense.add(st); this.incenseEmbers.push(st.userData.ember);
     }
     this.incense.position.set(-0.04, -0.2, 0.03); this.incense.visible = false;
     // mallet (for the wooden fish), held in the right hand
@@ -1043,7 +1242,7 @@ class Pilgrim {
 const F = HALL.floor, DOORS = [-6, 0, 6], GATE = [19.4, 24.6];
 const OBSTACLES = [
   [0, 8, 2.4],                                                         // 天公爐 (planPath relies on index 0)
-  ...[-11, -5.5, 5.5, 11].flatMap((x) => [-8, -14, -20, -26].map((z) => [x, z, z === -8 && Math.abs(x) < 6 ? 1.35 : 0.8])),   // scanned dragon pillars have wide bases
+  ...[-11, -5.5, 5.5, 11].flatMap((x) => [-8, -14].map((z) => [x, z, z === -8 && Math.abs(x) < 6 ? 1.35 : 0.8])),   // scanned dragon pillars have wide bases; no columns nearer the altar
   ...[-10, -7.4, -4.6, -1.6, 1.6, 4.6, 7.4, 10].map((x) => [x, 24.2, Math.abs(x) < 2 ? 0.7 : 0.5]),
   [-12, 30, 1.3], [13, 31, 1.1], [-13.5, 12, 1.1],
   [13.5, -2, 0.8],
@@ -1051,6 +1250,7 @@ const OBSTACLES = [
   [-3.1, 26.2, 1.1], [3.1, 26.2, 1.1],                                  // stone lions
   ...[28, 33].flatMap((z) => [[-6, z, 0.3], [6, z, 0.3]]),
 ];
+BENCHES.forEach((b) => OBSTACLES.push([b.x, b.z, 0.6]));            // you walk round the pond benches, not through them
 const inHall = (z) => z < HALL.front;
 const nearestDoor = (x) => DOORS.reduce((a, b) => (Math.abs(b - x) < Math.abs(a - x) ? b : a));
 function clampWalk(p) {
@@ -1249,6 +1449,8 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   ray.setFromCamera(ndc, camera);
   const cush = ray.intersectObject(world.cushions.mesh)[0];
   if (cush) { hideHint(); sitAt(cush.instanceId); return; }
+  const bench = benchMeshes.length && ray.intersectObjects(benchMeshes)[0];
+  if (bench) { hideHint(); sitBench(bench.object.userData.bench); return; }
   if (ray.intersectObject(muyu, true)[0]) { hideHint(); ACTS.muyu(); return; }
   const hit = new THREE.Vector3();
   let ok = ray.ray.intersectPlane(plane1, hit);
@@ -1316,7 +1518,15 @@ function nearestCushion() {
 }
 
 // ---------------- follow camera ----------------
+// scripted ritual shots (moon blocks): while set, the camera glides to director.pos looking at director.look
+let director = null;
 function followCam(dt, snap = false) {
+  if (director) {
+    const k = 1 - Math.exp(-dt * (director.speed || 2.2));
+    camera.position.lerp(director.pos, k); camLook.lerp(director.look, k);
+    controls.target.copy(camLook); camera.lookAt(camLook); cam.wasFraming = true;
+    return;
+  }
   const p = me.root.position;
   if (!cam.dragging && (me.walking || busy)) cam.yaw *= Math.exp(-dt * 2.4);   // swing back behind you as you move
   const yaw = me.root.rotation.y + cam.yaw, fx = Math.sin(yaw), fz = Math.cos(yaw);
@@ -1335,7 +1545,7 @@ function followCam(dt, snap = false) {
   let h = firstPerson ? eye : THREE.MathUtils.lerp(eye, ground + 1.7, Math.min(1, d / 2.6));
   // During a ritual facing the deity, step back along the line to the statue until the whole statue and its
   // halo fit on screen, and tilt to take in its full height. The camera height stays fixed: no floating.
-  const frame = deityFraming(p, ground);
+  const frame = pondView(clock.elapsedTime) || deityFraming(p, ground);
   if (frame) {
     if (snap || !cam.ready) { camera.position.copy(frame.pos); cam.ready = true; }
     else {
@@ -1448,6 +1658,47 @@ const JIAO = {
   yin: { name: TX.jiao.yin[+EN][0], text: TX.jiao.yin[+EN][1] },
 };
 const jiaoKind = (r) => (r[0] !== r[1] ? 'sheng' : r[0] ? 'xiao' : 'yin');
+// moon-block sequence for your own throw: (1) the two blocks held at your chest, (2) look up to the deity and pray,
+// (3) look down to the floor in front and throw — then lookAtBlocks() comes down over where they landed.
+const heldBlocks = (() => {
+  const g = new THREE.Group();
+  for (const sx of [-1, 1]) {
+    const b = new THREE.Mesh(blockGeo, blockMat);
+    b.scale.setScalar(0.85); b.rotation.set(0, sx * Math.PI / 2, Math.PI / 2); b.position.x = sx * 0.012;   // flat faces together, between the palms
+    g.add(b);
+  }
+  g.visible = false;
+  return g;
+})();
+async function jiaoShots(first) {
+  const p = me.root.position, ry = me.root.rotation.y, F0 = groundY(p.x, p.z);
+  const fwd = new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry)), side = new THREE.Vector3(Math.cos(ry), 0, -Math.sin(ry));
+  me.arms[1].el.add(heldBlocks); heldBlocks.position.set(0.03, -0.24, 0.06); heldBlocks.visible = true;
+  me.play('jiaoHold');
+  // (1) close on the hands holding the blocks
+  // in front of your hands, a little above and to the side, looking back at the blocks you're holding
+  await wait(0.5);
+  me.root.updateMatrixWorld(true);
+  const held = heldBlocks.getWorldPosition(new THREE.Vector3()), head = me.head.getWorldPosition(new THREE.Vector3());
+  const out = held.clone().sub(head).setY(0).normalize(), across = new THREE.Vector3(-out.z, 0, out.x);
+  director = { pos: held.clone().addScaledVector(out, 0.75).addScaledVector(across, 0.3).add(new THREE.Vector3(0, 0.35, 0)), look: held, speed: 2.4 };
+  await wait(first ? 2.4 : 1.4);
+  // (2) low behind you, looking up past your head to the deity while you pray
+  const top = DEITY ? new THREE.Vector3(DEITY.x, DEITY.base + (DEITY.top - DEITY.base) * 0.62, DEITY.z) : p.clone().addScaledVector(fwd, 8).setY(F0 + 6);
+  director = { pos: p.clone().addScaledVector(fwd, -1.15).addScaledVector(side, 0.35).setY(F0 + 0.75), look: top, speed: 1.6 };
+  me.play('jiaoPray'); await wait(first ? 3.3 : 2.4);
+  // (3) high over the shoulder, looking down at the floor where they'll fall
+  const land = p.clone().addScaledVector(fwd, 0.95).setY(F0);
+  director = { pos: p.clone().addScaledVector(fwd, -0.35).addScaledVector(side, -0.55).setY(F0 + 2.0), look: land, speed: 2.2 };
+  await wait(0.9);
+  heldBlocks.visible = false;
+}
+function lookAtBlocks() {
+  if (!thrown.length) return;
+  const c = thrown.reduce((a, b) => a.add(b.position), new THREE.Vector3()).multiplyScalar(1 / thrown.length);
+  const ry = me.root.rotation.y, side = new THREE.Vector3(Math.cos(ry), 0, -Math.sin(ry));
+  director = { pos: c.clone().addScaledVector(side, -0.95).add(new THREE.Vector3(0, 1.05, 0)), look: c, speed: 1.8 };   // from the side: your head stays out of the way
+}
 async function throwBlocks(who, r) {
   if (who === me) clearBlocks();
   who.play('throw');
@@ -1563,23 +1814,23 @@ const ACTS = {
       <div class="row"><button class="btn ghost" data-v="no">${t('no')}</button><button class="btn primary" data-v="go">${t('throw')}</button></div>`);
     if (v !== 'go') return;
     await toAltar();
-    me.play('palms'); await wait(1.6);
-    let streak = 0;
-    for (;;) {
+    let streak = 0, first = true;
+    try { for (;;) {
       const r = [Math.random() < 0.5, Math.random() < 0.5];
+      await jiaoShots(first); first = false;
       net.act('jiao', r);
       await throwBlocks(me, r);
       const kind = jiaoKind(r);
       streak = kind === 'sheng' ? streak + 1 : 0;
-      await wait(0.4);
+      lookAtBlocks();
+      await wait(1.6);
       const strong = streak >= 3 ? `<p>${t('strong')}</p>` : streak > 0 ? `<p class="muted">${t('streak', streak)}</p>` : '';
       const { v: again } = await modal(`
         <div class="result">${JIAO[kind].name}</div>
         <p style="text-align:center">${JIAO[kind].text}</p>${strong}
         <div class="row"><button class="btn ghost" data-v="done">${t('thanks')}</button><button class="btn primary" data-v="again">${t('again')}</button></div>`);
       if (again !== 'again') break;
-      me.play('palms'); await wait(1);
-    }
+    } } finally { director = null; heldBlocks.visible = false; }   // always hand the camera back
     toast('🙏');
   },
 
@@ -1684,8 +1935,8 @@ $('#credits').onclick = () => modal(`
   <p class="muted">${EN ? 'Statues, paintings and textures are public-domain (CC0) works from' : '佛像、畫作與材質為公共領域（CC0）作品，來自'} Minneapolis Institute of Art, Cleveland Museum of Art, Poly Haven.</p>
   <p class="muted">${EN ? 'Stone lions, dragon pillars and drum stones' : '石獅、龍柱、抱鼓石'}: "Stone Big Lion 01", "Stone Dragon Pillar 02", "Stone Old Sculpture Drum 01" by zhengzhangxun (Sketchfab), CC BY 4.0.</p>
   <p class="muted">${EN ? 'Offerings' : '供品'}: "Mandarin Scan", "Pineapple Scan" by Franco Pizzani; "White Orchid" by gottalovehana; "Chrystanthemum flower" by Lassi Kaukonen (recoloured) — Sketchfab, CC BY 4.0.</p>
+  <p class="muted">${EN ? 'Bamboo' : '竹林'}: "Free Bamboo Set" by JonhGillessen — Sketchfab, CC BY 4.0.</p>
   <p class="muted">${EN ? 'Pond' : '放生池'}: "Lilypads" by sligocreatures; "Water Lily, Nymphaea cv." by ffish.asia / floraZia.com; "Koi Fish" by SDPM Esare; "Cattails" by AlkaliDragon — Sketchfab, CC BY 4.0.</p>
-  <p class="muted">${EN ? 'Wooden fish sound' : '木魚聲'}: "Mokugyo drum sounds" by George_Papargyris (Freesound), CC BY 4.0.</p>
   <div class="row"><button class="btn ghost" data-v="ok">${t('ok')}</button></div>`);
 
 document.querySelector('#bar').addEventListener('click', async (e) => {
@@ -1771,7 +2022,7 @@ function frame() {
     if (k >= 1) { tweens.delete(tw); tw.res(); }
   }
   locomotion(dt);
-  me.root.position.y = groundY(me.root.position.x, me.root.position.z) + (me.kn || 0) * 0.22;
+  me.root.position.y = groundY(me.root.position.x, me.root.position.z) + (me.kn || 0) * 0.22 + (me.seatY || 0);
   me.update(dt);
   // camera follows
   followCam(dt, intro.on);           // during the intro: where the camera will end up (snapped), the flight eases toward it
@@ -1785,6 +2036,7 @@ function frame() {
   updatePeers(dt);
   updateSmoke(dt);
   updateSticks();
+  updateWisps(dt);
   const t = clock.elapsedTime;
   pondTick?.(dt);
   for (const l of world.lanterns) l.rotation.z = Math.sin(t * 0.8 + l.userData.swing) * 0.04;
@@ -2023,4 +2275,4 @@ async function partClouds() {
 }
 partClouds();
 
-window.__temple = { sfx, geomStamp, exportStamp, composer, get floorMirror() { return floorMirror; }, exportBake, me, walkTo, ACTS, peers, scene, camera, controls, renderer };
+window.__temple = { sitBench, sfx, geomStamp, exportStamp, composer, get floorMirror() { return floorMirror; }, exportBake, me, walkTo, ACTS, peers, scene, camera, controls, renderer };

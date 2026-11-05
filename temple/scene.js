@@ -561,6 +561,9 @@ function mainHall() {
     if (z === -8 && Math.abs(x) < 6) g.add(dragonColumn(x, F, z, colH, 0.5));
     else g.add(mesh(colGeo, Math.abs(x) > 8 ? darkWood : red, x, F + colH / 2, z));   // outer rows plain wood: red only along the aisle
     g.add(mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.35, 16), stone, x, F + 0.17, z));
+    // the two rows nearest the altar are left out: nothing stands between you and the deities. (Hidden, not
+    // removed, so the baked-lighting fingerprint still matches; their baked copies are hidden with them.)
+    if (z === -20 || z === -26) g.children.slice(-2).forEach((o) => (o.visible = false));
   }
   // beams
   const bt = beamTex();
@@ -853,7 +856,7 @@ function forest(scene) {
   const near = [[-12, 30, 2.3], [13, 31, 2.0], [-13.5, 12, 2.1], [13.5, -2, 1.9]];
   const im = new THREE.InstancedMesh(geo, mat, near.length);
   near.forEach(([x, z, sc], i) => im.setMatrixAt(i, m4.compose(v.set(x, 0, z), q.setFromAxisAngle(up, i), s.setScalar(sc))));
-  im.userData.role = 'skip';
+  im.userData.role = 'skip'; im.name = 'nearTrees'; im.userData.spots = near;   // swapped for a real 3D tree in main.js
   scene.add(im);
 }
 
