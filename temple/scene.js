@@ -6,7 +6,7 @@ import * as THREE from 'three';
 
 const RED = 0xa8261e, DEEP_RED = 0x7a1712, GOLD = 0xd9a441, DARK_WOOD = 0x3a2219,
   TILE = 0xc9762c, JADE = 0x2f8f74, BLUE = 0x2c4f86;
-export const HALL = { floor: 1.2, front: -6.5, back: -35, halfW: 16, ceil: 15, domeZ: -17 };
+export const HALL = { floor: 1.2, front: -6.5, back: -35, halfW: 16, ceil: 23, domeZ: -17 };   // ceil: tall enough for the 21 m Guanyin
 
 export function canvasTex(w, h, draw, repeat, isText = false) {
   const c = document.createElement('canvas');
@@ -138,13 +138,34 @@ const roofTex = (rep = [10, 3]) => canvasTex(256, 256, (g, w, h) => {
   for (let y = 0; y < h; y += 32) g.fillRect(0, y, w, 3);
 }, rep);
 
-const lanternTex = canvasTex(256, 256, (g, w, h) => {
-  g.fillStyle = '#d42a1c'; g.fillRect(0, 0, w, h);
-  g.fillStyle = '#f2c14e'; g.fillRect(0, 0, w, 18); g.fillRect(0, h - 18, w, 18);
-  g.fillStyle = '#2a0d08'; g.font = `72px ${SERIF}`;
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  for (const x of [0.25, 0.75]) { g.fillText('平', w * x, h * 0.38); g.fillText('安', w * x, h * 0.66); }
-});
+// lantern silk: a colour, gold bands top and bottom, and the blessing written on it (repeated round the lantern)
+const lanternTexes = new Map();
+const lanternTex = (text = '平安', bg = '#d42a1c', ribs = 0, faces = 2) => {
+  const key = [text, bg, ribs, faces].join('|');
+  if (!lanternTexes.has(key)) lanternTexes.set(key, canvasTex(512, 256, (g, w, h) => {
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    const sh = g.createLinearGradient(0, 0, 0, h); sh.addColorStop(0, 'rgba(0,0,0,.18)'); sh.addColorStop(0.5, 'rgba(255,220,160,.12)'); sh.addColorStop(1, 'rgba(0,0,0,.22)');
+    g.fillStyle = sh; g.fillRect(0, 0, w, h);                          // the light inside shows brightest at the waist
+    g.fillStyle = '#f2c14e'; g.fillRect(0, 0, w, 16); g.fillRect(0, h - 16, w, 16);
+    g.fillStyle = 'rgba(242,193,78,.55)'; for (let i = 0; i < ribs; i++) g.fillRect((i / ribs) * w, 0, 3, h);
+    g.fillStyle = '#2a0d08'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const chars = [...text], fs = chars.length > 1 ? 70 : 118;
+    g.font = `${fs}px ${SERIF}`;
+    for (let f = 0; f < faces; f++) {
+      const x = ((f + 0.5) / faces) * w;
+      chars.forEach((c, i) => g.fillText(c, x, h * (chars.length > 1 ? 0.36 + i * 0.3 : 0.52)));
+    }
+  }));
+  return lanternTexes.get(key);
+};
+// five kinds, so no two neighbours match: round, drum (鼓燈), tall oval, six-sided palace lantern (宮燈)
+const LANTERN_STYLES = [
+  { shape: 'round', text: '平安', bg: '#d42a1c' },
+  { shape: 'drum', text: '福', bg: '#c8241a', ribs: 16 },
+  { shape: 'oval', text: '吉祥', bg: '#e07018' },
+  { shape: 'palace', text: '如意', bg: '#b81e18' },
+  { shape: 'round', text: '光明', bg: '#d8501c' },
+];
 
 export function plaqueTex(text, vertical = false) {
   const [W, H] = vertical ? [300, 1024] : [1024, 300];
@@ -316,17 +337,33 @@ function ridge({ halfW, y, z, s = 1 }) {
 }
 
 // ---------- small pieces ----------
-function lantern(x, y, z, s = 1) {
-  const g = new THREE.Group();
-  const body = mesh(new THREE.SphereGeometry(0.42, 20, 14), new THREE.MeshStandardMaterial({
-    map: lanternTex, emissive: 0xff5a2a, emissiveMap: lanternTex, emissiveIntensity: 0.9, roughness: 0.8,
-  }), 0, 0, 0, { cast: false });
-  body.scale.set(1, 1.15, 1);
-  const cap = new THREE.CylinderGeometry(0.22, 0.26, 0.1, 12);
-  const gold = std(GOLD, { metalness: 0.5, roughness: 0.4 });
-  g.add(body, mesh(cap, gold, 0, 0.5, 0), mesh(cap, gold, 0, -0.5, 0));
-  g.add(mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.8), std(0x222222), 0, 0.95, 0));
-  const tassel = mesh(new THREE.ConeGeometry(0.08, 0.35, 8), std(0xd42a1c), 0, -0.75, 0);
+function lantern(x, y, z, s = 1, style = 0) {
+  const st = LANTERN_STYLES[style % LANTERN_STYLES.length], g = new THREE.Group();
+  const tex = lanternTex(st.text, st.bg, st.ribs || 0, st.shape === 'palace' ? 3 : 2);
+  const silk = new THREE.MeshStandardMaterial({ map: tex, emissive: 0xff6a30, emissiveMap: tex, emissiveIntensity: 0.9, roughness: 0.8 });
+  const gold = std(GOLD, { metalness: 0.5, roughness: 0.4 }), wood = std(0x3a1e12, { roughness: 0.6 });
+  let half = 0.5;
+  if (st.shape === 'palace') {                                         // 宮燈: silk panels in a dark wooden frame, a tassel at each corner
+    g.add(mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.72, 6, 1, true), silk, 0, 0, 0, { cast: false }));
+    for (const yy of [0.42, -0.42]) g.add(mesh(new THREE.CylinderGeometry(yy > 0 ? 0.3 : 0.46, yy > 0 ? 0.46 : 0.3, 0.12, 6), wood, 0, yy, 0));
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * Math.PI * 2;
+      g.add(mesh(new THREE.BoxGeometry(0.04, 0.74, 0.04), wood, Math.sin(a) * 0.36, 0, Math.cos(a) * 0.36));
+      const ts = mesh(new THREE.ConeGeometry(0.035, 0.28, 6), std(0xd42a1c), Math.sin(a) * 0.46, -0.62, Math.cos(a) * 0.46); ts.rotation.x = Math.PI; g.add(ts);
+    }
+    half = 0.48;
+  } else {
+    const body = st.shape === 'drum'
+      ? mesh(new THREE.LatheGeometry([[0.3, -0.42], [0.4, -0.25], [0.44, 0], [0.4, 0.25], [0.3, 0.42]].map(([r, yy]) => new THREE.Vector2(r, yy)), 24), silk, 0, 0, 0, { cast: false })
+      : mesh(new THREE.SphereGeometry(0.42, 22, 16), silk, 0, 0, 0, { cast: false });
+    if (st.shape === 'round') body.scale.set(1, 1.08, 1);
+    if (st.shape === 'oval') { body.scale.set(0.78, 1.55, 0.78); half = 0.68; }
+    g.add(body);
+    const cap = new THREE.CylinderGeometry(0.22, 0.26, 0.1, 12);
+    g.add(mesh(cap, gold, 0, half, 0), mesh(cap, gold, 0, -half, 0));
+  }
+  g.add(mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.8), std(0x222222), 0, half + 0.45, 0));
+  const tassel = mesh(new THREE.ConeGeometry(0.08, 0.35, 8), std(0xd42a1c), 0, -half - 0.25, 0);
   tassel.rotation.x = Math.PI;
   g.add(tassel);
   g.position.set(x, y, z);
@@ -587,16 +624,59 @@ function mainHall() {
     g.add(m);
   }
 
-  // columns: front row is carved dragon pillars, the rest lacquered red
-  const colH = C - 0.3, colGeo = new THREE.CylinderGeometry(0.5, 0.55, colH, 18), darkWood = DARK_LACQUER(3);
+  // columns: front row is carved dragon pillars, the rest red lacquer painted with gold peony scrolls (瀝粉貼金),
+  // standing on gilded lotus bases
+  const colH = C - 0.3, colGeo = new THREE.CylinderGeometry(0.5, 0.55, colH, 18);
+  const scrollTex = canvasTex(512, 1024, (c, w, h) => {
+    c.fillStyle = '#9e1f17'; c.fillRect(0, 0, w, h);
+    let sd = 3; const rr = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < 900; i++) { c.fillStyle = `rgba(${rr() < 0.5 ? '60,8,4' : '200,60,40'},${0.05 + rr() * 0.06})`; c.fillRect(rr() * w, rr() * h, 2 + rr() * 6, 2 + rr() * 6); }   // worn lacquer
+    const GOLD_A = '#e2b54f', GOLD_B = '#b8862c';
+    c.lineCap = 'round';
+    for (const x0 of [w * 0.25, w * 0.75]) {                          // two climbing vines, each swaying the other way
+      const flip = x0 < w / 2 ? 1 : -1;
+      c.strokeStyle = GOLD_A; c.lineWidth = 16; c.beginPath();
+      for (let y = -20; y <= h + 20; y += 8) c.lineTo(x0 + Math.sin((y / h) * Math.PI * 4) * 60 * flip, y);
+      c.stroke();
+      for (let k = 0; k < 4; k++) {
+        const y = (k + 0.5) * (h / 4), x = x0 + Math.sin(((k + 0.5) / 4) * Math.PI * 4) * 60 * flip, side = (k % 2 ? 1 : -1) * flip;
+        c.strokeStyle = GOLD_A; c.lineWidth = 11; c.beginPath();     // a curling tendril
+        for (let t = 0; t < 7; t += 0.15) { const rad = 70 - t * 9; c.lineTo(x + side * (40 + Math.cos(t) * rad * 0.6), y - 50 + Math.sin(t) * rad * 0.6); }
+        c.stroke();
+        for (let l = 0; l < 6; l++) {                                 // leaves along it, and down the stem
+          c.save(); c.translate(x + side * (10 + l * 18) * (l < 3 ? 1 : -0.6), y + 30 - l * 34); c.rotate(side * (0.5 + l * 0.35));
+          c.fillStyle = l % 2 ? GOLD_B : GOLD_A; c.beginPath(); c.ellipse(0, 0, 44, 15, 0, 0, 7); c.fill();
+          c.strokeStyle = '#9e1f17'; c.lineWidth = 2; c.beginPath(); c.moveTo(-36, 0); c.lineTo(36, 0); c.stroke(); c.restore();
+        }
+        const px = x - side * 60, py = y + 40;                       // a peony on the other side
+        for (const [n, R, col] of [[12, 74, GOLD_B], [12, 58, GOLD_A], [9, 38, GOLD_B], [7, 22, GOLD_A]]) for (let p = 0; p < n; p++) {
+          const a = (p / n) * Math.PI * 2 + R;
+          c.fillStyle = col; c.beginPath(); c.ellipse(px + Math.cos(a) * R * 0.55, py + Math.sin(a) * R * 0.55, R * 0.48, R * 0.3, a, 0, 7); c.fill();
+        }
+        c.fillStyle = '#9e1f17'; c.beginPath(); c.arc(px, py, 9, 0, 7); c.fill();
+      }
+    }
+  }, [2, 5]);                                                         // bold gold over much of the red, like 瀝粉貼金
+  const lacquer = new THREE.MeshStandardMaterial({ map: scrollTex, roughness: 0.42, metalness: 0.15 });
+  const gildBase = std(0xd6a548, { metalness: 0.75, roughness: 0.32 });
   const rows = [-8, -14, -20, -26, -31];
   for (const z of rows) for (const x of [-11, -5.5, 5.5, 11]) {
     if (z === -8 && Math.abs(x) < 6) g.add(dragonColumn(x, F, z, colH, 0.5));
-    else g.add(mesh(colGeo, Math.abs(x) > 8 ? darkWood : red, x, F + colH / 2, z));   // outer rows plain wood: red only along the aisle
+    else g.add(mesh(colGeo, lacquer, x, F + colH / 2, z));
     g.add(mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.35, 16), stone, x, F + 0.17, z));
     // the two rows nearest the altar, and the inner pair among the cushions, are left out: nothing stands between you and the deities. (Hidden, not
     // removed, so the baked-lighting fingerprint still matches; their baked copies are hidden with them.)
-    if (z === -20 || z === -26 || (z === -14 && Math.abs(x) < 8)) g.children.slice(-2).forEach((o) => (o.visible = false));   // and none among the prayer cushions
+    const gone = z === -20 || z === -26 || z === -31 || (z === -14 && Math.abs(x) < 8);
+    if (gone) g.children.slice(-2).forEach((o) => (o.visible = false));   // none among the cushions, none in the giant statues
+    else if (!(z === -8 && Math.abs(x) < 6)) {                          // a gilded lotus base round the foot of each red column
+      const base = new THREE.Group(); base.userData.role = 'skip';
+      base.add(mesh(new THREE.LatheGeometry([[0.001, 0], [0.8, 0], [0.82, 0.12], [0.7, 0.22], [0.74, 0.32], [0.62, 0.5], [0.58, 0.95], [0.66, 1.05], [0.56, 1.12]].map(([r, yy]) => new THREE.Vector2(r, yy)), 40), gildBase, 0, 0, 0));
+      for (let k = 0; k < 16; k++) {                                   // lotus petals round the drum
+        const a = (k / 16) * Math.PI * 2, pt = mesh(new THREE.SphereGeometry(0.16, 10, 8), gildBase, Math.sin(a) * 0.66, 0.38, Math.cos(a) * 0.66);
+        pt.scale.set(0.9, 1.3, 0.35); pt.rotation.y = a; base.add(pt);
+      }
+      base.position.set(x, F + 0.34, z); g.add(base);
+    }
   }
   // beams
   const bt = beamTex();
@@ -604,6 +684,7 @@ function mainHall() {
     if (Math.abs(z - domeZ) < 5) {        // leave the dome's span open so it can be seen from the nave
       for (const sx of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(HW - 5.5, 0.7, 0.55), std(0xffffff, { map: bt }), sx * (HW + 5.5) / 2, F + C - 0.6, z));
     } else g.add(mesh(new THREE.BoxGeometry(HW * 2, 0.7, 0.55), std(0xffffff, { map: bt }), 0, F + C - 0.6, z));
+    if (z === -31) g.children[g.children.length - 1].visible = false;   // it would cut through Guanyin's crown
   }
   for (const x of [-11, -5.5, 5.5, 11]) g.add(mesh(new THREE.BoxGeometry(0.5, 0.6, ZF - ZB), std(BLUE), x, F + C - 0.5, (ZF + ZB) / 2));
 
@@ -747,7 +828,7 @@ function mainHall() {
   g.add(mesh(new THREE.BoxGeometry(24.2, 0.15, 5.8), gold, 0, F + 1.45, DZ));
   for (let i = 0; i < 3; i++) g.add(mesh(new THREE.BoxGeometry(10 - i * 0.4, 0.45 * (i + 1), 0.45), std(0x6a1712), 0, F + 0.225 * (i + 1), DZ + 3.0 + (2 - i) * 0.45));
   // backdrop: red with gold rays
-  const backdrop = mesh(new THREE.PlaneGeometry(25.6, 12.5), std(0xffffff, {
+  const backdrop = mesh(new THREE.PlaneGeometry(25.6, C - 2.0), std(0xffffff, {   // floor-to-beam behind the statues
     map: canvasTex(1024, 400, (c, w, h) => {
       c.fillStyle = '#7a1712'; c.fillRect(0, 0, w, h);
       for (const cx of [w * 0.2, w * 0.5, w * 0.8]) {
@@ -756,9 +837,11 @@ function mainHall() {
       }
       c.strokeStyle = '#e0b04f'; c.lineWidth = 14; c.strokeRect(7, 7, w - 14, h - 14);
     }),
-  }), 0, F + 1.5 + 6.25, ZB + 0.3, { cast: false });
+  }), 0, F + 1.5 + (C - 2.0) / 2, ZB + 0.3, { cast: false });
   g.add(backdrop);
-  // shrine frame (神龕) and its gold roof
+  // shrine frame (神龕) and its gold roof. Hidden: the statues now rise to just under the ceiling, and the frame
+  // stood in their way. (Kept, not removed, so the baked-lighting fingerprint still matches.)
+  const shrineStart = g.children.length;
   for (const sx of [-1, 1]) {
     g.add(mesh(new THREE.BoxGeometry(0.8, 11.2, 0.8), gold, sx * 5.9, F + 1.5 + 5.6, DZ + 1.6));
   }
@@ -774,6 +857,7 @@ function mainHall() {
     }, null, true),
   }), 0, F + 12.0, DZ + 2.12, { cast: false });
   g.add(val);
+  g.children.slice(shrineStart).forEach((o) => (o.visible = false));
   const center = deity(2.3); center.position.set(0, F + 1.5, DZ + 0.3); g.add(center);
   const sides = [];
   for (const sx of [-1, 1]) {
@@ -784,7 +868,7 @@ function mainHall() {
   // vertical couplet plaques on the front shrine pillars
   for (const [sx, txt] of [[-1, '歇腳'], [1, '安心']]) {
     const p = mesh(new THREE.PlaneGeometry(0.75, 2.7), new THREE.MeshStandardMaterial({ map: plaqueTex(txt, true) }), sx * 5.9, F + 8.4, DZ + 2.02, { cast: false });
-    g.add(p);
+    p.visible = false; g.add(p);                                       // they hung on the shrine's pillars
   }
   // big hanging plaque above the altar
   g.add(mesh(new THREE.PlaneGeometry(6, 1.7), new THREE.MeshStandardMaterial({ map: plaqueTex('慈光普照') }), 0, F + C - 1.3, -21.6, { cast: false }));
@@ -893,7 +977,7 @@ function mainHall() {
   const lanPos = [];
   for (const x of [-11, 11]) for (const z of [-14, -26]) lanPos.push([x, F + 10.6, z]);
   const lanGeo = new THREE.CylinderGeometry(0.42, 0.42, 1.1, 6);
-  const lanMat = new THREE.MeshStandardMaterial({ color: 0xd42a1c, emissive: 0xff7a4a, emissiveIntensity: 0.35, map: lanternTex, emissiveMap: lanternTex });
+  const lanMat = new THREE.MeshStandardMaterial({ color: 0xd42a1c, emissive: 0xff7a4a, emissiveIntensity: 0.35, map: lanternTex(), emissiveMap: lanternTex() });
   const lans = new THREE.InstancedMesh(lanGeo, lanMat, lanPos.length);
   const lanCaps = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.5, 0.5, 0.14, 6), gold, lanPos.length * 2);
   lanPos.forEach(([x, y, z], i) => {
@@ -1020,12 +1104,12 @@ export function buildWorld(scene) {
   forest(scene);
 
   const lanterns = [];
-  for (const x of [-12, -6, 0, 6, 12]) { const l = lantern(x, HALL.floor + HALL.ceil - 1.6, -5.2, 1.4); lanterns.push(l); scene.add(l); }
-  for (const sx of [-1, 1]) { const l = lantern(sx * 4.8, 5.4, 24.6, 1); lanterns.push(l); scene.add(l); }
+  [-12, -6, 0, 6, 12].forEach((x, i) => { const l = lantern(x, HALL.floor + HALL.ceil - 1.6, -5.2, 1.4, [3, 0, 1, 0, 3][i]); lanterns.push(l); scene.add(l); });   // palace lanterns at the ends, round and drum between
+  for (const sx of [-1, 1]) { const l = lantern(sx * 4.8, 5.4, 24.6, 1, sx < 0 ? 0 : 4); lanterns.push(l); scene.add(l); }
   // street lanterns in front of the gate
   for (const z of [28, 33]) for (const sx of [-1, 1]) {
     scene.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, 3.2), std(DARK_WOOD), sx * 6, 1.6, z));
-    const l = lantern(sx * 6, 3.4, z, 0.75); lanterns.push(l); scene.add(l);
+    const l = lantern(sx * 6, 3.4, z, 0.75, z === 28 ? (sx < 0 ? 2 : 1) : (sx < 0 ? 1 : 2)); lanterns.push(l); scene.add(l);
   }
 
   // lights
