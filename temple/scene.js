@@ -846,9 +846,47 @@ function mainHall() {
 
   // ---- altar: raised dais, gold shrine with a little roof, three deities ----
   const DZ = -32.2;
+  const daisStart = g.children.length;
   g.add(mesh(new THREE.BoxGeometry(24, 1.4, 5.6), std(0x6a1712, { roughness: 0.4 }), 0, F + 0.7, DZ));
   g.add(mesh(new THREE.BoxGeometry(24.2, 0.15, 5.8), gold, 0, F + 1.45, DZ));
   for (let i = 0; i < 3; i++) g.add(mesh(new THREE.BoxGeometry(10 - i * 0.4, 0.45 * (i + 1), 0.45), std(0x6a1712), 0, F + 0.225 * (i + 1), DZ + 3.0 + (2 - i) * 0.45));
+  // The old dais was too small for the colossal statues (they hung off its front and sides). It is hidden, not
+  // removed (bake fingerprint), and a grand throne platform (須彌座) runs the full width of the hall in its place:
+  // red lacquer, gold mouldings, and gilt-framed carved panels under a band of upturned lotus petals.
+  g.children.slice(daisStart).forEach((o) => (o.visible = false));
+  {
+    const W = 36.6, Z0 = -35.2, Z1 = -28.3, D = Z1 - Z0, ZC = (Z0 + Z1) / 2, TOP = F + 1.5;
+    const red = std(0x6a1712, { roughness: 0.38 }), gilt = std(0xe0b04a, { metalness: 0.85, roughness: 0.28 });
+    const skirtTex = (rep) => canvasTex(2048, 128, (c, w, h) => {
+      c.fillStyle = '#7a1712'; c.fillRect(0, 0, w, h);
+      for (let x = 0; x < w; x += 40) {                                // upturned lotus petals along the top
+        const gr = c.createLinearGradient(0, 0, 0, 34); gr.addColorStop(0, '#f6d27a'); gr.addColorStop(1, '#b8862c');
+        c.fillStyle = gr; c.beginPath(); c.moveTo(x + 2, 36); c.quadraticCurveTo(x + 4, 6, x + 20, 2); c.quadraticCurveTo(x + 36, 6, x + 38, 36); c.fill();
+        c.strokeStyle = '#8a5a1a'; c.lineWidth = 2; c.stroke();
+      }
+      const n = 16, pw = w / n;                                        // gilt-framed panels, a cloud scroll in each
+      for (let i = 0; i < n; i++) {
+        const x = i * pw, cx = x + pw / 2, cy = 46 + (h - 58) / 2;
+        c.strokeStyle = '#e8bd5a'; c.lineWidth = 5; c.strokeRect(x + 10, 46, pw - 20, h - 58);
+        c.lineWidth = 4;
+        for (const d of [-1, 1]) {
+          c.beginPath(); c.moveTo(cx, cy); c.bezierCurveTo(cx + d * 22, cy - 22, cx + d * 46, cy + 4, cx + d * 30, cy + 12); c.stroke();
+          c.beginPath(); c.arc(cx + d * 24, cy + 8, 7, 0, Math.PI * 2); c.stroke();
+        }
+      }
+    }, [rep, 1], true);
+    const add = (o) => { o.userData.role = 'skip'; g.add(o); return o; };
+    add(mesh(new THREE.BoxGeometry(W, TOP - 0.18, D), red, 0, (TOP - 0.18) / 2, ZC));                     // the body, down to the ground (the hall is open at the sides)
+    add(mesh(new THREE.BoxGeometry(W + 0.3, 0.18, D + 0.3), gilt, 0, TOP - 0.09, ZC));                  // gilt top moulding the statues sit on
+    add(mesh(new THREE.BoxGeometry(W + 0.24, 0.1, D + 0.24), gilt, 0, TOP - 0.26, ZC));                 // a finer bead below it
+    add(mesh(new THREE.BoxGeometry(W + 0.4, 0.3, D + 0.4), red, 0, F + 0.15, ZC));                      // the plinth step at the floor
+    add(mesh(new THREE.BoxGeometry(W + 0.44, 0.06, D + 0.44), gilt, 0, F + 0.33, ZC));
+    add(mesh(new THREE.PlaneGeometry(W - 0.4, 0.95), new THREE.MeshStandardMaterial({ map: skirtTex(1), roughness: 0.4, metalness: 0.25 }), 0, F + 0.84, Z1 + 0.006, { cast: false }));
+    for (const sx of [-1, 1]) {                                        // the two ends, seen from the open sides of the hall
+      const e = add(mesh(new THREE.PlaneGeometry(D - 0.4, 0.95), new THREE.MeshStandardMaterial({ map: skirtTex(D / W), roughness: 0.4, metalness: 0.25 }), sx * (W / 2 + 0.006), F + 0.84, ZC, { cast: false }));
+      e.rotation.y = sx * Math.PI / 2;
+    }
+  }
   // backdrop: red with gold rays
   const backdrop = mesh(new THREE.PlaneGeometry(25.6, C - 2.0), std(0xffffff, {   // floor-to-beam behind the statues
     map: canvasTex(1024, 400, (c, w, h) => {
@@ -1024,7 +1062,7 @@ function mainHall() {
   g.add(roof({ halfW: HW * 0.78, zFront: ridgeZ + 8.2, zBack: ridgeZ - 8.2, yEave: F + C + 6.8, yRidge: F + C + 10.2, lift: 1.1, mat: tiles2, gableMat: BRICK(0.35, 0.35) }));
   g.add(ridge({ halfW: HW * 0.78, y: F + C + 10.2, z: ridgeZ, s: 1.6 }));
 
-  return { group: g, table, tube, tableBurnerPos: new THREE.Vector3(0, F + 1.8, -27.6), lamps: { cells, slots }, cushions: { mesh: cushion, spots }, altar: { center, sides, backdrop, murals, group: g } };
+  return { group: g, table, tube, tableBurnerPos: new THREE.Vector3(0, F + 1.8, -27.6), lamps: { cells, slots }, cushions: { mesh: cushion, spots }, coilTips: coilPos.map(([x, y, z]) => new THREE.Vector3(x + 0.5, y - 0.9, z)), altar: { center, sides, backdrop, murals, group: g } };
 }
 
 function sideCorridor(sx) {
@@ -1181,7 +1219,7 @@ export function buildWorld(scene) {
     lanterns, luLight,
     luPos: new THREE.Vector3(0, lu.userData.ashY * 1.3, 8),
     table: hall.table, tube: hall.tube, tableBurnerPos: hall.tableBurnerPos,
-    lamps: hall.lamps, cushions: hall.cushions, altar: hall.altar, lu,
+    lamps: hall.lamps, cushions: hall.cushions, altar: hall.altar, coilTips: hall.coilTips, lu,
     occluders: [gateG],
   };
 }

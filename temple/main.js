@@ -12,7 +12,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Water } from 'three/addons/objects/Water.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { connectPresence } from './presence.js';
 import { buildGate } from './gate.js';
@@ -281,13 +281,24 @@ function gild(root) {
       const d = g.getImageData(0, 0, w, h), p = d.data;
       for (let i = 0; i < p.length; i += 4) {
         const l = (0.3 * p[i] + 0.59 * p[i + 1] + 0.11 * p[i + 2]) / 255;
-        const v = Math.round(255 * (0.6 + 0.4 * Math.pow(l, 0.55)));
+        const v = Math.round(255 * (0.55 + 0.45 * Math.pow(l, 0.7)));   // more contrast: the carving's recesses read as depth
         p[i] = p[i + 1] = p[i + 2] = v;
       }
       g.putImageData(d, 0, 0);
       detail = new THREE.CanvasTexture(c); detail.colorSpace = THREE.SRGBColorSpace; detail.flipY = o.material.map.flipY;
     }
-    o.material = new THREE.MeshPhysicalMaterial({ color: 0xf0b545, map: detail, metalness: 1, roughness: 0.24, clearcoat: 0.35, clearcoatRoughness: 0.2, envMapIntensity: 1.5 });
+    // the decimated scan shades in flat facets: weld its vertices and smooth the normals
+    const g0 = new THREE.BufferGeometry();                             // unpack the quantized, interleaved scan to plain floats first
+    for (const k of ['position', 'uv']) {
+      const at = o.geometry.attributes[k]; if (!at) continue;
+      const n = at.itemSize, arr = new Float32Array(at.count * n);
+      for (let i = 0; i < at.count; i++) for (let j = 0; j < n; j++) arr[i * n + j] = at.getComponent(i, j);
+      g0.setAttribute(k, new THREE.BufferAttribute(arr, n));
+    }
+    if (o.geometry.index) g0.setIndex(o.geometry.index);
+    try { const sm = mergeVertices(g0, 1e-3); sm.computeVertexNormals(); o.geometry = sm; } catch (e) { console.warn('statue smoothing skipped', e); }
+    // polished gilding; the scan's own shading doubles as occlusion, so folds and recesses darken and the form reads in 3D
+    o.material = new THREE.MeshPhysicalMaterial({ color: 0xffc24e, map: detail, aoMap: detail, aoMapIntensity: 0.7, metalness: 1, roughness: 0.25, clearcoat: 0.6, clearcoatRoughness: 0.08, envMapIntensity: 3.2 });
   });
 }
 
@@ -295,12 +306,12 @@ function gild(root) {
 const GEM_GEO = new THREE.IcosahedronGeometry(1, 0).scale(1, 1, 0.55);
 const BEZEL_GEO = new THREE.TorusGeometry(1.05, 0.2, 6, 18);
 const GEM = {
-  ruby: new THREE.MeshPhysicalMaterial({ color: 0xc8102e, roughness: 0.06, clearcoat: 1, emissive: 0x3a0008, envMapIntensity: 2.2 }),
-  emerald: new THREE.MeshPhysicalMaterial({ color: 0x0f9a5a, roughness: 0.06, clearcoat: 1, emissive: 0x022a14, envMapIntensity: 2.2 }),
-  sapphire: new THREE.MeshPhysicalMaterial({ color: 0x1f3fc4, roughness: 0.06, clearcoat: 1, emissive: 0x050c33, envMapIntensity: 2.2 }),
-  pearl: new THREE.MeshPhysicalMaterial({ color: 0xf4eee2, roughness: 0.28, clearcoat: 1, sheen: 1, envMapIntensity: 1.6 }),
+  ruby: new THREE.MeshPhysicalMaterial({ color: 0xff0a2a, roughness: 0.03, clearcoat: 1, ior: 2.2, emissive: 0xc00018, emissiveIntensity: 0.9, envMapIntensity: 3 }),
+  emerald: new THREE.MeshPhysicalMaterial({ color: 0x00d26a, roughness: 0.03, clearcoat: 1, ior: 2.2, emissive: 0x00873c, emissiveIntensity: 0.9, envMapIntensity: 3 }),
+  sapphire: new THREE.MeshPhysicalMaterial({ color: 0x1240ff, roughness: 0.03, clearcoat: 1, ior: 2.2, emissive: 0x0a22c8, emissiveIntensity: 0.9, envMapIntensity: 3 }),
+  pearl: new THREE.MeshPhysicalMaterial({ color: 0xfff8ec, roughness: 0.2, clearcoat: 1, sheen: 1, iridescence: 0.6, emissive: 0x3a352c, envMapIntensity: 2 }),
 };
-const BEZEL = new THREE.MeshPhysicalMaterial({ color: 0xf0b545, metalness: 1, roughness: 0.2, envMapIntensity: 1.5 });
+const BEZEL = new THREE.MeshPhysicalMaterial({ color: 0xffc24e, metalness: 1, roughness: 0.12, envMapIntensity: 2.1 });
 function adorn(root) {
   const meshes = []; root.traverse((o) => o.isMesh && meshes.push(o));
   const box = new THREE.Box3().setFromObject(root), H = box.max.y - box.min.y, W = box.max.x - box.min.x, cx = (box.min.x + box.max.x) / 2;
@@ -434,7 +445,8 @@ gl.load(PROPS + 'pillar_dragon_02.glb', (g) => {
     const s = o.userData.spot;
     o.visible = false;
     // the scan only has a carved front; pairs are mirrored so the two dragons of each pair face each other
-    placeProp(g.scene, { x: s.x, y: s.y, z: s.z, h: s.h, girthOf: Math.min(s.h, 14.7), yaw: -Math.PI / 2, mirror: s.x < 0 });   // the tall hall's pillars: taller, not fatter
+    const hall = s.y > 1;                                              // the hall's pair: slimmer and set back, so their lotus bases stay on the hall floor, not over the steps
+    placeProp(g.scene, { x: s.x, y: s.y, z: hall ? s.z - 0.45 : s.z, h: s.h, girthOf: hall ? 10.5 : s.h, yaw: -Math.PI / 2, mirror: s.x < 0 });
   });
 }, undefined, () => {});
 gl.load(PROPS + 'lion_stone_big.glb', (g) => {
@@ -1124,7 +1136,7 @@ const ease = (k) => 1 - Math.pow(1 - k, 3);
 
 // ---------------- sound (synthesized, no files) ----------------
 // All sounds are real recordings (Freesound, CC0 / CC BY — see assets/CREDITS.md). Nothing is synthesized.
-const SFX_FILES = { muyu: 'muyu', bowl: 'bowl', clack1: 'clack1', clack2: 'clack2', sticks: 'sticks', birds: 'birds_stream' };
+const SFX_FILES = { muyu: 'muyu', bowl: 'bowl', clack1: 'clack1', clack2: 'clack2', sticks: 'sticks', birds: 'birds_stream', water: 'waterfall' };
 const sfx = {
   ctx: null, on: store.get('sound', true), buf: {},
   init() {
@@ -1146,7 +1158,7 @@ const sfx = {
     this.ctx.createMediaElementSource(this.chantEl).connect(this.chantGain).connect(this.master);
     for (const [k, f] of Object.entries(SFX_FILES)) {
       fetch(`/temple/assets/sfx/${f}.mp3`).then((r) => r.arrayBuffer()).then((b) => this.ctx.decodeAudioData(b))
-        .then((buf) => { this.buf[k] = buf; if (k === 'birds') this.ambient(); }).catch(() => {});
+        .then((buf) => { this.buf[k] = buf; if (k === 'birds') this.ambient(); if (k === 'water') this.falls(); }).catch(() => {});
     }
   },
   toggle() {
@@ -1177,6 +1189,13 @@ const sfx = {
     };
     next(this.ctx.currentTime + 0.05);
   },
+  // the waterfall into the lotus lake: a real recording, looped, heard only as you come near it
+  falls() {
+    this.waterGain = this.ctx.createGain(); this.waterGain.gain.value = 0;
+    this.waterLP = this.ctx.createBiquadFilter(); this.waterLP.type = 'lowpass'; this.waterLP.frequency.value = 18000;
+    const s = this.ctx.createBufferSource(); s.buffer = this.buf.water; s.loop = true;
+    s.connect(this.waterLP).connect(this.waterGain).connect(this.master); s.start();
+  },
   chant(on, dt) {
     if (!this.chantEl) return;
     const el = this.chantEl, g = this.chantGain.gain;
@@ -1185,9 +1204,14 @@ const sfx = {
     if (!on && g.value < 0.01 && !el.paused) el.pause();
   },
   // called every frame: birds fade a little and turn muffled once you're inside the hall
-  update(inside, dt) {
+  update(inside, dt, pos) {
     if (!this.ctx) return;
     const k = 1 - Math.exp(-dt * 1.5);
+    if (this.waterGain && pos) {                                       // louder as you near the falls, muffled behind the hall walls
+      const d = Math.hypot(pos.x - (LAKE.x - LAKE.rx + 0.5), pos.z - LAKE.z), near = Math.max(0, 1 - Math.max(0, d - 4) / 26) ** 2;
+      this.waterGain.gain.value += ((inside ? 0.2 : 1) * 0.16 * near - this.waterGain.gain.value) * k;   // a soft murmur, never a roar
+      this.waterLP.frequency.value += ((inside ? 700 : 1800 + near * 2600) - this.waterLP.frequency.value) * k;   // hiss rolled off: a gentle trickle
+    }
     // a quiet bed under everything, not a soundtrack: it slowly swells and recedes (about a minute per breath),
     // so there are long gentle stretches rather than a constant wall of birds
     const tt = this.ctx.currentTime, swell = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(tt * 2 * Math.PI / 70)) * (0.6 + 0.4 * Math.sin(tt * 2 * Math.PI / 29 + 1));
@@ -1234,6 +1258,13 @@ function updateSmoke(dt) {
 }
 const luSmoke = emitter(world.luPos.clone().add(new THREE.Vector3(0, 0.4, 0)), 2.5, 0.8);
 emitter(world.tableBurnerPos.clone(), 1.2, 0.2);
+// the hanging incense coils (塔香) burn from their outer end: a glowing ember and a thin thread of smoke
+const coilEmbers = world.coilTips.map((p) => {
+  const e = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff5a10, toneMapped: false }));
+  e.position.copy(p); e.userData.role = 'skip'; scene.add(e);
+  emitter(p.clone().add(new THREE.Vector3(0, 0.05, 0)), 1.4, 0.04);
+  return e;
+});
 
 // incense sticks planted in the 天公爐 (burn down over 3 min). A real joss stick: a pale bamboo handle, a brown
 // coat of incense paste that burns down from the top, a short cap of grey ash and a glowing ember point.
@@ -1820,6 +1851,7 @@ function nearestCushion() {
 // ---------------- follow camera ----------------
 // scripted ritual shots (moon blocks): while set, the camera glides to director.pos looking at director.look
 let director = null;
+const reveal = { t: -1 };                                   // the first-entry view of the statues (see the frame loop)
 function followCam(dt, snap = false) {
   if (director) {
     const k = 1 - Math.exp(-dt * (director.speed || 2.2));
@@ -2844,10 +2876,23 @@ function frame() {
   sendT += dt;
   if (sendT > 0.15) { sendT = 0; net.pos(me.root.position.x, me.root.position.z, me.root.rotation.y); }
 
-  sfx.update(inHall(me.root.position.z), dt);
-  sfx.chant(me.kneel && !seated && !atMuyu, dt);                 // on a cushion: the mantra; stand up and it fades away
+  sfx.update(inHall(me.root.position.z), dt, me.root.position);
+  // first step into the hall: the camera rises by the doorway and tilts slowly up the statues, so the first thing
+  // you see is their whole height. Once per visit; any tap or drag hands the camera back.
+  if (reveal.t < 0 && !intro.on && !director && !busy && inHall(me.root.position.z)) {
+    reveal.t = 0; director = { pos: new THREE.Vector3(0, F + 3.2, -8.2), look: new THREE.Vector3(0, F + 2.5, -30), speed: 0.9 };
+    addEventListener('pointerdown', () => { reveal.t = Math.max(reveal.t, 7.5); }, { once: true });
+  }
+  if (reveal.t >= 0 && reveal.t < 8) {
+    reveal.t += dt;
+    const u = THREE.MathUtils.smootherstep(reveal.t, 0.8, 6);
+    director.pos.set(0, F + 3.2 + u * 1.6, -8.2 - u * 2.5); director.look.set(0, F + 2.5 + u * 10.5, -30);
+    if (reveal.t >= 7.5) { director = null; reveal.t = 8; }
+  }
+  sfx.chant(me.kneel && me.praying && !seated && !atMuyu, dt);   // kneel, then Pray: the mantra; end the prayer or stand and it fades away
   updatePeers(dt);
   updateSmoke(dt);
+  coilEmbers.forEach((e, i) => e.material.color.setRGB(1, 0.3 + 0.12 * Math.sin(clock.elapsedTime * 2.3 + i * 1.7), 0.06));   // the ember breathes
   updateSticks();
   updateWisps(dt);
   const t = clock.elapsedTime;
