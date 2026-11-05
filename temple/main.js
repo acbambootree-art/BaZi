@@ -1599,6 +1599,7 @@ const OBSTACLES = [
   [-12, 30, 1.3], [13, 31, 1.1], [-13.5, 12, 1.1],
   [13.5, -2, 0.8],
   [3.0, -25.6, 0.5],                                                   // 木魚
+  [-3.0, -25.6, 0.5],                                                  // 功德箱 (donation box)
   [-3.1, 26.2, 1.1], [3.1, 26.2, 1.1],                                  // stone lions
   ...[28, 33].flatMap((z) => [[-6, z, 0.3], [6, z, 0.3]]),
 ];
@@ -1854,6 +1855,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   const bench = benchMeshes.length && ray.intersectObjects(benchMeshes)[0];
   if (bench) { hideHint(); sitBench(bench.object.userData.bench); return; }
   if (ray.intersectObject(muyu, true)[0]) { hideHint(); ACTS.muyu(); return; }
+  if (ray.intersectObject(donationBox, true)[0]) { hideHint(); openDonation(); return; }
   const hit = new THREE.Vector3();
   let ok = ray.ray.intersectPlane(plane1, hit);
   if (!ok || !inHall(hit.z) || Math.abs(hit.x) > 16) ok = ray.ray.intersectPlane(plane0, hit);
@@ -1890,6 +1892,86 @@ const muyu = (() => {
   return g;
 })();
 let atMuyu = false;
+
+// ---------------- donation box (功德箱) ----------------
+// Front-left of the offering table, opposite the wooden fish: a red lacquered box with a gilt slot. Tap it to see
+// the keeper's PayNow code: "buy me a coffee" if the place has brought you some calm.
+const DONATE = { x: -3.0, z: -25.6 };
+const donationBox = (() => {
+  const g = new THREE.Group();
+  const lac = new THREE.MeshStandardMaterial({ color: 0x8e1b12, roughness: 0.35, metalness: 0.05, envMapIntensity: 1.2 });
+  const goldM = new THREE.MeshStandardMaterial({ color: 0xd6a548, metalness: 0.9, roughness: 0.3 });
+  const M = (geo, mat, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+  const W = 0.7, H = 0.72, D = 0.5;
+  M(new THREE.BoxGeometry(W + 0.08, 0.08, D + 0.08), goldM, 0, 0.04, 0);                        // gilt plinth
+  M(new THREE.BoxGeometry(W, H, D), lac, 0, 0.08 + H / 2, 0);
+  M(new THREE.BoxGeometry(W + 0.06, 0.05, D + 0.06), goldM, 0, 0.08 + H + 0.025, 0);            // gilt lid
+  M(new THREE.BoxGeometry(0.34, 0.02, 0.05), new THREE.MeshStandardMaterial({ color: 0x140603, roughness: 0.9 }), 0, 0.08 + H + 0.05, 0);   // the coin slot
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) M(new THREE.BoxGeometry(0.035, H, 0.035), goldM, sx * W / 2, 0.08 + H / 2, sz * D / 2);   // gilt corners
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.1, H - 0.12), new THREE.MeshStandardMaterial({ roughness: 0.4, map: canvasTex(256, 256, (c, w, h) => {
+    c.fillStyle = '#8e1b12'; c.fillRect(0, 0, w, h);
+    c.strokeStyle = '#e2b54f'; c.lineWidth = 8; c.strokeRect(12, 12, w - 24, h - 24);
+    c.fillStyle = '#f2c14e'; c.font = '92px "TempleKai", "LXGW WenKai TC", "Noto Serif TC", serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('功德', w / 2, h * 0.36); c.fillText('箱', w / 2, h * 0.72);
+  }, null, true) }));
+  face.position.set(0, 0.08 + H / 2, D / 2 + 0.002); g.add(face);
+  g.position.set(DONATE.x, HALL.floor, DONATE.z); g.rotation.y = 0.12;    // turned a touch toward the cushions
+  g.userData.role = 'skip';
+  scene.add(g);
+  return g;
+})();
+async function openDonation() {
+  if (busy) return;
+  setBusy(true);
+  try { await walkTo(DONATE.x + 0.15, DONATE.z + 1.0, Math.PI); } finally { setBusy(false); }
+  await modal(`
+    <style>
+      .tip { text-align: center; }
+      .tip .hero { width: 118px; height: 118px; margin: -8px auto -2px; display: block; animation: tipBob 2.6s ease-in-out infinite; }
+      .tip .steam path { animation: tipSteam 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: bottom; }
+      .tip .steam path:nth-child(2) { animation-delay: .8s; } .tip .steam path:nth-child(3) { animation-delay: 1.6s; }
+      .tip .heart { animation: tipHeart 3s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+      .tip .heart.b { animation-delay: 1.5s; }
+      @keyframes tipBob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-4px) } }
+      @keyframes tipSteam { 0% { opacity: 0; transform: translateY(4px) scaleY(.8) } 40% { opacity: .9 } 100% { opacity: 0; transform: translateY(-8px) scaleY(1.1) } }
+      @keyframes tipHeart { 0%,100% { opacity: 0; transform: translateY(6px) scale(.6) } 30%,70% { opacity: 1; transform: translateY(-2px) scale(1) } }
+      .tip h2 { font-size: 24px; margin-top: 2px; }
+      .tip .sub { font-size: 14px; color: var(--muted); margin: 4px 8px 10px; }
+      .tip .qr { position: relative; display: inline-block; padding: 12px; margin: 4px 0 2px; border-radius: 24px; background: #fff;
+        border: 3px dashed #e7b7a0; box-shadow: 0 6px 18px rgba(170, 110, 80, .18); transform: rotate(-1.5deg); }
+      .tip .qr img { display: block; width: 188px; height: 188px; border-radius: 14px; }
+      .tip .qr .tape { position: absolute; top: -10px; left: 50%; width: 70px; height: 20px; translate: -50% 0; rotate: 3deg;
+        background: rgba(255, 214, 160, .85); border-radius: 4px; }
+      .tip .paw { font-size: 12.5px; color: var(--muted); margin: 8px 6px 2px; line-height: 1.6; }
+      .tip .row .btn { border-radius: 999px; }
+    </style>
+    <div class="tip">
+      <svg class="hero" viewBox="0 0 160 160" aria-hidden="true">
+        <g class="heart a"><path d="M30 46c-4-6-14-2-10 6l10 9 10-9c4-8-6-12-10-6z" fill="#f29aa8"/></g>
+        <g class="heart b"><path d="M128 34c-3-5-11-2-8 5l8 7 8-7c3-7-5-10-8-5z" fill="#f6b8c2"/></g>
+        <ellipse cx="80" cy="150" rx="40" ry="6" fill="rgba(120,80,50,.12)"/>
+        <path d="M44 150c0-30 14-50 36-50s36 20 36 50z" fill="#9aa2a7"/>
+        <path d="M58 104c10 14 34 14 44 0l4 14c-16 14-36 14-52 0z" fill="#d9a441"/>
+        <circle cx="80" cy="66" r="40" fill="#f2c19a"/>
+        <circle cx="41" cy="68" r="7" fill="#f2c19a"/><circle cx="119" cy="68" r="7" fill="#f2c19a"/>
+        <path d="M60 66q6-6 12 0M88 66q6-6 12 0" stroke="#4a3426" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+        <ellipse cx="56" cy="80" rx="7" ry="4.5" fill="#f4a3a0" opacity=".8"/><ellipse cx="104" cy="80" rx="7" ry="4.5" fill="#f4a3a0" opacity=".8"/>
+        <path d="M74 84q6 6 12 0" stroke="#4a3426" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <g class="steam" stroke="#c9b6a6" stroke-width="3" fill="none" stroke-linecap="round">
+          <path d="M71 115q-3-3 0-6t0-5"/><path d="M80 114q-3-3 0-6t0-5"/><path d="M89 115q-3-3 0-6t0-5"/>
+        </g>
+        <path d="M62 118h36l-4 26q-1 6-7 6H73q-6 0-7-6z" fill="#fffaf2" stroke="#b07a52" stroke-width="2.5"/>
+        <path d="M98 124q12 0 10 10t-12 8" stroke="#b07a52" stroke-width="3" fill="none"/>
+        <path d="M74 132q6-5 12 0q-6 6-12 0z" fill="#f29aa8"/>
+        <circle cx="62" cy="134" r="7" fill="#f2c19a"/><circle cx="98" cy="134" r="7" fill="#f2c19a"/>
+      </svg>
+      <h2>${EN ? 'Buy the little monk a coffee?' : '請小和尚喝杯咖啡？'}</h2>
+      <p class="sub">${EN ? 'If this quiet little temple gave you a moment of calm, a small treat keeps the lamps glowing ✨' : '若這座小廟給了你片刻安寧，請小和尚喝杯咖啡，讓燈火一直亮著 ✨'}</p>
+      <div class="qr"><span class="tape"></span><img src="/temple/assets/paynow.jpg" alt="PayNow QR"></div>
+      <p class="paw">${EN ? 'Scan with any PayNow app ☕<br>On your phone? Save the code, then open it in your bank app.' : '用任何 PayNow App 掃一掃 ☕<br>用手機瀏覽？先儲存此碼，再到銀行 App 開啟。'}</p>
+      <div class="row"><a class="btn ghost" style="color:inherit" href="/temple/assets/paynow.jpg" download="paynow-xiejiao-temple.jpg">${EN ? 'Save code' : '儲存此碼'}</a><button class="btn primary" data-v="ok">${EN ? 'Thank you 🙏' : '感恩 🙏'}</button></div>
+    </div>`);
+}
 function strike(who, gain = 1) {
   who.play('strike');
   setTimeout(() => {
