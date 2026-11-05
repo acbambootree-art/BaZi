@@ -273,13 +273,13 @@ function gild(root) {
   root.traverse((o) => {
     if (!o.isMesh) return;
     const src = o.material.map?.image;
-    let detail = null, ao = null, bump = null, rough = null;
+    let detail = null, ao = null, rough = null;
     if (src) {
-      // the scan's own shading holds its carving: stretch its contrast, then use it four ways — tone in the gilding,
-      // occlusion in the recesses, bump for crisp edges, and polish on the raised parts (worn smooth by hands)
+      // the scan's own shading holds its carving: stretch its contrast, then use it three ways — tone in the gilding,
+      // occlusion in the recesses and polish on the raised parts (worn smooth by hands)
       const w = Math.min(1024, src.width), h = Math.min(1024, src.height);
       const rd = document.createElement('canvas'); rd.width = w; rd.height = h;
-      const rg = rd.getContext('2d'); rg.drawImage(src, 0, 0, w, h);
+      const rg = rd.getContext('2d'); rg.filter = 'blur(2.5px)'; rg.drawImage(src, 0, 0, w, h);   // blurred: the scan's blocky compression noise read as a crunchy, pitted surface
       const px = rg.getImageData(0, 0, w, h).data, L = new Float32Array(w * h);
       for (let i = 0; i < L.length; i++) L[i] = (0.3 * px[i * 4] + 0.59 * px[i * 4 + 1] + 0.11 * px[i * 4 + 2]) / 255;
       const sorted = L.slice().sort(), lo = sorted[Math.floor(L.length * 0.02)], hi = sorted[Math.floor(L.length * 0.98)];
@@ -292,8 +292,7 @@ function gild(root) {
         const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.flipY = o.material.map.flipY; t.anisotropy = 8; return t;
       };
       detail = tex((l) => 0.6 + 0.4 * Math.pow(l, 0.8), true);
-      ao = tex((l) => 0.25 + 0.75 * Math.pow(l, 0.6));                 // deep shadow in the folds outlines every feature
-      bump = tex((l) => l);
+      ao = tex((l) => 0.35 + 0.65 * Math.pow(l, 0.6));                 // shadow in the folds outlines every feature
       rough = tex((l) => 0.5 + 0.5 * (1 - l));                         // raised parts polished, recesses a little duller
     }
     // the decimated scan shades in flat facets: weld its vertices and smooth the normals
@@ -307,7 +306,7 @@ function gild(root) {
     if (o.geometry.index) g0.setIndex(o.geometry.index);
     try { const sm = mergeVertices(g0, 1e-3); sm.computeVertexNormals(); o.geometry = sm; } catch (e) { console.warn('statue smoothing skipped', e); }
     // polished gilding; the scan's own shading doubles as occlusion, so folds and recesses darken and the form reads in 3D
-    o.material = new THREE.MeshPhysicalMaterial({ color: 0xffc85a, map: detail, aoMap: ao, aoMapIntensity: 1, bumpMap: bump, bumpScale: 1.4,
+    o.material = new THREE.MeshPhysicalMaterial({ color: 0xffc85a, map: detail, aoMap: ao, aoMapIntensity: 1,
       roughnessMap: rough, metalness: 1, roughness: 0.32, clearcoat: 0.8, clearcoatRoughness: 0.05, envMapIntensity: 3.6 });
   });
 }
@@ -446,7 +445,7 @@ function cleanScanMap(map) {
 }
 function placeProp(src, { x, y = 0, z, h, yaw = 0, mirror = false, girthOf = h }) {   // girthOf: size its thickness as if it were this tall
   const m = src.clone(true);
-  m.rotation.y = yaw; if (mirror) m.scale.x = -1;
+  m.rotation.y = yaw; if (mirror) m.scale[mirror === 'z' ? 'z' : 'x'] = -1;   // 'z': with a quarter-turn yaw, that mirrors left↔right in the world
   m.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(m), size = box.getSize(new THREE.Vector3());
   m.scale.multiplyScalar(girthOf / size.y); m.scale.y *= h / girthOf;
@@ -474,9 +473,11 @@ gl.load(PROPS + 'pillar_dragon_02.glb', (g) => {
     if (o.name !== 'dragonCol') return;
     const s = o.userData.spot;
     o.visible = false;
-    // the scan only has a carved front; pairs are mirrored so the two dragons of each pair face each other
+    // a true mirror pair: both show their carved front to the visitor, the left one mirrored left↔right
+    // (it used to be mirrored front↔back, so one pillar turned its plain back to you and the pair looked different)
     const hall = s.y > 1;                                              // the hall's pair: massive, and set well back so their lotus bases stand on the hall floor, not over the steps
-    placeProp(g.scene, { x: s.x, y: s.y, z: hall ? s.z - 1.4 : s.z, h: s.h, girthOf: hall ? 18 : s.h, yaw: -Math.PI / 2, mirror: s.x < 0 });
+    const sink = s.h * 0.034;                                          // the scan's bottom slab was never textured: sunk below the floor, the carved lotus base stands on it
+    placeProp(g.scene, { x: s.x, y: s.y - sink, z: hall ? s.z - 1.4 : s.z, h: s.h + sink, girthOf: hall ? 18 : s.h, yaw: -Math.PI / 2, mirror: s.x < 0 && 'z' });
   });
 }, undefined, () => {});
 gl.load(PROPS + 'lion_stone_big.glb', (g) => {
@@ -1146,15 +1147,18 @@ scatter('/temple/assets/env/fern.glb', 24, (rnd) => {                // ferns at
   const side = rnd() < 0.5 ? -1 : 1; return [side * (15.4 + rnd() * 0.6), -3 + rnd() * 21];
 }, [0.6, 1.0]);
 
-function paint(meshObj, url, keepAspect) {
-  new THREE.TextureLoader().load(url, (t) => {
-    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
-    if (keepAspect) { const p = meshObj.geometry.parameters; meshObj.scale.y = (t.image.height / t.image.width) * (p.width / p.height); }
-    meshObj.material = new THREE.MeshStandardMaterial({ map: t, roughness: 0.85 });
-  }, undefined, () => {});
+// one great painting fills the whole wall behind the statues: the Western Paradise of Amitabha (西方淨土變), a Tang
+// mural from the Mogao caves at Dunhuang (public domain): palaces, the Buddha on his lotus throne, bodhisattvas and
+// celestials. It replaces the old stitched backdrop and the two side murals (hidden, not removed: bake fingerprint).
+{
+  world.altar.backdrop.visible = false; world.altar.murals.forEach((mm) => (mm.visible = false));
+  const t = new THREE.TextureLoader().load(`/temple/assets/paradise${isMobile ? '_m' : ''}.webp`);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  const W = HALL.halfW * 2 - 0.4, H = HALL.ceil - 1.6;                // wall to wall, from the altar top to just under the ceiling
+  const mural = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshStandardMaterial({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.14, roughness: 0.9 }));
+  mural.position.set(0, HALL.floor + 1.5 + H / 2, HALL.back + 0.34); mural.userData.role = 'skip';
+  scene.add(mural);
 }
-paint(world.altar.backdrop, '/temple/assets/backdrop.webp');
-world.altar.murals.forEach((mm, i) => paint(mm, `/temple/assets/mural${i + 1}.webp`, true));
 
 // ---------------- tiny tween helper ----------------
 const tweens = new Set();
@@ -1166,7 +1170,7 @@ const ease = (k) => 1 - Math.pow(1 - k, 3);
 
 // ---------------- sound (synthesized, no files) ----------------
 // All sounds are real recordings (Freesound, CC0 / CC BY — see assets/CREDITS.md). Nothing is synthesized.
-const SFX_FILES = { muyu: 'muyu', bowl: 'bowl', clack1: 'clack1', clack2: 'clack2', sticks: 'sticks', birds: 'birds_stream', water: 'waterfall' };
+const SFX_FILES = { muyu: 'muyu', bowl: 'bowl', clack1: 'clack1', clack2: 'clack2', sticks: 'sticks', birds: 'birds_stream', water: 'waterfall', mb1: 'moonblock1', mb2: 'moonblock2', mb3: 'moonblock3' };
 const sfx = {
   ctx: null, on: store.get('sound', true), buf: {},
   init() {
@@ -1205,6 +1209,8 @@ const sfx = {
   bell() { this.play('bowl', { gain: 0.55, rate: 0.98 + Math.random() * 0.04 }); },              // struck singing bowl (磬)
   clack(when = 0) { this.play(Math.random() < 0.5 ? 'clack1' : 'clack2', { gain: 0.8, rate: 0.9 + Math.random() * 0.25, when }); },
   muyu(g = 1) { this.play('muyu', { gain: 0.9 * g, rate: 0.93 + Math.random() * 0.08 }); },
+  // moon blocks landing on the stone floor: a hard wooden clack and a few small bounces (one of three real takes)
+  moonblock(when = 0) { this.play('mb' + (1 + (Math.random() * 3 | 0)), { gain: 0.85, rate: 0.95 + Math.random() * 0.12, when }); },
   rattle() { this.play('sticks', { gain: 0.9, rate: 0.95 + Math.random() * 0.1 }); },
   ambient() {
     // forest birdsong by a stream (checked: no voices), looped by overlapping copies with a slow crossfade (no gap, no click)
@@ -2207,8 +2213,8 @@ async function throwBlocks(who, r) {
       b.position.lerpVectors(from, land, k);
       b.position.y += Math.sin(k * Math.PI) * 0.9;
       b.rotation.set(spinX * ease(k), yaw * k, 0.3 * (1 - k));
-      if (k === 1) sfx.clack();
-    }).then(() => animate(0.25, (k) => { b.position.y = land.y + Math.sin(k * Math.PI) * 0.06; if (k === 1) sfx.clack(0.02); }));
+      if (k === 1) sfx.moonblock();                     // the recording carries the bounce that follows
+    }).then(() => animate(0.25, (k) => { b.position.y = land.y + Math.sin(k * Math.PI) * 0.06; }));
   });
   await Promise.all(jobs);
   if (who !== me) setTimeout(() => thrown.length && thrown.every((b) => b.parent) && null, 0);
@@ -2968,6 +2974,7 @@ $('#credits').onclick = () => modal(`
   <p class="muted">${EN ? 'Stone lions, dragon pillars and drum stones' : '石獅、龍柱、抱鼓石'}: "Stone Big Lion 01", "Stone Dragon Pillar 02", "Stone Old Sculpture Drum 01" by zhengzhangxun (Sketchfab), CC BY 4.0.</p>
   <p class="muted">${EN ? 'Offerings' : '供品'}: "Mandarin Scan", "Pineapple Scan" by Franco Pizzani; "White Orchid" by gottalovehana; "Chrystanthemum flower" by Lassi Kaukonen (recoloured) — Sketchfab, CC BY 4.0.</p>
   <p class="muted">${EN ? 'Bamboo' : '竹林'}: "Free Bamboo Set" by JonhGillessen — Sketchfab, CC BY 4.0.</p>
+  <p class="muted">${EN ? 'Great mural behind the altar' : '殿後大壁畫'}: ${EN ? '"Western Paradise of Amitabha", Tang dynasty, Mogao Caves, Dunhuang' : '〈西方淨土變〉，唐，敦煌莫高窟'} — Wikimedia Commons, public domain.</p>
   <p class="muted">${EN ? 'Horizon' : '遠景'}: "Wulingyuan, Zhangjiajie" by chensiyuan — Wikimedia Commons, CC BY-SA 4.0 (contrast lifted, edges faded); ${EN ? 'cliff texture' : '崖壁材質'} — Poly Haven, CC0.</p>
   <p class="muted">${EN ? 'Great tree and banyan leaves' : '古樹與榕樹葉'}: "Island Tree 01"; ${EN ? 'bark and sandstone textures' : '樹皮與砂岩材質'} — Poly Haven, CC0.</p>
   <p class="muted">${EN ? 'Pond' : '放生池'}: "Lilypads" by sligocreatures; "Water Lily, Nymphaea cv." by ffish.asia / floraZia.com; "Koi Fish" by SDPM Esare; "Cattails" by AlkaliDragon — Sketchfab, CC BY 4.0.</p>

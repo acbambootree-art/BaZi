@@ -2,12 +2,11 @@
 
 - `statue.glb` — Seated Guanyin, painted wood, late 11th–early 12th c., Minneapolis Institute of Art (CC0). https://sketchfab.com/3d-models/2c865894453743a49f8e82d57e4f0a8d
 - `statue_side.glb` — Water-Moon Guanyin, 12th c. (Jin), painted wood, Minneapolis Institute of Art (CC0). https://sketchfab.com/3d-models/f3316610c8b740c595c22ca1d7df54ca
-- `backdrop.webp` — composed from Cleveland Museum of Art Open Access (CC0): 1973.70.1, 1989.67 (Manjushri), 1973.70.2 (Ming Water-Land paintings). https://www.clevelandart.org/art/1973.70.1
-- `mural1.webp` — Heavenly King Virudhaka, Ming, Cleveland Museum of Art 1918.544 (CC0).
-- `mural2.webp` — Amitābha Triad, Ming, Cleveland Museum of Art 1961.135 (CC0).
+- `paradise.webp`, `paradise_m.webp` — the great mural behind the altar: "西方淨土變" (Western Paradise of Amitabha), Tang dynasty, Mogao Caves, Dunhuang (unknown painters), public domain, via Wikimedia Commons: https://commons.wikimedia.org/wiki/File:%E8%A5%BF%E6%96%B9%E6%B7%A8%E5%9C%9F%E8%AE%8A.jpg (cropped to the wall).
 - `tex/*`, `sky.hdr`, `sky.jpg` — Poly Haven (CC0). https://polyhaven.com
 - `sfx/birds_stream.mp3` — "Birds singing at stream", Freesound #517913 (CC0), looped. https://freesound.org/s/517913/
 - `sfx/waterfall.mp3` — "small waterfall in the forest sound effect" by Garuda1982, Freesound #577820 (CC0), mono, levelled, looped by the lotus lake. https://freesound.org/s/577820/
+- `sfx/moonblock1.mp3`, `sfx/moonblock2.mp3`, `sfx/moonblock3.mp3` (moon blocks landing) — cut from "PieceofWood03", "PieceofWood01", "PieceofWood06" by kingsrow, Freesound #194691, #194686, #194695 (CC0): small pieces of wood dropped on concrete. No recording of real moon blocks (筊杯) is available under a free licence. https://freesound.org/people/kingsrow/
 - `sfx/bowl.mp3` — "Singing Bowl – Single Strike with Fade-Out" by Fumbananana420, Freesound #697529 (CC0). https://freesound.org/s/697529/
 - `sfx/clack1.mp3`, `sfx/clack2.mp3`, `sfx/sticks.mp3` — cut from "Wooden Blocks falling, close aspect, fast" by rylandbrooks, Freesound #746613 (CC0). https://freesound.org/s/746613/
 - `env/broadleaf.glb` — Poly Haven "Jacaranda Tree" (CC0), leaves and branches reduced in Blender. https://polyhaven.com/a/jacaranda_tree
