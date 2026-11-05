@@ -1165,8 +1165,8 @@ export function buildWorld(scene) {
   }
 
   // lights
-  scene.add(new THREE.HemisphereLight(0xe8efe8, 0x8a8a78, 0.75));      // pale sky over warm-grey ground
-  const sun = new THREE.DirectionalLight(0xfff4e3, 1.9);
+  scene.add(new THREE.HemisphereLight(0xf6e6d0, 0x8a8a78, 0.75));      // warm morning sky over warm-grey ground
+  const sun = new THREE.DirectionalLight(0xffe2b4, 2.0);             // golden morning sun
   sun.position.set(-35, 45, 30);
   sun.castShadow = true;
   const S = sun.shadow, small = window.innerWidth < 800;
