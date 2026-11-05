@@ -55,3 +55,5 @@
   - `gate/mural_7.webp` — "Mural Avolokitesvara.jpg" (unknown ancient Buddhist artist(s)), Public domain, via Wikimedia Commons: https://commons.wikimedia.org/wiki/File:Mural_Avolokitesvara.jpg
   - `gate/mural_8.webp` — "西方淨土變.jpg" (Unknown author), Public domain, via Wikimedia Commons: https://commons.wikimedia.org/wiki/File:%E8%A5%BF%E6%96%B9%E6%B7%A8%E5%9C%9F%E8%AE%8A.jpg
 - Everything else on the gate (Tang-style painted beams with baoxiang flowers and honeysuckle scrolls, each bay seeded differently; brackets, plaster, lanterns, couplets, plaques) is drawn in code (`gate.js`).
+- `zjj_ring.webp`, `zjj_ring_m.webp` — "Wulingyuan zhangjiajie 2012 banner" by chensiyuan, CC BY-SA 4.0 (https://commons.wikimedia.org/wiki/File:Wulingyuan_zhangjiajie_2012_banner.jpg). Adapted: contrast and colour lifted, top and bottom faded to transparent; the adapted image is shared under the same licence.
+- `tex/cliff_side_*` — Poly Haven, CC0. https://polyhaven.com/a/cliff_side

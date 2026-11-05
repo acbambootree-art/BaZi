@@ -6,6 +6,28 @@ import * as THREE from 'three';
 
 const RED = 0xa8261e, DEEP_RED = 0x7a1712, GOLD = 0xd9a441, DARK_WOOD = 0x3a2219,
   TILE = 0xc9762c, JADE = 0x2f8f74, BLUE = 0x2c4f86;
+// the plateau the temple stands on: an irregular oval, its edge dropping away in cliffs (scenery.js)
+export const PLATEAU = { x: 0, z: 10, rx: 70, rz: 84 };
+export const plateauR = (a) => 1 + 0.07 * Math.sin(3 * a + 1) + 0.05 * Math.sin(7 * a + 2) + 0.03 * Math.sin(13 * a + 0.5);
+export const onPlateau = (x, z, k = 1) => { const dx = (x - PLATEAU.x) / PLATEAU.rx, dz = (z - PLATEAU.z) / PLATEAU.rz; return Math.hypot(dx, dz) < plateauR(Math.atan2(dz, dx)) * k; };
+// where the old stone paving still lies: under the hall and the gate, the courtyard and the plaza. Beyond these the
+// slabs give out into grass along a ragged, mossy edge (the mask is drawn from this, and the grass grows outside it).
+const vnoise = (x, z) => {
+  const h = (i, j) => { const v = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return v - Math.floor(v); };
+  const i = Math.floor(x), j = Math.floor(z), fx = x - i, fz = z - j, sx = fx * fx * (3 - 2 * fx), sz = fz * fz * (3 - 2 * fz);
+  return (h(i, j) * (1 - sx) + h(i + 1, j) * sx) * (1 - sz) + (h(i, j + 1) * (1 - sx) + h(i + 1, j + 1) * sx) * sz;
+};
+const PAVED = [[-17.5, 17.5, -33, -6, 1], [-16.5, 16.5, -7, 19.5, 4], [-16, 16, 19, 25.5, 1], [-14.5, 14.5, 24.5, 36.5, 4], [-3.2, 3.2, 35, 39, 0.5]];   // x0 x1 z0 z1 corner
+const pavedDist = (x, z) => {                                        // > 0 inside the paving, metres from its (straight) edge
+  let best = -99;
+  for (const [x0, x1, z0, z1, rc] of PAVED) {
+    const dx = Math.max(x0 + rc - x, 0, x - x1 + rc), dz = Math.max(z0 + rc - z, 0, z - z1 + rc);
+    const inX = Math.min(x - x0, x1 - x), inZ = Math.min(z - z0, z1 - z);
+    best = Math.max(best, dx > 0 || dz > 0 ? rc - Math.hypot(dx, dz) : Math.min(inX, inZ));
+  }
+  return best;
+};
+export const pavedAt = (x, z) => pavedDist(x, z) + (vnoise(x * 0.35, z * 0.35) - 0.5) * 3.2 + (vnoise(x * 1.3, z * 1.3) - 0.5) * 1.1 > 0;
 export const HALL = { floor: 1.2, front: -6.5, back: -35, halfW: 16, ceil: 23, domeZ: -17 };   // ceil: tall enough for the 21 m Guanyin
 
 export function canvasTex(w, h, draw, repeat, isText = false) {
@@ -1047,7 +1069,7 @@ function mergeGeos(list) {
 function forest(scene) {
   let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   const spots = [[], [], [], [], [], []];
-  for (let tries = 0, n = 0; n < 280 && tries < 6000; tries++) {
+  for (let tries = 0, n = 0; n < 70 && tries < 9000; tries++) {
     const x = (rnd() - 0.5) * 190, z = -120 + rnd() * 200;
     if (Math.abs(x) < 24 && z > -44 && z < 21) continue;               // the temple and its walls
     if (Math.abs(x) < 16 && z >= 21 && z < 46) continue;               // open plaza in front of the gate
@@ -1055,7 +1077,8 @@ function forest(scene) {
     if (Math.hypot(x + 38, z - 4) < 17) continue;                       // the great tree's crown
     if (Math.hypot(x - 36, z - 4) < 25) continue;                       // the blessing banyan's crown
     if (Math.abs(x) < 6 && z >= 46) continue;                          // the approach path
-    spots[Math.floor(rnd() * 6)].push([x, z, 0.8 + rnd() * 0.45, rnd() * Math.PI]); n++;
+    if (!onPlateau(x, z, 0.97) || onPlateau(x, z, 0.85)) continue;     // a thin fringe along the cliff edge; the view opens to the peaks
+    spots[Math.floor(rnd() * 6)].push([x, z, 0.55 + rnd() * 0.35, rnd() * Math.PI]); n++;
   }
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), v = new THREE.Vector3(), s = new THREE.Vector3();
   spots.forEach((list, k) => {
@@ -1077,11 +1100,32 @@ function forest(scene) {
 export function buildWorld(scene) {
   scene.fog = new THREE.FogExp2(0x909184, 0.0085);   // matches the misty horizon of the sky
 
-  const ground = mesh(new THREE.PlaneGeometry(44, 70), pbr('rectangular_paving', 12, 19), 0, 0, 3, { cast: false });
+  // the paving: one plane (as baked), cut to the old stone's ragged outline by a mask, mossy where it frays.
+  // Mask: G = stone here (alpha), R = moss. 10 px per metre; canvas row 0 is the plane's far (z = -32) end.
+  const mask = canvasTex(440, 700, (c, w, h) => {
+    const img = c.createImageData(w, h);
+    for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) {
+      const x = -22 + (px + 0.5) / 10, z = -32 + (py + 0.5) / 10, i = (py * w + px) * 4;
+      const d = pavedDist(x, z) + (vnoise(x * 0.35, z * 0.35) - 0.5) * 3.2 + (vnoise(x * 1.3, z * 1.3) - 0.5) * 1.1;
+      const moss = Math.min(1, Math.max(0, 1 - d / 2.6) * 0.9 + Math.max(0, vnoise(x * 0.8 + 40, z * 0.8) - 0.72) * 2.2);
+      img.data[i] = 255 * moss; img.data[i + 1] = d > 0 ? 255 : 0; img.data[i + 2] = 0; img.data[i + 3] = 255;
+    }
+    c.putImageData(img, 0, 0);
+  });
+  mask.colorSpace = THREE.NoColorSpace;
+  const paving = pbr('granite_tile_04', 44 / 3, 70 / 3, { alphaMap: mask, alphaTest: 0.5, color: 0xbfc2bd });   // weathered grey granite flagstones (青石板), ~0.75 m slabs
+  paving.onBeforeCompile = (sh) => {                                  // moss and grass creeping in near the edges
+    sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+      #ifdef USE_ALPHAMAP
+        float moss = texture2D(alphaMap, vAlphaMapUv).r;
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.55, 0.68, 0.42), moss * 0.85);
+      #endif`);
+  };
+  const ground = mesh(new THREE.PlaneGeometry(44, 70), paving, 0, 0, 3, { cast: false });
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
   const grass = mesh(new THREE.PlaneGeometry(400, 400), pbr('leafy_grass', 130, 130, { color: 0x9cb47e }), 0, -0.02, 0, { cast: false });
-  grass.rotation.x = -Math.PI / 2; grass.userData.role = 'occ';
+  grass.rotation.x = -Math.PI / 2; grass.userData.role = 'occ'; grass.visible = false;   // replaced by the plateau (scenery.js)
   scene.add(grass);
 
   const gateG = gate();

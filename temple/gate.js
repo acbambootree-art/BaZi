@@ -197,11 +197,11 @@ export function buildGate(scene, { gl, isMobile, oldGate }) {
   if (oldGate) for (const o of oldGate.children) if (o.isMesh) o.visible = false;
 
   const G = new THREE.Group(); G.name = 'gate3'; G.userData.role = 'skip';
-  // warm sandstone for the platform, steps and plinths; vermilion lacquer; gilt; cream plaster
+  // grey granite for the platform, steps and plinths (matching the courtyard's flagstones); vermilion lacquer; gilt; cream plaster
   const stone = relief(512, 512, (g, w, h) => {
     g.fillStyle = '#888'; g.fillRect(0, 0, w, h);
     g.fillStyle = '#5c5c5c'; for (let x = 0; x < w; x += 170) g.fillRect(x, 0, 3, h); for (let y = 0; y < h; y += 256) g.fillRect(0, y, w, 3);
-  }, { base: [214, 198, 168], depth: 1.2, repeat: [6, 2] });
+  }, { base: [168, 170, 165], depth: 1.2, repeat: [6, 2] });
   const lacquer = new THREE.MeshStandardMaterial({ color: 0xa8392a, roughness: 0.42, metalness: 0.05 });
   const lacquerDark = new THREE.MeshStandardMaterial({ color: 0x7e2a20, roughness: 0.5 });
   const gold = new THREE.MeshStandardMaterial({ color: 0xd9ad55, metalness: 0.85, roughness: 0.28, emissive: 0x2a1a04, emissiveIntensity: 0.4 });

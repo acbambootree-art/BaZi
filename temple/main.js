@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { buildWorld, canvasTex, HALL, flames } from './scene.js';
+import { buildWorld, canvasTex, HALL, flames, onPlateau, pavedAt } from './scene.js';
+import { buildScenery } from './scenery.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -124,7 +125,8 @@ const loadState = { done: 0, total: 0, idle: null };
 THREE.DefaultLoadingManager.onProgress = (url, done, total) => {
   loadState.done = done; loadState.total = total;
   if (!intro.on) { (window.__lateLoads ||= []).push(url); return; }
-  $('#gateBar').style.width = Math.max(parseFloat($('#gateBar').style.width) || 0, (done / total) * 92) + '%';   // never runs backwards
+  const w = Math.max(parseFloat($('#gateBar').style.width) || 0, (done / total) * 92);   // never runs backwards
+  $('#gateBar').style.width = w + '%'; $('#gatePct').textContent = Math.floor(w) + '%';
 };
 $('#rest div').textContent = t('rest');
 $('#wake').textContent = t('wake');
@@ -158,10 +160,6 @@ scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 scene.environmentIntensity = 0.3;
 scene.background = new THREE.Color(0xc89a7a);
 new RGBELoader().load('/temple/assets/sky.hdr', (hdr) => { scene.environment = pmrem.fromEquirectangular(hdr).texture; hdr.dispose(); });
-new THREE.TextureLoader().load('/temple/assets/sky.jpg', (t) => {
-  t.mapping = THREE.EquirectangularReflectionMapping; t.colorSpace = THREE.SRGBColorSpace;
-  scene.background = t; scene.backgroundIntensity = 0.9;
-});
 
 const fovFor = (a) => (a < 0.8 ? 66 : 50); // wider lens on portrait phones
 const camera = new THREE.PerspectiveCamera(fovFor(innerWidth / innerHeight), innerWidth / innerHeight, 0.1, 400);
@@ -392,6 +390,8 @@ function backlight(root) {
   scene.add(body, head);
 }
 const gl = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+const scenery = buildScenery(scene, { isMobile });                  // plateau, cliffs, sea of cloud, Zhangjiajie horizon, sky
+scenery.clouds.forEach((c) => noReflect.add(c));
 buildGate(scene, { gl, isMobile, oldGate: world.occluders[0] });   // the detailed 三川殿 front gate (gate.js)
 { const fill = new THREE.PointLight(0xfff1dc, 14, 13, 1.6); fill.position.set(0, 4.6, 25.2); scene.add(fill); }   // soft daylight bounce under the gate porch
 // missing file → keep the procedural statues
@@ -1092,6 +1092,7 @@ function scatter(url, count, place, scaleRange, role = 'skip') {
 const outsideWalls = (rnd) => {
   const x = (rnd() - 0.5) * 120, z = -90 + rnd() * 150;
   if (Math.abs(x) < 21 && z > -40 && z < 20) return null;            // temple
+  if (!onPlateau(x, z, 0.95)) return null;                           // not over the cliff edge
   if (Math.abs(x) < 5 && z > 20) return null;                        // keep the approach path clear
   if (inPond(x, z, 1.4)) return null;
   if (inLake(x, z, 1.4)) return null;
@@ -2484,8 +2485,8 @@ let grassTick = null;
       transformed.z += cos(uT * 1.1 + wp.z * 0.3) * 0.04 * bendK;`);
   }; return m; };
   const mat = (flowers) => sway(new THREE.MeshStandardMaterial({ map: bladeTex(flowers), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.95 }));
-  const paved = (x, z) => Math.abs(x) < 22.3 && z > -32.3 && z < 38.3 && !inLake(x, z, 1.45);   // courtyard, plaza and hall paving (the lake's meadow ring is grass)
-  const ok = (x, z) => !paved(x, z) && !inLake(x, z, 1.12) && !inPond(x, z, 1.2) && Math.hypot(x - BANYAN.x, z - BANYAN.z) > BANYAN.r0 + 0.3 && Math.hypot(x - BODHI.x, z - BODHI.z) > 7.6;
+  const paved = (x, z) => (pavedAt(x, z) || (Math.abs(x) < 17.5 && z > -33 && z < -6)) && !inLake(x, z, 1.45);   // on the stones (and never under the hall)
+  const ok = (x, z) => onPlateau(x, z, 0.98) && !paved(x, z) && !inLake(x, z, 1.12) && !inPond(x, z, 1.2) && Math.hypot(x - BANYAN.x, z - BANYAN.z) > BANYAN.r0 + 0.3 && Math.hypot(x - BODHI.x, z - BODHI.z) > 7.6;
   const spots = [];
   const near = (cx, cz, r0, r1, n) => { for (let i = 0, t = 0; i < n && t < n * 6; t++) { const a = r() * 6.28, d = r0 + Math.sqrt(r()) * (r1 - r0), x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d; if (ok(x, z)) { spots.push([x, z]); i++; } } };
   const k = isMobile ? 0.3 : 1;
@@ -2740,6 +2741,7 @@ $('#credits').onclick = () => modal(`
   <p class="muted">${EN ? 'Stone lions, dragon pillars and drum stones' : '石獅、龍柱、抱鼓石'}: "Stone Big Lion 01", "Stone Dragon Pillar 02", "Stone Old Sculpture Drum 01" by zhengzhangxun (Sketchfab), CC BY 4.0.</p>
   <p class="muted">${EN ? 'Offerings' : '供品'}: "Mandarin Scan", "Pineapple Scan" by Franco Pizzani; "White Orchid" by gottalovehana; "Chrystanthemum flower" by Lassi Kaukonen (recoloured) — Sketchfab, CC BY 4.0.</p>
   <p class="muted">${EN ? 'Bamboo' : '竹林'}: "Free Bamboo Set" by JonhGillessen — Sketchfab, CC BY 4.0.</p>
+  <p class="muted">${EN ? 'Horizon' : '遠景'}: "Wulingyuan, Zhangjiajie" by chensiyuan — Wikimedia Commons, CC BY-SA 4.0 (contrast lifted, edges faded); ${EN ? 'cliff texture' : '崖壁材質'} — Poly Haven, CC0.</p>
   <p class="muted">${EN ? 'Great tree and banyan leaves' : '古樹與榕樹葉'}: "Island Tree 01"; ${EN ? 'bark and sandstone textures' : '樹皮與砂岩材質'} — Poly Haven, CC0.</p>
   <p class="muted">${EN ? 'Pond' : '放生池'}: "Lilypads" by sligocreatures; "Water Lily, Nymphaea cv." by ffish.asia / floraZia.com; "Koi Fish" by SDPM Esare; "Cattails" by AlkaliDragon — Sketchfab, CC BY 4.0.</p>
   <div class="row"><button class="btn ghost" data-v="ok">${t('ok')}</button></div>`);
@@ -2849,7 +2851,7 @@ function frame() {
   updateSticks();
   updateWisps(dt);
   const t = clock.elapsedTime;
-  pondTick?.(dt); lakeTick?.(dt); bodhiTick?.(dt); banyanTick?.(dt); grassTick?.(dt);
+  pondTick?.(dt); lakeTick?.(dt); bodhiTick?.(dt); banyanTick?.(dt); grassTick?.(dt); scenery.tick(dt);
   for (const l of world.lanterns) l.rotation.z = Math.sin(t * 0.8 + l.userData.swing) * 0.04;
   for (const f of flames) {
     const k = 1 + Math.sin(t * 13 + f.seed) * 0.07 + Math.sin(t * 29 + f.seed * 2) * 0.05 + Math.sin(t * 61 + f.seed) * 0.03;
@@ -2939,7 +2941,10 @@ const LM_LOOK = { hall: { neutral: 0.88, lift: 1.15, floor: 0.22 }, out: { neutr
 function bakedMaterial(mat, lm, look = LM_LOOK.out) {
   const m2 = mat.clone();
   m2.lightMap = lm; m2.lightMapIntensity = LM_GAIN; m2.envMapIntensity = 0.5;
+  const own = mat.onBeforeCompile, ownKey = own.toString();         // keep the live material's own shader tweaks (e.g. the paving's moss)
+  m2.customProgramCacheKey = () => 'baked|' + ownKey;
   m2.onBeforeCompile = (sh) => {
+    own(sh);
     sh.fragmentShader = sh.fragmentShader.replace('#include <lights_fragment_maps>',
       `irradiance = vec3(0.0); reflectedLight.directDiffuse = vec3(0.0);
        #include <lights_fragment_maps>
@@ -3084,11 +3089,15 @@ async function partClouds() {
     sfx.on = true; store.set('sound', true); $('#sound').textContent = '🔈';
     sfx.init(); sfx.ctx.resume?.(); sfx.master.gain.value = 1;
   });
-  $(EN ? '#enterEn' : '#enter').focus({ preventScroll: true });   // Enter / Space work too
-  await Promise.all([loaded, entered]);
-  $('#gateBar').style.width = '100%';
+  // loading screen: the doors stay shut until every file has arrived and every shader is compiled
+  await loaded;
   try { await renderer.compileAsync(scene, camera); } catch {}
   await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+  $('#gateBar').style.width = '100%'; $('#gatePct').textContent = '100%';
+  document.querySelectorAll('.enterBtn').forEach((b) => { b.disabled = false; });
+  $('#intro').classList.add('ready');
+  $(EN ? '#enterEn' : '#enter').focus({ preventScroll: true });   // Enter / Space work too
+  await entered;
   intro.parting = true;
   $('#intro').classList.add('out');
 }
