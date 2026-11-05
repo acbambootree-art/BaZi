@@ -11,6 +11,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Water } from 'three/addons/objects/Water.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { connectPresence } from './presence.js';
 import { buildGate } from './gate.js';
@@ -47,7 +48,8 @@ const TX = {
   acts: [['拜拜', '坐下', '上香', '擲筊', '求籤', '祈福', '木魚'], ['Pray', 'Kneel', 'Incense', 'Blocks', 'Fortune', 'Blessing', 'Muyu']],
   muyuHint: ['再點「木魚」或按空白鍵，敲一聲', 'Tap Muyu again (or press Space) to strike'],
   kneel: ['跪在拜墊上，靜靜待一會兒', 'Kneeling on the cushion. Stay as long as you like.'],
-  bench: ['坐在池邊，看看水、看看魚。想走時動一下就好', 'Sitting by the pond. Watch the water and the koi. Move whenever you like to get up.'],
+  bench: ['坐在水邊，看看水、看看魚。想走時動一下就好', 'Sitting by the water. Watch the lotus and the koi. Move whenever you like to get up.'],
+  watch: ['坐下看水', 'Sit & watch'],
   toBurner: ['走到天公爐前…', 'Walking to the Heaven burner…'],
   incenseDone: [(n) => `香已插上，心意神明收到了（第 ${n} 炷）`, (n) => `Your incense is offered. The gods received it (stick no. ${n}).`],
   copied: ['已複製，貼給朋友吧', 'Link copied. Paste it to a friend.'],
@@ -560,8 +562,8 @@ gl.load('/temple/assets/env/bamboo.glb', (g) => {
     band(26 * many, sx * 18.5, sx * 23, 20, 44);       // framing the plaza
     band(38 * many, sx * 18.2, sx * 23.5, -40, 18);    // behind the courtyard walls
   }
-  band(46 * many, -24.5, -29.5, -40, 48);              // the far bank of the stream (west)
-  const keep = spots.filter(([x, z]) => !inPond(x, z, 1.6) && !nearStream(x, z, 1.4) && Math.hypot(x - 13, z - 31) > 2.5 && Math.hypot(x + 12, z - 30) > 2.5);
+  band(40 * many, -33, -38, -14, 24);                  // behind the lake (west)
+  const keep = spots.filter(([x, z]) => !inPond(x, z, 1.6) && !inLake(x, z, 1.5) && Math.hypot(x - 13, z - 31) > 2.5 && Math.hypot(x + 12, z - 30) > 2.5);
   // each spot is a little clump of 2–3 culms of mixed heights, leaning slightly
   const per = plants.map(() => []);
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3();
@@ -586,20 +588,82 @@ gl.load('/temple/assets/env/bamboo.glb', (g) => {
   });
 }, undefined, () => {});
 
+// koi that feel alive: each one wanders to spots of its own choosing, turning gradually; it cruises, sometimes darts
+// off with a few strong tail beats and glides, sometimes hangs almost still. The tail beats with its speed (its own
+// shader uniforms), it drifts a little up and down, and it keeps clear of the edge and of the other fish.
+function koiSchool(put, ticks, P, n, y0, inside) {
+  gl.load('/temple/assets/pond/koi.glb', (g) => {
+    let seed = Math.round(P.x * 31 + P.z * 7) | 0; const r = () => ((seed = (seed * 16807 + 11) % 2147483647 + 2147483647) % 2147483647 / 2147483647);
+    const pick = () => { for (let i = 0; i < 40; i++) { const x = P.x + (r() - 0.5) * 2 * P.rx, z = P.z + (r() - 0.5) * 2 * P.rz; if (inside(x, z, 0.82)) return [x, z]; } return [P.x, P.z]; };
+    const fish = [];
+    for (let i = 0; i < n; i++) {
+      const u = { phase: { value: r() * 6 }, amp: { value: 0.06 } };
+      const src = g.scene.clone(true);
+      src.traverse((o) => {
+        if (!o.isMesh) return;
+        o.material = o.material.clone();
+        o.material.onBeforeCompile = (sh) => {
+          sh.uniforms.uPhase = u.phase; sh.uniforms.uAmp = u.amp;
+          sh.vertexShader = 'uniform float uPhase; uniform float uAmp;\n' + sh.vertexShader.replace('#include <begin_vertex>',
+            `#include <begin_vertex>
+             float along = clamp((transformed.x + 0.45) / 0.95, 0.0, 1.0);            // 0 head .. 1 tail
+             transformed.z += sin(uPhase - along * 5.0) * uAmp * along * along;`);
+        };
+      });
+      const [x, z] = pick();
+      const f = put(src, 0.36 + r() * 0.16, x, y0, z);
+      fish.push({ f, u, x, z, h: r() * 6.28, v: 0.15, vWant: 0.2, tgt: pick(), t: 0, mode: 'cruise', yPh: r() * 6.28, y0: y0 + r() * 0.04 });
+    }
+    ticks.push((dt) => {
+      dt = Math.min(dt, 0.05);
+      for (const k of fish) {
+        k.t -= dt;
+        const dx = k.tgt[0] - k.x, dz = k.tgt[1] - k.z, d = Math.hypot(dx, dz);
+        if (d < 0.4 || k.t <= 0) {                                         // a new whim
+          const roll = r();
+          k.mode = roll < 0.12 ? 'dart' : roll < 0.3 ? 'rest' : 'cruise';
+          k.vWant = k.mode === 'dart' ? 0.7 + r() * 0.3 : k.mode === 'rest' ? 0.02 + r() * 0.03 : 0.14 + r() * 0.16;
+          k.t = k.mode === 'dart' ? 1 + r() : k.mode === 'rest' ? 2 + r() * 4 : 4 + r() * 6;
+          if (k.mode !== 'rest') k.tgt = pick();
+        }
+        // steer: toward the target, away from close neighbours, back in from the edge
+        let want = Math.atan2(dx, dz);
+        for (const o of fish) {
+          if (o === k) continue;
+          const ox = k.x - o.x, oz = k.z - o.z, od = Math.hypot(ox, oz);
+          if (od < 0.6 && od > 1e-3) want += Math.sign(Math.sin(Math.atan2(ox, oz) - k.h)) * 0.6 * (1 - od / 0.6);
+        }
+        const ahead = [k.x + Math.sin(k.h) * 0.8, k.z + Math.cos(k.h) * 0.8];
+        if (!inside(ahead[0], ahead[1], 0.88)) { want = Math.atan2(P.x - k.x, P.z - k.z); k.vWant = Math.max(k.vWant, 0.15); }
+        const turn = Math.atan2(Math.sin(want - k.h), Math.cos(want - k.h));
+        const rate = (k.mode === 'dart' ? 2.2 : 0.9) + Math.sin(k.yPh + k.t) * 0.2;   // gentle, slightly wavering turns
+        k.h += THREE.MathUtils.clamp(turn, -rate * dt, rate * dt);
+        k.v += (k.vWant - k.v) * (1 - Math.exp(-dt * (k.vWant > k.v ? 2.5 : 0.8)));   // quick to speed up, slow to glide down
+        k.x += Math.sin(k.h) * k.v * dt; k.z += Math.cos(k.h) * k.v * dt;
+        if (!inside(k.x, k.z, 0.95)) { k.x -= Math.sin(k.h) * k.v * dt; k.z -= Math.cos(k.h) * k.v * dt; k.h += Math.PI * dt; }
+        // tail beat follows speed; a resting koi just fans its tail slowly
+        k.u.phase.value += dt * (2.2 + k.v * 14);
+        k.u.amp.value = 0.03 + Math.min(0.07, k.v * 0.12) + Math.abs(turn) * 0.015;
+        k.yPh += dt * 0.4;
+        k.f.position.set(k.x, k.y0 + Math.sin(k.yPh) * 0.02, k.z);
+        k.f.rotation.set(0, k.h + KOI_YAW, Math.sin(k.yPh * 1.7) * 0.04);
+      }
+    });
+  }, undefined, () => {});
+}
+
 // ---------------- 放生池: a stone-edged lotus pond on the plaza, right of the approach ----------------
 const POND = { x: 11.6, z: 34.0, rx: 4.3, rz: 2.5, y: 0.3 };
 const pondK = (a) => 1 + 0.07 * Math.sin(3 * a + 1.3) + 0.04 * Math.sin(5 * a + 0.4);           // organic, not an ellipse
 const pondAt = (a, k = 1) => [POND.x + Math.cos(a) * POND.rx * pondK(a) * k, POND.z + Math.sin(a) * POND.rz * pondK(a) * k];
 const inPond = (x, z, k = 1) => { const a = Math.atan2((z - POND.z) / POND.rz, (x - POND.x) / POND.rx), K = pondK(a) * k; return ((x - POND.x) / (POND.rx * K)) ** 2 + ((z - POND.z) / (POND.rz * K)) ** 2 < 1; };
 let pondTick = null, pondBank = null;
-// a winding stream on the west side, where the courtyard walkway used to stand: from the forest behind the hall,
-// past the courtyard and out beside the plaza
-const STREAM = { z0: -42, z1: 50, y: 0.22 };
-const streamX = (z) => -20.6 + 1.3 * Math.sin(z * 0.13 + 0.6) + 0.6 * Math.sin(z * 0.31 + 2);
-const streamW = (z) => 2.3 + 0.6 * Math.sin(z * 0.21 + 1);                     // full width of the water
-const streamInner = (z) => streamX(z) + streamW(z) / 2;                           // the courtyard-side waterline
-const nearStream = (x, z, pad = 0) => z > STREAM.z0 - 2 && z < STREAM.z1 + 2 && Math.abs(x - streamX(z)) < streamW(z) / 2 + pad;
-let streamBank = null, streamTick = null;
+// a quiet lotus lake on the west side of the courtyard (where the walkway used to stand)
+const LAKE = { x: -25.5, z: 4, rx: 6.3, rz: 12, y: 0.26 };
+const lakeK = (a) => 1 + 0.08 * Math.sin(3 * a + 2.1) + 0.05 * Math.sin(5 * a + 1.2) + 0.03 * Math.sin(7 * a);
+const lakeAt = (a, k = 1) => [LAKE.x + Math.cos(a) * LAKE.rx * lakeK(a) * k, LAKE.z + Math.sin(a) * LAKE.rz * lakeK(a) * k];
+const inLake = (x, z, k = 1) => { const a = Math.atan2((z - LAKE.z) / LAKE.rz, (x - LAKE.x) / LAKE.rx), K = lakeK(a) * k; return ((x - LAKE.x) / (LAKE.rx * K)) ** 2 + ((z - LAKE.z) / (LAKE.rz * K)) ** 2 < 1; };
+let lakeBank = null, lakeTick = null;
 const KOI_YAW = Math.PI / 2;    // the koi model's head points along -x (tall tail fin at +x)
 {
   const N = 72, shape = new THREE.Shape();
@@ -656,92 +720,143 @@ const KOI_YAW = Math.PI / 2;    // the koi model's head points along -x (tall ta
   gl.load(PD + 'cattails.glb', (g) => {
     for (const [u, v, h, yaw] of [[0.85, 0.55, 1.5, 0], [0.98, 0.15, 1.2, 1.7], [0.6, 0.85, 1.35, 3.1], [-0.95, 0.4, 1.1, 0.8]]) put(g.scene, h, ...at(u, v, POND.y - 0.1), yaw, 'h');
   }, undefined, () => {});
-  // koi: each swims a slow loop under the surface; the body flexes in a travelling wave (vertex shader), tail most
-  gl.load(PD + 'koi.glb', (g) => {
-    const flex = { value: 0 };
-    g.scene.traverse((o) => {
-      if (!o.isMesh) return;
-      o.material = o.material.clone();
-      o.material.onBeforeCompile = (sh) => {
-        sh.uniforms.uFlex = flex;
-        sh.vertexShader = 'uniform float uFlex;\n' + sh.vertexShader.replace('#include <begin_vertex>',
-          `#include <begin_vertex>
-           float along = clamp((transformed.x + 0.45) / 0.95, 0.0, 1.0);            // 0 head .. 1 tail
-           transformed.z += sin(uFlex * 6.0 - along * 5.0) * 0.06 * along * along;`);
-      };
-    });
-    const fish = [];
-    for (let i = 0; i < 5; i++) {
-      const f = put(g.scene, 0.4 + (i % 3) * 0.06, POND.x, 0.06 + (i % 2) * 0.03, POND.z);   // the pond is ~27 cm deep: stay under
-      fish.push({ f, ph: i * 1.27, sp: 0.09 + i * 0.012, ru: 0.55 - (i % 3) * 0.12, rv: 0.5 - (i % 2) * 0.12, dir: i % 2 ? 1 : -1 });
-    }
-    let T = 0;
-    ticks.push((dt) => {
-      T += dt; flex.value = T;
-      for (const k of fish) {
-        const a = T * k.sp * k.dir + k.ph, w = 1 + 0.15 * Math.sin(T * 0.3 + k.ph);
-        const x = POND.x + Math.cos(a) * POND.rx * k.ru * w, z = POND.z + Math.sin(a) * POND.rz * k.rv * w;
-        const dx = x - k.f.position.x, dz = z - k.f.position.z;
-        if (dx || dz) k.f.rotation.y = Math.atan2(dx, dz) + KOI_YAW;
-        k.f.position.x = x; k.f.position.z = z;
-      }
-    });
-  }, undefined, () => {});
+  koiSchool(put, ticks, POND, 6, 0.06, inPond);         // ~27 cm deep: they stay under
 }
 {
-  const N = 184, pos = [], idx = [], bank = [], bIdx = [], buv = [];
+  const N = 120, shape = new THREE.Shape();
+  for (let i = 0; i <= N; i++) { const [x, z] = lakeAt((i / N) * Math.PI * 2); i ? shape.lineTo(x - LAKE.x, -(z - LAKE.z)) : shape.moveTo(x - LAKE.x, -(z - LAKE.z)); }
+  const flat = (geo, y, mat) => { const m = new THREE.Mesh(geo, mat); m.rotation.x = -Math.PI / 2; m.position.set(LAKE.x, y, LAKE.z); m.userData.role = 'skip'; scene.add(m); return m; };
+  flat(new THREE.ShapeGeometry(shape), 0.03, new THREE.MeshStandardMaterial({ color: 0x18201a, roughness: 1 }));   // dark silty bed
+  // a bank sloping from the ground up to the waterline (rocks sit on it)
+  const pos = [], uvs = [], idx = [];
   for (let i = 0; i <= N; i++) {
-    const z = STREAM.z0 + ((STREAM.z1 - STREAM.z0) * i) / N, cx = streamX(z), hw = streamW(z) / 2;
-    pos.push(cx - hw, -z, 0, cx + hw, -z, 0);                                  // water ribbon (local XY, laid flat below)
-    const top = STREAM.y + 0.06;
-    for (const [x, y] of [[cx - hw - 1.0, 0.004], [cx - hw + 0.06, top], [cx + hw - 0.06, top], [cx + hw + 1.0, 0.004]]) { bank.push(x, y, z); buv.push(x * 0.6, z * 0.6); }
-    if (i < N) {
-      const a = i * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);   // wound to face up once laid flat
-      const b = i * 4, c = b + 4;
-      bIdx.push(b, b + 1, c, b + 1, c + 1, c, b + 2, b + 3, c + 2, b + 3, c + 3, c + 2);   // the two sloping banks
-    }
+    const a = (i / N) * Math.PI * 2, [ox, oz] = lakeAt(a, 1.14), [ix, iz] = lakeAt(a, 0.98);
+    pos.push(ox, 0.005, oz, ix, LAKE.y + 0.06, iz); uvs.push(ox * 0.6, oz * 0.6, ix * 0.6, iz * 0.6);
+    if (i < N) { const b = i * 2; idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
   }
-  const ribbon = new THREE.BufferGeometry(); ribbon.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); ribbon.setIndex(idx);
-  ribbon.computeVertexNormals();                      // the water shader needs normals (shadow lookups go NaN without them)
-  const flat = (geo, y, mat) => { const m = new THREE.Mesh(geo, mat); m.rotation.x = -Math.PI / 2; m.position.y = y; m.userData.role = 'skip'; scene.add(m); return m; };
-  flat(ribbon.clone(), 0.03, new THREE.MeshStandardMaterial({ color: 0x1b2018, roughness: 1 }));        // dark stony bed
-  const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(bank, 3)); bg.setAttribute('uv', new THREE.Float32BufferAttribute(buv, 2)); bg.setIndex(bIdx); bg.computeVertexNormals();
-  streamBank = new THREE.Mesh(bg, new THREE.MeshStandardMaterial({ color: 0x3b3a2c, roughness: 0.95, side: THREE.DoubleSide }));
-  streamBank.receiveShadow = true; streamBank.userData.role = 'skip'; scene.add(streamBank);
-  // the old paved terrace reaches x = -22: past the far bank it's covered with grass, so the stream sits in the meadow
+  const bank = new THREE.BufferGeometry(); bank.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); bank.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); bank.setIndex(idx); bank.computeVertexNormals();
+  lakeBank = new THREE.Mesh(bank, new THREE.MeshStandardMaterial({ color: 0x3b3a2c, roughness: 0.95, side: THREE.DoubleSide }));
+  lakeBank.receiveShadow = true; lakeBank.userData.role = 'skip'; scene.add(lakeBank);
   {
+    // a meadow ring outside the bank, so no plaza paving shows round the lake
     const gp = [], gi = [], gu = [];
     for (let i = 0; i <= N; i++) {
-      const z = STREAM.z0 + ((STREAM.z1 - STREAM.z0) * i) / N, x0 = streamX(z) - streamW(z) / 2 - 0.9;
-      for (const x of [-22.6, Math.max(x0, -22.6)]) { gp.push(x, 0.012, z); gu.push(x * 0.31, z * 0.31); }   // from the paving's edge to the far bank
-      if (i < N) { const a = i * 2; gi.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+      const a = (i / N) * Math.PI * 2, [ox, oz] = lakeAt(a, 1.13), [fx, fz] = lakeAt(a, 1.45);
+      for (const [x, z] of [[ox, oz], [fx, fz]]) { gp.push(x, 0.011, z); gu.push(x * 0.31, z * 0.31); }
+      if (i < N) { const b = i * 2; gi.push(b, b + 2, b + 1, b + 1, b + 2, b + 3); }
     }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(gu, 2)); geo.setIndex(gi); geo.computeVertexNormals();
     const tl = new THREE.TextureLoader(), tex = (m, srgb) => { const t = tl.load(`/temple/assets/tex/leafy_grass_${m}.webp`); t.wrapS = t.wrapT = THREE.RepeatWrapping; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
-    const grassStrip = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex('diff', true), normalMap: tex('nor'), roughness: 1, color: 0xb8c4a8, side: THREE.DoubleSide }));
-    grassStrip.receiveShadow = true; grassStrip.userData.role = 'skip'; scene.add(grassStrip);
+    const meadow = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex('diff', true), normalMap: tex('nor'), roughness: 1, color: 0xb8c4a8, side: THREE.DoubleSide }));
+    meadow.receiveShadow = true; meadow.userData.role = 'skip'; scene.add(meadow);
   }
   const normals = new THREE.TextureLoader().load('/temple/assets/env/waternormals.jpg', (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
   const res = isMobile ? 256 : 512;
-  const water = new Water(ribbon, {
+  const water = new Water(new THREE.ShapeGeometry(shape), {
     textureWidth: res, textureHeight: res, waterNormals: normals, sunDirection: new THREE.Vector3(-35, 45, 30).normalize(),
-    sunColor: 0x8a7a64, waterColor: 0x15403a, distortionScale: 0.45, fog: true, alpha: 0.66,
+    sunColor: 0x8a7a64, waterColor: 0x14423a, distortionScale: 0.3, fog: true, alpha: 0.6,   // clear enough to see the koi
   });
   water.material.uniforms.size.value = 5; water.material.transparent = true; water.renderOrder = 1;
-  water.rotation.x = -Math.PI / 2; water.position.y = STREAM.y; water.userData.role = 'skip';
+  water.rotation.x = -Math.PI / 2; water.position.set(LAKE.x, LAKE.y, LAKE.z); water.userData.role = 'skip';
   scene.add(water);
-  // the water moves a little faster than the pond's; only drawn when you're on its side of the temple
-  streamTick = (dt) => { water.material.uniforms.time.value += dt * 0.7; water.visible = camera.position.x < 4 && camera.position.z > -8; };
-  // rocks along both banks and ferns behind them
+  const ticks = [(dt) => { water.material.uniforms.time.value += dt * 0.3; water.visible = camera.position.x < 6 && camera.position.z > -14; }];
+  lakeTick = (dt) => ticks.forEach((f) => f(dt));
+  // rocks round the rim, ferns behind them
   let seed = 909; const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   const stones = [], ferns = [];
-  for (let z = STREAM.z0; z <= STREAM.z1; z += 0.75) for (const side of [-1, 1]) {
-    const cx = streamX(z), hw = streamW(z) / 2, d = r() * 0.45;
-    stones.push([cx + side * (hw + 0.05 + d), z + (r() - 0.5) * 0.5, 0.45 + r() * 0.5, r() * 6.28, 0.5 + r() * 0.3, (STREAM.y + 0.06) * (1 - d / 1.06)]);
-    if (r() < 0.18) ferns.push([cx + side * (hw + 1.1 + r() * 0.6), z, 1.1 + r() * 0.6, r() * 6.28]);
+  for (let i = 0; i < 150; i++) {
+    const a = (i / 150) * Math.PI * 2 + r() * 0.03, k = 0.99 + r() * 0.08, [x, z] = lakeAt(a, k);
+    stones.push([x, z, 0.6 + r() * 0.55, r() * 6.28, 0.5 + r() * 0.3, (LAKE.y + 0.06) * (1.14 - k) / 0.16]);
+    if (r() < 0.22) { const [fx, fz] = lakeAt(a, 1.2 + r() * 0.15); ferns.push([fx, fz, 1.2 + r() * 0.6, r() * 6.28]); }
   }
   ring('/temple/assets/env/rocks.glb', stones, 0.3, true);
   ring('/temple/assets/env/fern.glb', ferns);
+  // lotus clumps, floating water lilies and cattails (the same scans as the plaza pond)
+  const put = (src, size, x, y, z, yaw = 0, by = 'w') => {
+    const m = src.clone(true), w = new THREE.Group(); w.add(m);
+    const b = new THREE.Box3().setFromObject(m), sz = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3());
+    m.position.sub(new THREE.Vector3(c.x, b.min.y, c.z));
+    w.scale.setScalar(size / (by === 'h' ? sz.y : Math.max(sz.x, sz.z)));
+    w.position.set(x, y, z); w.rotation.y = yaw;
+    w.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    w.userData.role = 'skip'; scene.add(w); return w;
+  };
+  const spot = (u, v) => [LAKE.x + u * LAKE.rx, LAKE.z + v * LAKE.rz];
+  gl.load('/temple/assets/pond/lotus.glb', (g) => {
+    g.scene.traverse((o) => { if (o.isMesh && /glass|transparent/.test(o.material.name)) o.visible = false; });
+    for (const [u, v, w, yaw] of [[0.5, -0.6, 2.6, 0.3], [-0.3, -0.35, 2.2, 1.9], [0.25, 0.1, 2.0, 3.3], [-0.5, 0.45, 2.6, 4.4], [0.45, 0.72, 2.2, 5.6], [-0.1, 0.85, 1.8, 0.9], [0.62, 0.32, 1.7, 2.6]]) {
+      const [x, z] = spot(u, v); put(g.scene, w, x, LAKE.y - 0.25, z, yaw);
+    }
+  }, undefined, () => {});
+  gl.load('/temple/assets/pond/lily.glb', (g) => {
+    for (const [u, v, w, yaw] of [[0.1, -0.15, 1.0, 1.0], [-0.45, 0.05, 0.85, 3.9], [0.35, 0.5, 0.9, 5.0], [-0.2, 0.62, 0.8, 2.2], [0.05, -0.8, 0.9, 0.4]]) {
+      const [x, z] = spot(u, v); put(g.scene, w, x, LAKE.y - 0.3, z, yaw);
+    }
+  }, undefined, () => {});
+  gl.load('/temple/assets/pond/cattails.glb', (g) => {
+    for (const [u, v, h, yaw] of [[-0.95, -0.3, 1.5, 0], [-0.9, 0.35, 1.3, 1.7], [-0.7, 0.85, 1.4, 3.1], [-0.6, -0.85, 1.2, 0.8]]) {
+      const [x, z] = spot(u, v); put(g.scene, h, x, LAKE.y - 0.1, z, yaw, 'h');
+    }
+  }, undefined, () => {});
+  koiSchool(put, ticks, LAKE, 11, 0.07, inLake);
+  // glowing lotus lanterns (蓮花燈) drifting slowly on the water: two rings of petals, white at the heart and pink at
+  // the tips, a warm candle light inside, a green pad underneath
+  // three shapes: wide open, half open, a tight bud; each lantern also gets its own size, colour and glow
+  const petal = () => new THREE.SphereGeometry(1, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.07, 0.03, 0.15).translate(0, 0, 0.12);
+  const lotusShape = (rings) => {
+    const parts = [];
+    for (const [n, tilt, rad, s, turn] of rings) for (let i = 0; i < n; i++) {
+      const g = petal().scale(s, s, s); g.rotateX(-tilt); g.translate(0, 0.03, rad); g.rotateY((i / n) * Math.PI * 2 + turn);
+      parts.push(g.toNonIndexed());
+    }
+    const geo = mergeGeometries(parts), p2 = geo.attributes.position, cols = [];
+    for (let i = 0; i < p2.count; i++) { const k = THREE.MathUtils.smoothstep(Math.hypot(p2.getX(i), p2.getZ(i)) + p2.getY(i), 0.06, 0.2); cols.push(1, 1 - k * 0.3, 1 - k * 0.2); }   // pale heart, tinted tips
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); geo.computeVertexNormals();
+    return geo;
+  };
+  const SHAPES = [
+    lotusShape([[10, 0.55, 0.06, 1.05, 0], [8, 0.95, 0.03, 0.85, 0.3], [5, 1.3, 0.0, 0.6, 0.6]]),    // wide open
+    lotusShape([[8, 0.95, 0.04, 0.95, 0], [6, 1.25, 0.01, 0.75, 0.4]]),                               // half open
+    lotusShape([[6, 1.35, 0.01, 0.8, 0], [4, 1.5, 0.0, 0.6, 0.5]]),                                   // bud
+  ];
+  const TINTS = [0xffffff, 0xffe4ec, 0xffc2d4, 0xff9db8, 0xfff0cf];                                  // white, blush, pink, deep pink, pale gold
+  const GLOWS = [0xffe6c0, 0xffd8c8, 0xffc8b8, 0xffbfae, 0xffe8a8];
+  const LN = 18, lanterns = [], byShape = [[], [], []];
+  const glowTex = canvasTex(64, 64, (c, w) => { const g = c.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(255,240,210,1)'); g.addColorStop(0.35, 'rgba(255,200,160,0.45)'); g.addColorStop(1, 'rgba(255,180,140,0)'); c.fillStyle = g; c.fillRect(0, 0, w, w); });
+  for (let i = 0; i < LN; i++) {
+    let x, z; do { x = LAKE.x + (r() - 0.5) * 1.6 * LAKE.rx; z = LAKE.z + (r() - 0.5) * 1.6 * LAKE.rz; } while (!inLake(x, z, 0.8));
+    const shape = r() < 0.45 ? 0 : r() < 0.6 ? 1 : 2, tint = (r() * TINTS.length) | 0, size = 0.7 + r() * 0.65;
+    const strength = shape === 2 ? 0.35 + r() * 0.2 : 0.55 + r() * 0.45;                          // buds glow faintly
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: GLOWS[tint], transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: strength }));
+    glow.scale.setScalar(0.7 * size + strength * 0.5); glow.userData.role = 'skip'; scene.add(glow);
+    const L = { x, z, ph: r() * 6.28, sp: 0.015 + r() * 0.035, rad: 0.3 + r() * 1.0, yaw: r() * 6.28, glow, size, strength, shape, tint, k: byShape[shape].length };
+    byShape[shape].push(L); lanterns.push(L);
+  }
+  const petals = SHAPES.map((geo, si) => {
+    const m = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, emissive: 0xfff0e6, emissiveIntensity: 0.28, side: THREE.DoubleSide }), Math.max(1, byShape[si].length));
+    m.count = byShape[si].length;
+    byShape[si].forEach((L) => m.setColorAt(L.k, new THREE.Color(TINTS[L.tint])));
+    return m;
+  });
+  const pads = new THREE.InstancedMesh(new THREE.CircleGeometry(0.22, 18).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3f6a32, roughness: 0.7 }), LN);
+  for (const m of [...petals, pads]) { m.userData.role = 'skip'; m.frustumCulled = false; scene.add(m); }
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), v = new THREE.Vector3();
+  let T = 0;
+  ticks.push((dt) => {
+    T += dt;
+    lanterns.forEach((L, i) => {
+      const a = T * L.sp + L.ph, x = L.x + Math.cos(a) * L.rad, z = L.z + Math.sin(a * 0.8) * L.rad;
+      const y = LAKE.y + 0.01 + Math.sin(T * 0.9 + L.ph) * 0.012;                      // drifting, gently bobbing
+      e.set(Math.sin(T * 0.7 + L.ph) * 0.05, L.yaw + T * 0.03, Math.cos(T * 0.6 + L.ph) * 0.05);
+      q.setFromEuler(e); sc.setScalar(L.size);
+      petals[L.shape].setMatrixAt(L.k, m4.compose(v.set(x, y + 0.02 * L.size, z), q, sc));
+      pads.setMatrixAt(i, m4.compose(v.set(x, y, z), q, sc));
+      L.glow.position.set(x, y + 0.1 * L.size, z);
+      L.glow.material.opacity = L.strength * (0.88 + Math.sin(T * 2.3 + L.ph) * 0.08 + Math.sin(T * 5.1 + L.ph * 2) * 0.05);   // candle flicker
+    });
+    for (const m of petals) m.instanceMatrix.needsUpdate = true;
+    pads.instanceMatrix.needsUpdate = true;
+  });
 }
 
 // rim stones and ferns, from the same CC0 scans as the forest floor. Each part is re-centred and sized in metres
@@ -817,7 +932,7 @@ function ring(url, list, sink = 0, split = false, onParts) {
   }
   ring('/temple/assets/env/rocks.glb', stones, 0.3, true, (parts) => {      // the bank wears the same mossy stone
     const m = parts[0].mat;
-    for (const bank of [pondBank, streamBank]) if (bank) bank.material = new THREE.MeshStandardMaterial({ map: m.map, normalMap: m.normalMap, roughness: 1, color: 0x9a9a90, side: THREE.DoubleSide });
+    for (const bank of [pondBank, lakeBank]) if (bank) bank.material = new THREE.MeshStandardMaterial({ map: m.map, normalMap: m.normalMap, roughness: 1, color: 0x9a9a90, side: THREE.DoubleSide });
   });
   const ferns = [];
   for (let i = 0; i < 16; i++) {
@@ -831,9 +946,17 @@ function ring(url, list, sink = 0, split = false, onParts) {
 // ---------------- benches on the pond bank: sit and watch the water ----------------
 // Two old painted wooden benches (Poly Haven, CC0) face the pond. Tap one: your monk walks over and sits, and the
 // camera settles into a slow view across the water over his shoulder. Moving gets him up again.
-const BENCHES = [-1.9, 2.55].map((a) => {
-  const [x, z] = pondAt(a, 1.5);
-  return { x, z, yaw: Math.atan2(POND.x - x, POND.z - z) };     // facing the middle of the pond
+const BENCHES = [
+  ...[-1.9, 2.55].map((a) => { const [x, z] = pondAt(a, 1.5); return { x, z, look: POND, far: 2.8, up: 2.35 }; }),
+  (() => { const [x, z] = lakeAt(0.05, 1.32); return { x, z, look: LAKE, far: 3.4, up: 2.9 }; })(),   // on the lotus lake's east shore
+].map((b) => ({ ...b, yaw: Math.atan2(b.look.x - b.x, b.look.z - b.z) }));   // each faces the middle of its water
+// a small floating 🪷 over each bench when you're near: tap it to sit and watch the water
+const benchIcons = BENCHES.map((b, i) => {
+  const el = document.createElement('button'); el.className = 'benchIcon'; el.textContent = '🪷 ' + t('watch');
+  el.addEventListener('pointerdown', (e) => e.stopPropagation());
+  el.addEventListener('click', (e) => { e.stopPropagation(); hideHint(); sitBench(i); });
+  const o = new CSS2DObject(el); o.position.set(b.x, 1.9, b.z); o.visible = false; scene.add(o);
+  return o;
 });
 const benchMeshes = [];
 gl.load('/temple/assets/pond/bench.glb', (g) => {
@@ -875,8 +998,8 @@ function pondView(t) {
   if (!seated) return null;
   if (me.walking) { seated = null; me.seatY = 0; return null; }      // got up
   const b = seated, fx = Math.sin(b.yaw), fz = Math.cos(b.yaw), rx = fz, rz = -fx;
-  const pos = new THREE.Vector3(b.x - fx * 2.8 + rx * 1.1 + Math.sin(t * 0.07) * 0.25, 2.35 + Math.sin(t * 0.05) * 0.06, b.z - fz * 2.8 + rz * 1.1);
-  const look = new THREE.Vector3(POND.x + Math.sin(t * 0.04) * 0.8, POND.y - 0.6, POND.z + 0.4);
+  const pos = new THREE.Vector3(b.x - fx * b.far + rx * 1.1 + Math.sin(t * 0.07) * 0.25, b.up + Math.sin(t * 0.05) * 0.06, b.z - fz * b.far + rz * 1.1);
+  const look = new THREE.Vector3(b.look.x + Math.sin(t * 0.04) * 0.8, b.look.y - 0.6, b.look.z + 0.4);
   return { pos, look };
 }
 
@@ -905,7 +1028,7 @@ const outsideWalls = (rnd) => {
   if (Math.abs(x) < 21 && z > -40 && z < 20) return null;            // temple
   if (Math.abs(x) < 5 && z > 20) return null;                        // keep the approach path clear
   if (inPond(x, z, 1.4)) return null;
-  if (nearStream(x, z, 1.6)) return null;
+  if (inLake(x, z, 1.4)) return null;
   return [x, z];
 };
 scatter('/temple/assets/env/fern.glb', 260, outsideWalls, [0.8, 1.6]);
@@ -1346,12 +1469,15 @@ const nearestDoor = (x) => DOORS.reduce((a, b) => (Math.abs(b - x) < Math.abs(a 
 function clampWalk(p) {
   const C = THREE.MathUtils.clamp;
   if (p.z < -4.5) { p.x = C(p.x, -14.3, 14.3); p.z = Math.max(p.z, Math.abs(p.x) < 5 ? -26 : -27.6); }
-  else if (p.z <= GATE[0]) p.x = C(p.x, streamInner(p.z) + 0.5, 17.4);          // courtyard: open to the stream bank and the bamboo
+  else if (p.z <= GATE[0]) p.x = C(p.x, -19.5, 17.4);                             // courtyard: open to the lake shore and the bamboo
   else if (p.z < GATE[1]) { const d = nearestDoor(p.x); p.x = C(p.x, d - 1.05, d + 1.05); }
-  else { p.x = C(p.x, Math.max(-18, streamInner(p.z) + 0.5), 18); p.z = Math.min(p.z, 37); }
+  else { p.x = C(p.x, -18, 18); p.z = Math.min(p.z, 37); }
   for (const [ox, oz, r] of OBSTACLES) {
     const dx = p.x - ox, dz = p.z - oz, d = Math.hypot(dx, dz);
     if (d < r && d > 1e-4) { p.x = ox + dx / d * r; p.z = oz + dz / d * r; }
+  }
+  if (inLake(p.x, p.z, 1.1)) {                       // the lake shore: stand at the edge, not in the water
+    const a = Math.atan2((p.z - LAKE.z) / LAKE.rz, (p.x - LAKE.x) / LAKE.rx); [p.x, p.z] = lakeAt(a, 1.11);
   }
   if (inPond(p.x, p.z, 1.12)) {                      // the pond's stone rim: stand at its edge, not in the water
     const a = Math.atan2((p.z - POND.z) / POND.rz, (p.x - POND.x) / POND.rx); [p.x, p.z] = pondAt(a, 1.13);
@@ -2217,6 +2343,7 @@ function frame() {
   // camera follows
   followCam(dt, intro.on);           // during the intro: where the camera will end up (snapped), the flight eases toward it
   introTick(dt);
+  for (let i = 0; i < benchIcons.length; i++) benchIcons[i].visible = !seated && !intro.on && Math.hypot(me.root.position.x - BENCHES[i].x, me.root.position.z - BENCHES[i].z) < 16;
   for (const o of lampLabels) o.visible = Math.hypot(me.root.position.x - BODHI.x, me.root.position.z - BODHI.z) < 18;
 
   sendT += dt;
@@ -2228,7 +2355,7 @@ function frame() {
   updateSticks();
   updateWisps(dt);
   const t = clock.elapsedTime;
-  pondTick?.(dt); streamTick?.(dt);
+  pondTick?.(dt); lakeTick?.(dt);
   for (const l of world.lanterns) l.rotation.z = Math.sin(t * 0.8 + l.userData.swing) * 0.04;
   for (const f of flames) {
     const k = 1 + Math.sin(t * 13 + f.seed) * 0.07 + Math.sin(t * 29 + f.seed * 2) * 0.05 + Math.sin(t * 61 + f.seed) * 0.03;

@@ -545,7 +545,7 @@ function mainHall() {
 
   // walls: back + sides
   g.add(mesh(new THREE.BoxGeometry(HW * 2, C, 0.5), PLASTER(6, 3), 0, F + C / 2, ZB));
-  // side walls (hidden: the hall is open at the sides, looking out to the bamboo and the stream; kept for the bake fingerprint)
+  // side walls (hidden: the hall is open at the sides, looking out to the bamboo and the lotus lake; kept for the bake fingerprint)
   for (const sx of [-1, 1]) g.add(Object.assign(mesh(new THREE.BoxGeometry(0.5, C, ZF - ZB - 1), PLASTER(6, 3), sx * HW, F + C / 2, (ZF + ZB) / 2 - 0.5), { visible: false }));
   // murals behind the side altars
   const murals = [];
@@ -843,7 +843,7 @@ function forest(scene) {
     const x = (rnd() - 0.5) * 190, z = -120 + rnd() * 200;
     if (Math.abs(x) < 24 && z > -44 && z < 21) continue;               // the temple and its walls
     if (Math.abs(x) < 16 && z >= 21 && z < 46) continue;               // open plaza in front of the gate
-    if (x > -28 && x < -15 && z > -44 && z < 50) continue;              // the stream and its banks (west side)
+    if (x > -36 && x < -15 && z > -14 && z < 22) continue;              // the lotus lake and its shore (west side)
     if (Math.abs(x) < 6 && z >= 46) continue;                          // the approach path
     spots[Math.floor(rnd() * 6)].push([x, z, 0.8 + rnd() * 0.45, rnd() * Math.PI]); n++;
   }
@@ -876,7 +876,7 @@ export function buildWorld(scene) {
 
   const gateG = gate();
   scene.add(gateG);
-  // the side walkways are gone: the courtyard opens onto bamboo and, on the left, a stream (main.js). Hidden, not
+  // the side walkways are gone: the courtyard opens onto bamboo and, on the left, a lotus lake (main.js). Hidden, not
   // removed, so the baked-lighting fingerprint still matches.
   for (const sx of [-1, 1]) { const c = sideCorridor(sx); c.visible = false; scene.add(c); }
   // perimeter wall behind the hall
