@@ -1255,7 +1255,7 @@ const ease = (k) => 1 - Math.pow(1 - k, 3);
 
 // ---------------- sound (synthesized, no files) ----------------
 // All sounds are real recordings (Freesound, CC0 / CC BY — see assets/CREDITS.md). Nothing is synthesized.
-const SFX_FILES = { muyu: 'muyu', bowl: 'bowl', clack1: 'clack1', clack2: 'clack2', sticks: 'sticks', birds: 'birds_stream', water: 'waterfall', mb1: 'moonblock1', mb2: 'moonblock2', mb3: 'moonblock3' };
+const SFX_FILES = { muyu: 'muyu', bowl: 'bowl', clack1: 'clack1', clack2: 'clack2', sticks: 'sticks', birds: 'birds_stream', water: 'waterfall', cw1: 'clack_w1', cw2: 'clack_w2', cw3: 'clack_w3', cw4: 'clack_w4', cw5: 'clack_w5' };
 const sfx = {
   ctx: null, on: store.get('sound', true), buf: {},
   init() {
@@ -1294,8 +1294,15 @@ const sfx = {
   bell() { this.play('bowl', { gain: 0.55, rate: 0.98 + Math.random() * 0.04 }); },              // struck singing bowl (磬)
   clack(when = 0) { this.play(Math.random() < 0.5 ? 'clack1' : 'clack2', { gain: 0.8, rate: 0.9 + Math.random() * 0.25, when }); },
   muyu(g = 1) { this.play('muyu', { gain: 0.9 * g, rate: 0.93 + Math.random() * 0.08 }); },
-  // moon blocks landing on the stone floor: a hard wooden clack and a few small bounces (one of three real takes)
-  moonblock(when = 0) { this.play('mb' + (1 + (Math.random() * 3 | 0)), { gain: 0.85, rate: 0.95 + Math.random() * 0.12, when }); },
+  // a moon block landing on the stone floor: a bright hard-wood "tok", then quick, softer bounces as it settles.
+  // Built from real recorded wooden clacks, each block at its own pitch, so no two throws sound the same.
+  moonblock() {
+    const r = 0.95 + Math.random() * 0.18, hit = (when, gain, k) => this.play('cw' + (1 + (Math.random() * 5 | 0)), { gain, rate: r * k, when });
+    hit(0, 0.7, 1);
+    hit(0.08 + Math.random() * 0.03, 0.34, 1.04);
+    hit(0.15 + Math.random() * 0.04, 0.17, 1.08);
+    if (Math.random() < 0.6) hit(0.2 + Math.random() * 0.04, 0.08, 1.1);
+  },
   rattle() { this.play('sticks', { gain: 0.9, rate: 0.95 + Math.random() * 0.1 }); },
   ambient() {
     // forest birdsong by a stream (checked: no voices), looped by overlapping copies with a slow crossfade (no gap, no click)

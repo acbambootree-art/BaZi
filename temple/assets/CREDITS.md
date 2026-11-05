@@ -6,7 +6,7 @@
 - `tex/*`, `sky.hdr`, `sky.jpg` — Poly Haven (CC0). https://polyhaven.com
 - `sfx/birds_stream.mp3` — "Birds singing at stream", Freesound #517913 (CC0), looped. https://freesound.org/s/517913/
 - `sfx/waterfall.mp3` — "small waterfall in the forest sound effect" by Garuda1982, Freesound #577820 (CC0), mono, levelled, looped by the lotus lake. https://freesound.org/s/577820/
-- `sfx/moonblock1.mp3`, `sfx/moonblock2.mp3`, `sfx/moonblock3.mp3` (moon blocks landing) — cut from "PieceofWood03", "PieceofWood01", "PieceofWood06" by kingsrow, Freesound #194691, #194686, #194695 (CC0): small pieces of wood dropped on concrete. No recording of real moon blocks (筊杯) is available under a free licence. https://freesound.org/people/kingsrow/
+- `sfx/clack_w1.mp3`–`sfx/clack_w4.mp3` (moon blocks landing) — single clacks cut from "Wood block clacking" by 200221-WeanBekker, Freesound #543705 (CC0); `sfx/clack_w5.mp3` — "Small Wood Piece Sound" by qubodup, Freesound #822567 (CC0). Each landing is a clack plus quick, softer bounces built from these. No recording of real moon blocks (筊杯) is available under a free licence. https://freesound.org/s/543705/ https://freesound.org/s/822567/
 - `sfx/bowl.mp3` — "Singing Bowl – Single Strike with Fade-Out" by Fumbananana420, Freesound #697529 (CC0). https://freesound.org/s/697529/
 - `sfx/clack1.mp3`, `sfx/clack2.mp3`, `sfx/sticks.mp3` — cut from "Wooden Blocks falling, close aspect, fast" by rylandbrooks, Freesound #746613 (CC0). https://freesound.org/s/746613/
 - `env/broadleaf.glb` — Poly Haven "Jacaranda Tree" (CC0), leaves and branches reduced in Blender. https://polyhaven.com/a/jacaranda_tree
