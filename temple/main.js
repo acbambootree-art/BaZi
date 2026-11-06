@@ -2036,53 +2036,104 @@ setTimeout(hideHint, 9000);
 // it; every further tap or Space strikes it once. Other visitors see and hear it.
 const MUYU = { x: 3.0, z: -25.6 };                 // front-right of the offering table, facing the main Guanyin
 const muyu = (() => {
-  // a classic temple 木魚: deep red lacquer with gilded fish scales, a dark mouth slit with a gilt lip and gold eyes,
-  // on a round golden silk cushion with red piping and tassels
+  // an old temple 木魚 carved from one block of camphor wood: worn vermilion lacquer over dark wood, scales carved
+  // in relief with traces of old gilding. The whole block is one curled fish: a blunt head at the front with bulging
+  // eyes and a wide mouth slit, gill lines, fins on its sides and back, and its fan tail flipped up over the rear.
+  // It rests on a faded red brocade cushion.
   const g = new THREE.Group();
-  const W = 1024, H = 512, cv = document.createElement('canvas'), mv = document.createElement('canvas');
-  cv.width = mv.width = W; cv.height = mv.height = H;
-  const cx = cv.getContext('2d'), mx = mv.getContext('2d');
-  const grd = cx.createLinearGradient(0, 0, 0, H); grd.addColorStop(0, '#5a1208'); grd.addColorStop(0.45, '#8e2410'); grd.addColorStop(1, '#4a0e06');
-  cx.fillStyle = grd; cx.fillRect(0, 0, W, H); mx.fillStyle = '#000'; mx.fillRect(0, 0, W, H);
-  // gilded scales over the back and sides; the face (u ≈ 0.25, facing +z) stays plain lacquer
-  for (let row = 0; row < 9; row++) for (let col = 0; col < 34; col++) {
-    const x = (col + (row % 2) * 0.5) * (W / 34), y = H * 0.2 + row * H * 0.07, u = x / W;
-    const face = Math.abs(((u - 0.25 + 1.5) % 1) - 0.5);                       // distance round the body from the face
-    if (face < 0.12) continue;
-    const a = Math.min(1, (face - 0.12) / 0.06);
-    for (const [c, ctx] of [[`rgba(226,178,80,${0.9 * a})`, cx], [`rgba(255,255,255,${a})`, mx]]) {
-      ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, W / 68, 0, Math.PI); ctx.stroke();
-    }
+  const W = 1024, H = 512, cv = document.createElement('canvas'), bv = document.createElement('canvas');
+  cv.width = bv.width = W; cv.height = bv.height = H;
+  const cx = cv.getContext('2d'), bx = bv.getContext('2d');
+  let sd = 7; const rn = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+  const grd = cx.createLinearGradient(0, 0, 0, H); grd.addColorStop(0, '#6e2a16'); grd.addColorStop(0.5, '#8a2c14'); grd.addColorStop(1, '#3e140a');
+  cx.fillStyle = grd; cx.fillRect(0, 0, W, H); bx.fillStyle = '#808080'; bx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 260; i++) {                                           // wood grain under the lacquer
+    const y = H * (0.22 + rn() * 0.78), a = 0.04 + rn() * 0.08;             // none on the crown, where the rings would bunch into a target
+    cx.strokeStyle = `rgba(30,8,2,${a})`; cx.lineWidth = 1 + rn() * 2; cx.beginPath(); cx.moveTo(0, y);
+    for (let x = 0; x <= W; x += 32) cx.lineTo(x, y + Math.sin(x * 0.01 + i) * 4);
+    cx.stroke();
   }
-  for (const [c, ctx] of [['#e2b250', cx], ['#fff', mx]]) { ctx.fillStyle = c; ctx.fillRect(0, H * 0.84, W, 6); }   // gilt band round the base
+  for (let i = 0; i < 70; i++) {                                            // lacquer worn thin where hands and mallets touch
+    const x = rn() * W, y = H * (0.15 + rn() * 0.4), r = 10 + rn() * 40, gr = cx.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, 'rgba(120,66,34,0.35)'); gr.addColorStop(1, 'rgba(120,66,34,0)'); cx.fillStyle = gr; cx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  for (let row = 0; row < 9; row++) for (let col = 0; col < 30; col++) {   // scales carved over the back and sides
+    const x = (col + (row % 2) * 0.5) * (W / 30), y = H * 0.24 + row * H * 0.065, u = x / W;
+    const face = Math.abs(((u - 0.25 + 1.5) % 1) - 0.5); if (face < 0.2) continue;   // the head stays smooth
+    const r = W / 62;
+    bx.lineWidth = 7; bx.strokeStyle = '#2a2a2a'; bx.beginPath(); bx.arc(x, y, r, 0.1, Math.PI - 0.1); bx.stroke();   // the cut
+    bx.lineWidth = 3; bx.strokeStyle = '#c8c8c8'; bx.beginPath(); bx.arc(x, y - 3, r, 0.2, Math.PI - 0.2); bx.stroke(); // the raised edge
+    cx.lineWidth = 3; cx.strokeStyle = 'rgba(30,8,2,0.55)'; cx.beginPath(); cx.arc(x, y, r, 0.1, Math.PI - 0.1); cx.stroke();
+    cx.lineWidth = 1.5; cx.strokeStyle = `rgba(200,150,70,${0.25 + rn() * 0.3})`; cx.beginPath(); cx.arc(x, y - 2, r, 0.3, Math.PI - 0.3); cx.stroke();   // old gilding
+  }
   const map = new THREE.CanvasTexture(cv); map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 4;
-  const metal = new THREE.CanvasTexture(mv);
-  const lac = new THREE.MeshPhysicalMaterial({ color: 0xffffff, map, metalnessMap: metal, metalness: 1, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.12, envMapIntensity: 1.3 });
-  const goldM = new THREE.MeshStandardMaterial({ color: 0xe0ac4a, metalness: 1, roughness: 0.25, envMapIntensity: 1.8 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x140604, roughness: 0.9 });
-  const silk = new THREE.MeshPhysicalMaterial({ color: 0x8f5a0c, roughness: 0.5, sheen: 1, sheenColor: new THREE.Color(0xffe2a0) });
-  const red = new THREE.MeshPhysicalMaterial({ color: 0x9a1612, roughness: 0.5, sheen: 0.6, sheenColor: new THREE.Color(0xff9070) });
+  const bump = new THREE.CanvasTexture(bv);
+  const wood = new THREE.MeshPhysicalMaterial({ map, bumpMap: bump, bumpScale: 2.5, roughness: 0.42, clearcoat: 0.5, clearcoatRoughness: 0.35, envMapIntensity: 1 });
+  const carve = new THREE.MeshPhysicalMaterial({ color: 0x7a2812, roughness: 0.45, clearcoat: 0.5, clearcoatRoughness: 0.35 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x120503, roughness: 0.95 });
+  const gilt = new THREE.MeshStandardMaterial({ color: 0xb98a3e, metalness: 0.8, roughness: 0.45 });
+  // the cushion: faded red brocade with a gold cloud pattern, gold cord and tassels
+  const kv = document.createElement('canvas'); kv.width = 512; kv.height = 128; const kx = kv.getContext('2d');
+  kx.fillStyle = '#7c1a14'; kx.fillRect(0, 0, 512, 128); kx.strokeStyle = 'rgba(214,170,80,0.7)'; kx.lineWidth = 2;
+  for (let i = 0; i < 16; i++) for (let j = 0; j < 4; j++) { const x = i * 32 + (j % 2) * 16, y = j * 32 + 16; kx.beginPath(); kx.arc(x - 5, y, 6, Math.PI, 0); kx.arc(x + 5, y, 6, Math.PI, 0); kx.stroke(); }   // little ruyi clouds
+  const brocade = new THREE.CanvasTexture(kv); brocade.colorSpace = THREE.SRGBColorSpace; brocade.wrapS = THREE.RepeatWrapping; brocade.repeat.x = 3;
+  const silk = new THREE.MeshPhysicalMaterial({ map: brocade, roughness: 0.6, sheen: 0.7, sheenColor: new THREE.Color(0xffb080) });
   const M = (geo, mat, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; return o; };
-  // the cushion: a plump round bun of golden silk, red piping, four tassels
-  const bun = M(new THREE.LatheGeometry([[0, 0], [0.44, 0], [0.52, 0.04], [0.54, 0.1], [0.5, 0.16], [0.36, 0.2], [0, 0.205]].map(([r, y]) => new THREE.Vector2(r, y)), 40), silk);
-  g.add(bun);
-  const pipe = M(new THREE.TorusGeometry(0.535, 0.018, 8, 48), red, 0, 0.1, 0); pipe.rotation.x = Math.PI / 2; g.add(pipe);
-  const button = M(new THREE.SphereGeometry(0.05, 14, 10), red, 0, 0.19, 0); button.scale.y = 0.4; g.add(button);
+  g.add(M(new THREE.LatheGeometry([[0, 0], [0.44, 0], [0.52, 0.04], [0.54, 0.1], [0.5, 0.16], [0.36, 0.2], [0, 0.205]].map(([r, y]) => new THREE.Vector2(r, y)), 40), silk));
+  const cord = M(new THREE.TorusGeometry(0.535, 0.014, 8, 48), gilt, 0, 0.1, 0); cord.rotation.x = Math.PI / 2; g.add(cord);
   for (let i = 0; i < 4; i++) {
-    const a = Math.PI / 4 + i * Math.PI / 2, x = Math.cos(a) * 0.53, z = Math.sin(a) * 0.53;
-    g.add(M(new THREE.SphereGeometry(0.025, 10, 8), goldM, x, 0.1, z));
-    g.add(M(new THREE.ConeGeometry(0.03, 0.12, 10).rotateX(Math.PI), red, x * 1.02, 0.03, z * 1.02));
+    const a = Math.PI / 4 + i * Math.PI / 2, x = Math.cos(a) * 0.54, z = Math.sin(a) * 0.54;
+    g.add(M(new THREE.SphereGeometry(0.022, 10, 8), gilt, x, 0.1, z));
+    g.add(M(new THREE.CylinderGeometry(0.012, 0.03, 0.11, 10), new THREE.MeshStandardMaterial({ color: 0x8a1c14, roughness: 0.8 }), x * 1.02, 0.03, z * 1.02));
   }
   // the fish
   const body = new THREE.Group(); body.position.y = 0.46; g.add(body);
-  const shell = M(new THREE.SphereGeometry(0.34, 48, 32), lac); shell.scale.set(1.15, 0.8, 1); body.add(shell);
-  const slit = M(new THREE.TorusGeometry(0.33, 0.032, 8, 48, Math.PI * 1.15), dark, 0, -0.03, 0);
-  slit.rotation.set(Math.PI / 2, 0, -Math.PI * 0.075); slit.scale.set(1.15, 1, 1); body.add(slit);                   // the mouth slit, cut into the surface
-  const lip = M(new THREE.TorusGeometry(0.336, 0.009, 6, 48, Math.PI * 1.15), goldM, 0, 0.008, 0);
-  lip.rotation.set(Math.PI / 2, 0, -Math.PI * 0.075); lip.scale.set(1.15, 1, 1); body.add(lip);                      // gilt edge above the mouth
+  const A = 0.37, B = 0.27, C = 0.4;                                        // half-widths: x across, y up, z nose-to-tail (head at +z)
+  const shell = M(new THREE.SphereGeometry(0.34, 56, 36), wood); shell.scale.set(A / 0.34, B / 0.34, C / 0.34); body.add(shell);
+  const surf = (x, y, z) => { const k = 1 / Math.hypot(x / A, y / B, z / C); return new THREE.Vector3(x * k, y * k, z * k); };   // the point on the body in that direction
+  const arc = (r, tube, len, mat) => new THREE.Mesh(new THREE.TorusGeometry(r, tube, 8, 48, len), mat);
+  // mouth: a wide dark slit round the front with carved lips above and below
+  for (const [y, tube, mat] of [[-0.03, 0.03, dark], [0.0, 0.011, carve], [-0.062, 0.011, carve]]) {
+    const m = arc(0.34, tube, Math.PI * 0.75, mat); m.rotation.set(Math.PI / 2, 0, Math.PI / 2 - Math.PI * 0.375); m.scale.set(A / 0.34 * 0.995, C / 0.34 * 0.995, 1);
+    m.position.y = y; m.castShadow = true; body.add(m);
+  }
   for (const sx of [-1, 1]) {
-    const eye = M(new THREE.SphereGeometry(0.045, 14, 10), goldM, sx * 0.14, 0.11, 0.255); eye.scale.z = 0.7; body.add(eye);   // fish eyes
-    body.add(M(new THREE.SphereGeometry(0.02, 10, 8), dark, sx * 0.145, 0.115, 0.293));
+    // big bulging eyes on the brow, ringed and gilded
+    const e = surf(sx * 0.5, 0.55, 0.75);
+    const ball = M(new THREE.SphereGeometry(0.06, 20, 14), carve, e.x, e.y, e.z); ball.scale.set(1, 0.85, 0.8); body.add(ball);
+    const ring = M(new THREE.TorusGeometry(0.06, 0.012, 8, 24), gilt, e.x, e.y, e.z); ring.lookAt(e.x * 3, e.y * 2.2, e.z * 2); body.add(ring);
+    const n = e.clone().normalize();
+    body.add(M(new THREE.SphereGeometry(0.03, 14, 10), dark, e.x + n.x * 0.04, e.y + n.y * 0.04, e.z + n.z * 0.04));
+    // gill line: a carved crescent behind the head, following the body's surface
+    const onSide = (y, z) => new THREE.Vector3(sx * A * Math.sqrt(Math.max(0, 1 - (y / B) ** 2 - (z / C) ** 2)), y, z);
+    const gpts = []; for (let i = 0; i <= 16; i++) { const a = (i / 16 - 0.5) * Math.PI * 0.85; gpts.push(onSide(Math.sin(a) * 0.17, 0.3 - Math.cos(a) * 0.17).multiplyScalar(1.004)); }
+    body.add(M(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(gpts), 32, 0.011, 6), carve));
+    // pectoral fin lying flat on the flank just behind the gill, sweeping back
+    const fs = new THREE.Shape(); fs.moveTo(0, 0); fs.quadraticCurveTo(0.07, 0.06, 0.05, 0.17); fs.quadraticCurveTo(0, 0.12, -0.04, 0.16); fs.quadraticCurveTo(-0.05, 0.06, 0, 0);
+    const fin = M(new THREE.ExtrudeGeometry(fs, { depth: 0.01, bevelEnabled: true, bevelThickness: 0.005, bevelSize: 0.005, bevelSegments: 2 }), carve);
+    const fp = onSide(-0.08, 0.1), fn = new THREE.Vector3(fp.x / A ** 2, fp.y / B ** 2, fp.z / C ** 2).normalize();
+    fin.position.copy(fp).addScaledVector(fn, 0.002); fin.lookAt(fp.clone().add(fn)); fin.rotateZ(sx * (Math.PI / 2 + 0.5)); body.add(fin);
+  }
+  // dorsal fin: a scalloped crest running down the back from behind the head to the tail
+  {
+    const ds = new THREE.Shape(), z0 = -0.28, z1 = 0.16, N = 24;
+    for (let i = 0; i <= N; i++) { const z = z1 - (z1 - z0) * i / N; const y = B * Math.sqrt(Math.max(0, 1 - (z / C) ** 2)) - 0.012; i ? ds.lineTo(z, y) : ds.moveTo(z, y); }
+    for (let i = 0; i <= N; i++) { const t = i / N, z = z0 + (z1 - z0) * t; const y = B * Math.sqrt(Math.max(0, 1 - (z / C) ** 2)) + 0.012 + Math.sin(t * Math.PI) * 0.05 * (0.75 + 0.25 * Math.abs(Math.sin(t * Math.PI * 5))); ds.lineTo(z, y); }
+    const dorsal = M(new THREE.ExtrudeGeometry(ds, { depth: 0.016, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.005, bevelSegments: 2 }), carve);
+    dorsal.rotation.y = -Math.PI / 2; dorsal.position.x = -0.008; body.add(dorsal);
+  }
+  // the tail: a forked fan flipped up over the rear, lying back along the body
+  {
+    const ts = new THREE.Shape();
+    ts.moveTo(-0.035, 0); ts.lineTo(0.035, 0);
+    ts.bezierCurveTo(0.06, 0.08, 0.2, 0.12, 0.2, 0.22); ts.quadraticCurveTo(0.1, 0.15, 0, 0.13); ts.quadraticCurveTo(-0.1, 0.15, -0.2, 0.22);
+    ts.bezierCurveTo(-0.2, 0.12, -0.06, 0.08, -0.035, 0);
+    const tail = M(new THREE.ExtrudeGeometry(ts, { depth: 0.02, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 3, curveSegments: 16 }), carve);
+    const tp = surf(0, 0.25, -1); tail.position.set(0, tp.y - 0.03, tp.z + 0.02);
+    tail.rotation.set(-0.5, 0, 0); body.add(tail);                          // flicks up from the rear, fanning out
+    for (const sx of [-1, 0, 1]) {                                          // ribs carved in the fan
+      const rib = M(new THREE.CylinderGeometry(0.006, 0.004, 0.17, 6), gilt); rib.position.set(sx * 0.06, 0.1, 0.03); rib.rotation.z = -sx * 0.55; tail.add(rib);
+    }
   }
   g.position.set(MUYU.x, HALL.floor, MUYU.z);
   g.userData.body = body; g.userData.role = 'skip';   // live object: not part of the bake
