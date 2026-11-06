@@ -595,7 +595,7 @@ world.table.traverse((o) => { if (o.name === 'standIn') o.visible = false; });
 function offer(src, h, x, y, z, yaw = 0) {
   const m = src.clone(true), w = new THREE.Group();
   w.add(m); w.rotation.y = yaw;
-  const box = new THREE.Box3().setFromObject(m), c = box.getCenter(new THREE.Vector3());
+  const box = new THREE.Box3().setFromObject(m, true), c = box.getCenter(new THREE.Vector3());   // precise: the packed scans' stored bounds can be off
   m.position.sub(new THREE.Vector3(c.x, box.min.y, c.z));
   w.scale.setScalar(h / (box.max.y - box.min.y));
   w.position.set(x, y, z);
@@ -779,14 +779,14 @@ function koiSchool(put, ticks, P, n, y0, inside) {
     }
     const fish = [];
     for (let i = 0; i < n; i++) {
-      const u = { phase: { value: r() * 6 }, amp: { value: 0.1 }, fin: { value: r() * 6 } };
+      const u = { phase: { value: r() * 6 }, amp: { value: 0.1 }, fin: { value: r() * 6 }, bend: { value: 0 }, look: { value: 0 } };
       const src = g.scene.clone(true);
       src.traverse((o) => {
         if (!o.isMesh) return;
         o.material = o.material.clone();
         o.material.onBeforeCompile = (sh) => {
-          sh.uniforms.uPhase = u.phase; sh.uniforms.uAmp = u.amp; sh.uniforms.uFin = u.fin; sh.uniforms.uCL = { value: cl };
-          sh.vertexShader = `uniform float uPhase; uniform float uAmp; uniform float uFin; uniform float uCL[${B}];\n` + sh.vertexShader.replace('#include <begin_vertex>',
+          sh.uniforms.uPhase = u.phase; sh.uniforms.uAmp = u.amp; sh.uniforms.uFin = u.fin; sh.uniforms.uBend = u.bend; sh.uniforms.uLook = u.look; sh.uniforms.uCL = { value: cl };
+          sh.vertexShader = `uniform float uPhase; uniform float uAmp; uniform float uFin; uniform float uBend; uniform float uLook; uniform float uCL[${B}];\n` + sh.vertexShader.replace('#include <begin_vertex>',
             `#include <begin_vertex>
              float fz = clamp((transformed.z + 1.0) * 0.5 * ${B - 1}.0, 0.0, ${B - 1}.0);
              int i0 = int(floor(fz)); int i1 = min(i0 + 1, ${B - 1});
@@ -796,6 +796,11 @@ function koiSchool(put, ticks, P, n, y0, inside) {
              float along = clamp((1.0 - transformed.z) * 0.5, 0.0, 1.0);              // 0 at the snout .. 1 at the tail fan
              // swimming: a travelling wave, small at the head, big at the tail
              transformed.x += sin(uPhase - along * 6.2) * uAmp * (0.15 + along * along * 1.6);
+             // the head is alive too: it yaws a little against each tail stroke, and glances about
+             float head = max(0.38 - along, 0.0);
+             transformed.x += head * (sin(uPhase + 1.3) * uAmp * 1.1 + uLook);
+             // turning: the whole body curves round the turn, head leading into it
+             transformed.x += uBend * (along - 0.4) * (along - 0.4) * 4.0;
              // pectoral fins (wide parts just behind the head) row up and down
              float finZone = smoothstep(0.25, 0.32, along) * (1.0 - smoothstep(0.42, 0.5, along));
              float finOut = max(abs(side) - 0.13, 0.0);
@@ -830,7 +835,10 @@ function koiSchool(put, ticks, P, n, y0, inside) {
         if (!inside(ahead[0], ahead[1], 0.9)) want = Math.atan2(P.x - k.x, P.z - k.z) + Math.sin(k.yPh) * 0.4;   // curve back in
         const turn = Math.atan2(Math.sin(want - k.h), Math.cos(want - k.h));
         const rate = (k.mode === 'dart' ? 2.2 : 0.9) + Math.sin(k.yPh + k.t) * 0.2;   // gentle, slightly wavering turns
-        k.h += THREE.MathUtils.clamp(turn, -rate * dt, rate * dt);
+        const dh = THREE.MathUtils.clamp(turn, -rate * dt, rate * dt);
+        k.h += dh;
+        k.u.bend.value += (THREE.MathUtils.clamp(dh / dt * 0.07, -0.16, 0.16) - k.u.bend.value) * (1 - Math.exp(-dt * 4));
+        k.u.look.value = Math.sin(k.yPh * 2.3 + k.y0 * 90) * (k.mode === 'rest' ? 0.22 : 0.08);   // glancing about, more when idling
         k.v += (k.vWant - k.v) * (1 - Math.exp(-dt * (k.vWant > k.v ? 2.5 : 0.8)));   // quick to speed up, slow to glide down
         k.x += Math.sin(k.h) * k.v * dt; k.z += Math.cos(k.h) * k.v * dt;
         if (!inside(k.x, k.z, 0.97)) { const a = Math.atan2(P.x - k.x, P.z - k.z); k.x += Math.sin(a) * 0.3 * dt; k.z += Math.cos(a) * 0.3 * dt; }   // never through the bank
@@ -2028,17 +2036,54 @@ setTimeout(hideHint, 9000);
 // it; every further tap or Space strikes it once. Other visitors see and hear it.
 const MUYU = { x: 3.0, z: -25.6 };                 // front-right of the offering table, facing the main Guanyin
 const muyu = (() => {
+  // a classic temple 木魚: deep red lacquer with gilded fish scales, a dark mouth slit with a gilt lip and gold eyes,
+  // on a round golden silk cushion with red piping and tassels
   const g = new THREE.Group();
-  const lac = new THREE.MeshStandardMaterial({ color: 0x86290f, roughness: 0.32, metalness: 0.05, envMapIntensity: 1.2 });
-  const goldM = new THREE.MeshStandardMaterial({ color: 0xd6a548, metalness: 0.9, roughness: 0.3 });
+  const W = 1024, H = 512, cv = document.createElement('canvas'), mv = document.createElement('canvas');
+  cv.width = mv.width = W; cv.height = mv.height = H;
+  const cx = cv.getContext('2d'), mx = mv.getContext('2d');
+  const grd = cx.createLinearGradient(0, 0, 0, H); grd.addColorStop(0, '#5a1208'); grd.addColorStop(0.45, '#8e2410'); grd.addColorStop(1, '#4a0e06');
+  cx.fillStyle = grd; cx.fillRect(0, 0, W, H); mx.fillStyle = '#000'; mx.fillRect(0, 0, W, H);
+  // gilded scales over the back and sides; the face (u ≈ 0.25, facing +z) stays plain lacquer
+  for (let row = 0; row < 9; row++) for (let col = 0; col < 34; col++) {
+    const x = (col + (row % 2) * 0.5) * (W / 34), y = H * 0.2 + row * H * 0.07, u = x / W;
+    const face = Math.abs(((u - 0.25 + 1.5) % 1) - 0.5);                       // distance round the body from the face
+    if (face < 0.12) continue;
+    const a = Math.min(1, (face - 0.12) / 0.06);
+    for (const [c, ctx] of [[`rgba(226,178,80,${0.9 * a})`, cx], [`rgba(255,255,255,${a})`, mx]]) {
+      ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, W / 68, 0, Math.PI); ctx.stroke();
+    }
+  }
+  for (const [c, ctx] of [['#e2b250', cx], ['#fff', mx]]) { ctx.fillStyle = c; ctx.fillRect(0, H * 0.84, W, 6); }   // gilt band round the base
+  const map = new THREE.CanvasTexture(cv); map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 4;
+  const metal = new THREE.CanvasTexture(mv);
+  const lac = new THREE.MeshPhysicalMaterial({ color: 0xffffff, map, metalnessMap: metal, metalness: 1, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.12, envMapIntensity: 1.3 });
+  const goldM = new THREE.MeshStandardMaterial({ color: 0xe0ac4a, metalness: 1, roughness: 0.25, envMapIntensity: 1.8 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x140604, roughness: 0.9 });
+  const silk = new THREE.MeshPhysicalMaterial({ color: 0x8f5a0c, roughness: 0.5, sheen: 1, sheenColor: new THREE.Color(0xffe2a0) });
+  const red = new THREE.MeshPhysicalMaterial({ color: 0x9a1612, roughness: 0.5, sheen: 0.6, sheenColor: new THREE.Color(0xff9070) });
   const M = (geo, mat, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; return o; };
-  g.add(M(new THREE.CylinderGeometry(0.46, 0.5, 0.16, 28), new THREE.MeshStandardMaterial({ color: 0xa8231a, roughness: 0.9 }), 0, 0.08, 0));   // cushion
-  const body = new THREE.Group(); body.position.y = 0.42; g.add(body);
-  const shell = M(new THREE.SphereGeometry(0.34, 36, 24), lac); shell.scale.set(1.15, 0.8, 1); body.add(shell);
-  const slit = M(new THREE.TorusGeometry(0.3, 0.022, 8, 40, Math.PI * 1.15), new THREE.MeshStandardMaterial({ color: 0x1a0805, roughness: 0.9 }), 0, -0.02, 0.0);
-  slit.rotation.set(Math.PI / 2, 0, Math.PI * 0.92); slit.scale.set(1.12, 1, 1); body.add(slit);                   // the mouth slit
-  const rim = M(new THREE.TorusGeometry(0.39, 0.012, 6, 48), goldM); rim.rotation.x = Math.PI / 2; rim.scale.set(1, 0.86, 1); rim.position.y = 0.04; body.add(rim);
-  for (const sx of [-1, 1]) body.add(M(new THREE.SphereGeometry(0.035, 10, 8), goldM, sx * 0.13, 0.12, 0.27));       // fish eyes
+  // the cushion: a plump round bun of golden silk, red piping, four tassels
+  const bun = M(new THREE.LatheGeometry([[0, 0], [0.44, 0], [0.52, 0.04], [0.54, 0.1], [0.5, 0.16], [0.36, 0.2], [0, 0.205]].map(([r, y]) => new THREE.Vector2(r, y)), 40), silk);
+  g.add(bun);
+  const pipe = M(new THREE.TorusGeometry(0.535, 0.018, 8, 48), red, 0, 0.1, 0); pipe.rotation.x = Math.PI / 2; g.add(pipe);
+  const button = M(new THREE.SphereGeometry(0.05, 14, 10), red, 0, 0.19, 0); button.scale.y = 0.4; g.add(button);
+  for (let i = 0; i < 4; i++) {
+    const a = Math.PI / 4 + i * Math.PI / 2, x = Math.cos(a) * 0.53, z = Math.sin(a) * 0.53;
+    g.add(M(new THREE.SphereGeometry(0.025, 10, 8), goldM, x, 0.1, z));
+    g.add(M(new THREE.ConeGeometry(0.03, 0.12, 10).rotateX(Math.PI), red, x * 1.02, 0.03, z * 1.02));
+  }
+  // the fish
+  const body = new THREE.Group(); body.position.y = 0.46; g.add(body);
+  const shell = M(new THREE.SphereGeometry(0.34, 48, 32), lac); shell.scale.set(1.15, 0.8, 1); body.add(shell);
+  const slit = M(new THREE.TorusGeometry(0.33, 0.032, 8, 48, Math.PI * 1.15), dark, 0, -0.03, 0);
+  slit.rotation.set(Math.PI / 2, 0, -Math.PI * 0.075); slit.scale.set(1.15, 1, 1); body.add(slit);                   // the mouth slit, cut into the surface
+  const lip = M(new THREE.TorusGeometry(0.336, 0.009, 6, 48, Math.PI * 1.15), goldM, 0, 0.008, 0);
+  lip.rotation.set(Math.PI / 2, 0, -Math.PI * 0.075); lip.scale.set(1.15, 1, 1); body.add(lip);                      // gilt edge above the mouth
+  for (const sx of [-1, 1]) {
+    const eye = M(new THREE.SphereGeometry(0.045, 14, 10), goldM, sx * 0.14, 0.11, 0.255); eye.scale.z = 0.7; body.add(eye);   // fish eyes
+    body.add(M(new THREE.SphereGeometry(0.02, 10, 8), dark, sx * 0.145, 0.115, 0.293));
+  }
   g.position.set(MUYU.x, HALL.floor, MUYU.z);
   g.userData.body = body; g.userData.role = 'skip';   // live object: not part of the bake
   scene.add(g);
