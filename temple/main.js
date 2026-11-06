@@ -1795,10 +1795,28 @@ function planPath(from, to) {
 // ---------------- me ----------------
 let nick = store.get('nick', null);
 if (!Array.isArray(nick)) { nick = [Math.random() * ADJ.length | 0, Math.random() * ANI.length | 0]; store.set('nick', nick); }
-const myName = EN ? `${ADJ_EN[nick[0]]} ${ANI_EN[nick[1]]}` : ADJ[nick[0]] + ANI[nick[1]];
+let myName = store.get('name', '') || (EN ? `${ADJ_EN[nick[0]]} ${ANI_EN[nick[1]]}` : ADJ[nick[0]] + ANI[nick[1]]);
 const myColor = store.get('color', pick(COLORS)); store.set('color', myColor);
 const me = new Pilgrim({ name: myName, color: myColor, me: true });
 me.root.position.set((Math.random() - 0.5) * 2, 0, 29.5);
+// tap your own name tag to change it (kept on this device; blank brings back the random name)
+me.label.element.addEventListener('pointerdown', (e) => e.stopPropagation());
+me.label.element.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const tag = me.label.element; if (tag.querySelector('input')) return;
+  const inp = Object.assign(document.createElement('input'), { value: myName, maxLength: 16, enterKeyHint: 'done' });
+  inp.setAttribute('aria-label', EN ? 'Your name' : '你的名字');
+  tag.textContent = ''; tag.appendChild(inp); tag.classList.add('editing'); inp.focus(); inp.select();
+  const done = (save) => {
+    if (!tag.classList.contains('editing')) return;
+    tag.classList.remove('editing');
+    const v = inp.value.replace(/\s+/g, ' ').trim().slice(0, 16);
+    if (save) { store.set('name', v); myName = v || (EN ? `${ADJ_EN[nick[0]]} ${ANI_EN[nick[1]]}` : ADJ[nick[0]] + ANI[nick[1]]); }
+    me.setName(myName);
+  };
+  inp.addEventListener('keydown', (k) => { k.stopPropagation(); if (k.key === 'Enter') done(true); if (k.key === 'Escape') done(false); });
+  inp.addEventListener('blur', () => done(true));
+});
 me.root.rotation.y = Math.PI;
 scene.add(me.root);
 
@@ -2084,6 +2102,7 @@ addEventListener('keydown', (e) => { if (e.code === 'Space' && atMuyu && !$('#mo
 // ---------------- kneeling cushions ----------------
 const CU = world.cushions;
 async function sitAt(i) {
+  if (TAKEN.has(i)) i = nearestCushion(CU.spots[i], 0);   // someone is already praying there: take the next free cushion
   const p = CU.spots[i];
   if (busy) return;
   setBusy(true);
@@ -2095,9 +2114,9 @@ async function sitAt(i) {
     await shot(p.x * 0.8 + 1.2, F + 3.0, p.z + 5.5, p.x * 0.7, F + 1.8, p.z - 5, 1.6);
   } finally { setBusy(false); }
 }
-function nearestCushion() {
+function nearestCushion(from = me.root.position, jitter = 3) {
   let best = 0, bd = 1e9;
-  CU.spots.forEach((p, i) => { const d = p.distanceTo(me.root.position) + Math.random() * 3; if (d < bd) { bd = d; best = i; } });
+  CU.spots.forEach((p, i) => { if (TAKEN.has(i)) return; const d = p.distanceTo(from) + Math.random() * jitter; if (d < bd) { bd = d; best = i; } });
   return best;
 }
 
@@ -3268,6 +3287,22 @@ function updatePeers(dt) {
   }
 }
 
+// A few quiet worshippers always kneel in the hall so it never feels empty. They live only on this screen
+// (not real players), keep their cushions, and now and then bow down to the floor.
+const TAKEN = new Set([1, 12, 16, 27]);
+const regulars = [...TAKEN].map((i, k) => {
+  const p = CU.spots[i], pg = new Pilgrim({ name: '' });
+  pg.kneel = true; pg.kn = 1; pg.next = 3 + k * 4 + Math.random() * 5;
+  pg.root.position.set(p.x, groundY(p.x, p.z) + 0.22, p.z); pg.root.rotation.y = Math.PI;
+  scene.add(pg.root); return pg;
+});
+function updateRegulars(dt) {
+  for (const pg of regulars) {
+    if ((pg.next -= dt) <= 0) { pg.play(Math.random() < 0.7 ? 'bai' : 'palms'); pg.next = 9 + Math.random() * 14; }
+    pg.update(dt);
+  }
+}
+
 // ---------------- rest mode (like Sansa: idle tabs leave the room) ----------------
 let lastInput = performance.now(), hiddenAt = 0, resting = false;
 function poke() { lastInput = performance.now(); }
@@ -3328,7 +3363,7 @@ function frame() {
   const praying = me.kneel && me.praying && !seated && !atMuyu;
   sfx.chant(praying, dt);                                         // kneel, then Pray: the mantra; end the prayer or stand and it fades away
   glory(praying, dt);                                             // ...and the halos blaze up with it
-  updatePeers(dt);
+  updatePeers(dt); updateRegulars(dt);
   updateSmoke(dt);
   updateSticks();
   updateWisps(dt);

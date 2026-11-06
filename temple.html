@@ -88,6 +88,10 @@
     background: var(--red); color: #fff; font-size: 10px; }
 
   html[lang="en"] .nametag.me::before { content: "Me"; }
+  .nametag.me { pointer-events: auto; cursor: pointer; }
+  .nametag.me::after { content: "✎"; margin-left: 5px; opacity: 0.5; font-size: 10px; }
+  .nametag.me.editing::after { content: none; }
+  .nametag.me input { font: inherit; font-size: 16px; width: 9em; border: 0; outline: 0; background: transparent; color: var(--ink); padding: 0; }
   html[lang="en"] .result { font-size: 28px; letter-spacing: 2px; }
   #brand { white-space: nowrap; }
   html[lang="en"] #brand b { letter-spacing: 0.5px; font-size: 16px; }
