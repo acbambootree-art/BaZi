@@ -38,6 +38,7 @@
   #brand { display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-size: 14px; }
   #brand b { font-family: var(--brush); font-size: 17px; letter-spacing: 2px; }
   #count { color: var(--muted); font-variant-numeric: tabular-nums; }
+  #room, #count { display: none; }   /* hall number and head count: hidden for now */
   #sound { width: 44px; height: 44px; display: grid; place-items: center; font-size: 18px; }
 
   #hint { position: fixed; top: calc(max(12px, env(safe-area-inset-top)) + 58px); left: 50%; transform: translateX(-50%);
@@ -127,6 +128,12 @@
     backdrop-filter: blur(4px); transition: opacity .8s, background .3s; }
   .enterBtn:hover, .enterBtn:focus-visible { background: rgba(255, 252, 245, .92); outline: none; }
   #enterEn { letter-spacing: 2px; }
+  #enterRow { flex-wrap: wrap; justify-content: center; }
+  #nameIn { flex: 1 0 100%; box-sizing: border-box; margin-bottom: 2px; padding: 10px 16px; border-radius: 999px; text-align: center;
+    border: 1px solid rgba(110, 86, 60, .25); background: rgba(250, 246, 238, .6); color: rgba(80, 62, 44, .95);
+    font: 16px/1.2 var(--brush); letter-spacing: 1px; outline: none; backdrop-filter: blur(4px); }
+  #nameIn::placeholder { color: rgba(80, 62, 44, .5); }
+  #nameIn:focus { background: rgba(255, 252, 245, .9); }
   #intro.ready.waiting #enterRow { opacity: 0; pointer-events: none; }
   body.intro #top, body.intro #bar, body.intro #hint, body.intro #credits, body.intro #joy, body.intro .nametag { opacity: 0; pointer-events: none; }
   #top, #bar, #hint, #credits, #joy { transition: opacity 1.5s; }
@@ -156,7 +163,7 @@
 <div id="toast" class="glass"></div>
 <div id="modal"><div class="card" id="card"></div></div>
 <div id="rest"><div>你在廟裡歇著</div><button class="btn primary" id="wake" style="flex:none;padding:10px 22px">回到廟裡</button></div>
-<div id="intro"><div class="t">歇腳廟</div><div id="enterRow"><button id="enter" class="enterBtn" data-lang="zh" lang="zh-Hant" disabled>入 廟</button><button id="enterEn" class="enterBtn" data-lang="en" lang="en" disabled>Enter</button></div><div class="msg"><span id="gateMsg">雲 開 中</span><div class="bar"><i id="gateBar"></i></div><span id="gatePct">0%</span></div></div>
+<div id="intro"><div class="t">歇腳廟</div><div id="enterRow"><input id="nameIn" maxlength="16" autocomplete="nickname" enterkeyhint="go"><button id="enter" class="enterBtn" data-lang="zh" lang="zh-Hant" disabled>入 廟</button><button id="enterEn" class="enterBtn" data-lang="en" lang="en" disabled>Enter</button></div><div class="msg"><span id="gateMsg">雲 開 中</span><div class="bar"><i id="gateBar"></i></div><span id="gatePct">0%</span></div></div>
 <script>
   // catch the Enter click at once (the 3D scene may still be loading); the click is also what may start audio
   // two doors: 入廟 (中文) and Enter (English). The one in the current language goes straight in; the other saves that
@@ -169,8 +176,16 @@
     let auto = false; try { auto = sessionStorage.getItem('xjm.autoEnter') === '1'; sessionStorage.removeItem('xjm.autoEnter'); } catch (e) {}
     if (auto) return go();
     const row = document.getElementById('enterRow');
-    if (lang === 'en') row.prepend(document.getElementById('enterEn'));       // your language's door first
+    // ask your name before you go in, and remember it for next time
+    const nameIn = document.getElementById('nameIn');
+    nameIn.placeholder = lang === 'en' ? "What's your name?" : '你叫什麼名字？';
+    nameIn.setAttribute('aria-label', nameIn.placeholder);
+    try { nameIn.value = JSON.parse(localStorage.getItem('xjm.name')) || ''; } catch (e) {}
+    const saveName = () => { try { localStorage.setItem('xjm.name', JSON.stringify(nameIn.value.replace(/\s+/g, ' ').trim().slice(0, 16))); } catch (e) {} };
+    nameIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); row.querySelector('.enterBtn:not([disabled])')?.click(); } });
+    if (lang === 'en') nameIn.after(document.getElementById('enterEn'));       // your language's door first
     document.querySelectorAll('.enterBtn').forEach((b) => b.addEventListener('click', () => {
+      saveName();
       if (b.dataset.lang !== lang) {
         try { localStorage.setItem('xjm.lang', JSON.stringify(b.dataset.lang)); sessionStorage.setItem('xjm.autoEnter', '1'); } catch (e) {}
         const u = new URL(location.href); u.searchParams.delete('lang'); location.replace(u); return;

@@ -1518,15 +1518,15 @@ const JOINTS = ['spine', 'head', 'sx', 'sz', 'e', 'ey'];
 const smooth = (k) => k * k * (3 - 2 * k);
 function bowSeq(up, down, base, n = 3, t0 = 0.35, period = 1.08) {
   const k = [[0, base], [t0, up]];
-  for (let i = 0; i < n; i++) { const s = t0 + i * period; k.push([s + 0.42, down], [s + 0.62, down], [s + period, up]); }
-  k.push([t0 + n * period + 0.35, base]);
+  for (let i = 0; i < n; i++) { const s = t0 + i * period; k.push([s + period * 0.39, down], [s + period * 0.57, down], [s + period, up]); }
+  k.push([t0 + n * period + period * 0.32, base]);
   return k;
 }
 function actKeys(act, kneeling) {
   const base = kneeling ? 'palms' : 'idle';   // (a praying pilgrim's rest pose is also palms: see update())
   switch (act) {
     case 'palms': return [[0, base], [0.45, 'palms'], [1.8, 'palms'], [2.2, base]];
-    case 'bai': return bowSeq('palms', kneeling ? 'prostrate' : 'bow', base);
+    case 'bai': return bowSeq('palms', kneeling ? 'prostrate' : 'bow', base, 3, 0.8, 2.6);   // slow and unhurried
     case 'incense': return bowSeq('high', 'bowHigh', base, 3, 0.4, 1.08);
     case 'shake': return [[0, base], [0.3, 'palms'], [1.5, 'palms'], [1.8, base]];
     case 'strike': return [[0, base], [0.5, base]];
@@ -1566,7 +1566,7 @@ class Pilgrim {
     this.feet = [-1, 1].map((sx) => { const f = M(new THREE.SphereGeometry(0.075, 12, 8), S(0xf3efe6, 0.8), sx * 0.11, 0.04, 0.16); f.scale.set(1, 0.6, 1.4); this.body.add(f); return f; });
     // upper body bends at the waist
     this.spine = new THREE.Group(); this.spine.position.y = 0.34; this.body.add(this.spine);
-    this.spine.add(lathe([[0.25, 0], [0.24, 0.14], [0.2, 0.28], [0.1, 0.36], [0, 0.37]], robe));
+    this.spine.add(lathe([[0, 0], [0.25, 0], [0.24, 0.14], [0.2, 0.28], [0.1, 0.36], [0, 0.37]], robe));
     const kasaya = lathe([[0.258, 0.0], [0.248, 0.14], [0.208, 0.27]], sash, -1.1, 2.2);           // sash over the chest
     kasaya.rotation.y = 0.35; this.spine.add(kasaya);
     const strap = M(new THREE.TorusGeometry(0.2, 0.035, 8, 20, Math.PI), sash, 0, 0.2, 0);
@@ -1795,7 +1795,8 @@ function planPath(from, to) {
 // ---------------- me ----------------
 let nick = store.get('nick', null);
 if (!Array.isArray(nick)) { nick = [Math.random() * ADJ.length | 0, Math.random() * ANI.length | 0]; store.set('nick', nick); }
-let myName = store.get('name', '') || (EN ? `${ADJ_EN[nick[0]]} ${ANI_EN[nick[1]]}` : ADJ[nick[0]] + ANI[nick[1]]);
+const randomName = () => (EN ? `${ADJ_EN[nick[0]]} ${ANI_EN[nick[1]]}` : ADJ[nick[0]] + ANI[nick[1]]);
+let myName = store.get('name', '') || randomName();
 const myColor = store.get('color', pick(COLORS)); store.set('color', myColor);
 const me = new Pilgrim({ name: myName, color: myColor, me: true });
 me.root.position.set((Math.random() - 0.5) * 2, 0, 29.5);
@@ -1811,7 +1812,7 @@ me.label.element.addEventListener('click', (e) => {
     if (!tag.classList.contains('editing')) return;
     tag.classList.remove('editing');
     const v = inp.value.replace(/\s+/g, ' ').trim().slice(0, 16);
-    if (save) { store.set('name', v); myName = v || (EN ? `${ADJ_EN[nick[0]]} ${ANI_EN[nick[1]]}` : ADJ[nick[0]] + ANI[nick[1]]); }
+    if (save) { store.set('name', v); myName = v || randomName(); }
     me.setName(myName);
   };
   inp.addEventListener('keydown', (k) => { k.stopPropagation(); if (k.key === 'Enter') done(true); if (k.key === 'Escape') done(false); });
@@ -3604,6 +3605,7 @@ async function partClouds() {
   // you part the clouds yourself: the click is also what lets the browser start the ambient sound
   // the Enter click is caught by a tiny script in the page (it may come before this module has loaded)
   const entered = window.__enter.then(() => {
+    myName = store.get('name', '') || randomName(); me.setName(myName);   // the name typed at the door
     sfx.on = true; store.set('sound', true); $('#sound').textContent = '🔈';
     sfx.init(); sfx.ctx.resume?.(); sfx.master.gain.value = 1;
   });
@@ -3614,7 +3616,8 @@ async function partClouds() {
   $('#gateBar').style.width = '100%'; $('#gatePct').textContent = '100%';
   document.querySelectorAll('.enterBtn').forEach((b) => { b.disabled = false; });
   $('#intro').classList.add('ready');
-  $(EN ? '#enterEn' : '#enter').focus({ preventScroll: true });   // Enter / Space work too
+  if (!isMobile && !$('#nameIn').value) $('#nameIn').focus({ preventScroll: true });   // no keyboard popping up on phones
+  else $(EN ? '#enterEn' : '#enter').focus({ preventScroll: true });   // Enter / Space work too
   await entered;
   intro.parting = true;
   $('#intro').classList.add('out');
