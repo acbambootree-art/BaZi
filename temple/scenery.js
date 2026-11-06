@@ -1,11 +1,11 @@
 // The world beyond the temple: it stands on a green plateau ringed by cliffs, above a sea of cloud, with a real
 // photograph of Zhangjiajie's sandstone pillars (張家界) all round the horizon under an open, misty sky.
 import * as THREE from 'three';
-import { canvasTex, PLATEAU, plateauR } from './scene.js';
+import { canvasTex, PLATEAU, plateauR, sharedTex } from './scene.js';
 
 const TL = new THREE.TextureLoader();
 const pbr = (id, o = {}) => {
-  const ld = (m, srgb) => { const t = TL.load(`/temple/assets/tex/${id}_${m}.webp`); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
+  const ld = (m, srgb) => { const t = sharedTex(`/temple/assets/tex/${id}_${m}.webp`); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
   return new THREE.MeshStandardMaterial({ map: ld('diff', true), normalMap: ld('nor'), roughnessMap: ld('rough'), roughness: 1, ...o });
 };
 

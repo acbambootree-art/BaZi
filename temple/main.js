@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { buildWorld, canvasTex, HALL, flames, onPlateau, pavedAt } from './scene.js';
+import { buildWorld, canvasTex, HALL, flames, onPlateau, pavedAt, sharedTex } from './scene.js';
 import { buildScenery } from './scenery.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
@@ -139,6 +139,17 @@ $('#lang').onclick = () => { store.set('lang', EN ? 'zh' : 'en'); const u = new 
 // ---------------- renderer / scene ----------------
 const app = $('#app');
 const isMobile = matchMedia('(pointer: coarse)').matches;
+if (isMobile) {   // phones: halve big photo textures before they reach the GPU; the full set ran past iOS Safari's memory limit and the tab crashed
+  const d = Object.getOwnPropertyDescriptor(THREE.Texture.prototype, 'needsUpdate'), done = new WeakSet();
+  Object.defineProperty(THREE.Texture.prototype, 'needsUpdate', { configurable: true, get: d.get, set(v) {
+    const s = this.source, im = s.data;
+    if (v && im && !done.has(s) && (im instanceof ImageBitmap || im instanceof HTMLImageElement) && Math.min(im.width, im.height) >= 1024 && !/paradise|zjj/.test(im.src || '')) {
+      done.add(s); const c = document.createElement('canvas'); c.width = im.width >> 1; c.height = im.height >> 1;
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); s.data = c; im.close?.();
+    }
+    d.set.call(this, v);
+  } });
+}
 const renderer = new THREE.WebGLRenderer({ antialias: !isMobile || devicePixelRatio < 2 });
 renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.4 : 1.5));   // ponytail: fixed caps; full retina was 4x the pixels for little visible gain
 renderer.setSize(innerWidth, innerHeight);
@@ -948,7 +959,7 @@ const KOI_YAW = Math.PI / 2;    // placed, the koi's head (geometry +z: the roun
       if (i < N) { const b = i * 2; gi.push(b, b + 2, b + 1, b + 1, b + 2, b + 3); }
     }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(gu, 2)); geo.setIndex(gi); geo.computeVertexNormals();
-    const tl = new THREE.TextureLoader(), tex = (m, srgb) => { const t = tl.load(`/temple/assets/tex/leafy_grass_${m}.webp`); t.wrapS = t.wrapT = THREE.RepeatWrapping; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
+    const tl = new THREE.TextureLoader(), tex = (m, srgb) => { const t = sharedTex(`/temple/assets/tex/leafy_grass_${m}.webp`); t.wrapS = t.wrapT = THREE.RepeatWrapping; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
     const meadow = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex('diff', true), normalMap: tex('nor'), roughness: 1, color: 0x9cb47e, side: THREE.DoubleSide }));
     meadow.receiveShadow = true; meadow.userData.role = 'skip'; scene.add(meadow);
   }
@@ -2638,7 +2649,7 @@ world.lamps = (() => {
   const ticks = []; banyanTick = (dt) => ticks.forEach((f) => f(dt));
   const tl = new THREE.TextureLoader();
   const pbrM = (id, o = {}) => {
-    const ld = (m, srgb) => { const t = tl.load(`/temple/assets/tex/${id}_${m}.webp`); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
+    const ld = (m, srgb) => { const t = sharedTex(`/temple/assets/tex/${id}_${m}.webp`); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
     return new THREE.MeshStandardMaterial({ map: ld('diff', true), normalMap: ld('nor'), roughnessMap: ld('rough'), roughness: 1, ...o });
   };
   const stone = pbrM('large_sandstone_blocks_01', { color: 0xf0e4cc });

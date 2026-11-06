@@ -45,10 +45,19 @@ export function canvasTex(w, h, draw, repeat, isText = false) {
 // photographic PBR materials (Poly Haven, CC0) — the main step from "toy" to "real"
 THREE.Cache.enabled = true;
 const TL = new THREE.TextureLoader();
+// one decode and one GPU upload per file: clones share the image but keep their own repeat
+const TEXS = new Map();
+export function sharedTex(url) {
+  let e = TEXS.get(url);
+  if (!e) { e = { kids: [] }; e.base = TL.load(url, () => e.kids.forEach((k) => { k.needsUpdate = true; })); TEXS.set(url, e); }
+  const t = e.base.clone();
+  if (e.base.image) t.needsUpdate = true; else e.kids.push(t);
+  return t;
+}
 function pbr(id, rx, ry, o = {}) {
   const { noDiff, ...rest } = o;
   const load = (m, srgb) => {
-    const t = TL.load(`/temple/assets/tex/${id}_${m}.webp`);
+    const t = sharedTex(`/temple/assets/tex/${id}_${m}.webp`);
     t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); t.anisotropy = 8;
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
     return t;
