@@ -138,7 +138,7 @@ $('#lang').onclick = () => { store.set('lang', EN ? 'zh' : 'en'); const u = new 
 const app = $('#app');
 const isMobile = matchMedia('(pointer: coarse)').matches;
 const renderer = new THREE.WebGLRenderer({ antialias: !isMobile || devicePixelRatio < 2 });
-renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.25 : 1.5));   // ponytail: fixed caps; full retina was 4x the pixels for little visible gain
+renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.4 : 1.5));   // ponytail: fixed caps; full retina was 4x the pixels for little visible gain
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -168,7 +168,7 @@ const DBG = new URLSearchParams(location.search);   // ?nomsaa ?nomirror ?noao f
 // multisampled target: post-processing otherwise drops the canvas MSAA and thin edges shimmer as you move
 const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(
   innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(),
-  { type: THREE.HalfFloatType, samples: DBG.has('nomsaa') ? 0 : isMobile ? 2 : 4 }));
+  { type: THREE.HalfFloatType, samples: DBG.has('nomsaa') ? 0 : 4 }));   // 4x on phones too: at their pixel ratio, 2x left jagged, sparkling edges
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight).multiplyScalar(0.5), 0.1, 0.4, 0.98);   // barely any glow: halos read as glare, not calm
 { const ss = bloom.setSize.bind(bloom); bloom.setSize = (w, h) => ss(w * 0.5, h * 0.5); }   // a soft glow needs no full-res blur
@@ -279,7 +279,8 @@ function gild(root) {
       // occlusion in the recesses and polish on the raised parts (worn smooth by hands)
       const w = Math.min(1024, src.width), h = Math.min(1024, src.height);
       const rd = document.createElement('canvas'); rd.width = w; rd.height = h;
-      const rg = rd.getContext('2d'); rg.filter = 'blur(2.5px)'; rg.drawImage(src, 0, 0, w, h);   // blurred: the scan's blocky compression noise read as a crunchy, pitted surface
+      const clean = cleanScanMap(o.material.map).image;                  // the atlas's white padding bled in as white specks (worst on phones)
+      const rg = rd.getContext('2d'); rg.filter = 'blur(2.5px)'; rg.drawImage(clean, 0, 0, w, h);   // blurred: the scan's blocky compression noise read as a crunchy, pitted surface
       const px = rg.getImageData(0, 0, w, h).data, L = new Float32Array(w * h);
       for (let i = 0; i < L.length; i++) L[i] = (0.3 * px[i * 4] + 0.59 * px[i * 4 + 1] + 0.11 * px[i * 4 + 2]) / 255;
       const sorted = L.slice().sort(), lo = sorted[Math.floor(L.length * 0.02)], hi = sorted[Math.floor(L.length * 0.98)];
@@ -307,7 +308,7 @@ function gild(root) {
     try { const sm = mergeVertices(g0, 1e-3); sm.computeVertexNormals(); o.geometry = sm; } catch (e) { console.warn('statue smoothing skipped', e); }
     // polished gilding; the scan's own shading doubles as occlusion, so folds and recesses darken and the form reads in 3D
     o.material = new THREE.MeshPhysicalMaterial({ color: 0xffc85a, map: detail, aoMap: ao, aoMapIntensity: 1,
-      roughnessMap: rough, metalness: 1, roughness: 0.32, clearcoat: 0.8, clearcoatRoughness: 0.05, envMapIntensity: 3.6 });
+      roughnessMap: rough, metalness: 1, roughness: isMobile ? 0.42 : 0.32, clearcoat: isMobile ? 0 : 0.8, clearcoatRoughness: 0.05, envMapIntensity: 3.6 });   // phones: a touch softer, so tiny highlights don't glitter into single bright pixels
   });
 }
 
@@ -474,17 +475,18 @@ scene.add(beams); noReflect.add(beams);
 function glory(on, dt) {
   GLORY.k += ((on ? 1 : 0) - GLORY.k) * (1 - Math.exp(-dt * (on ? 0.55 : 1.4)));   // swells in over a few seconds with the mantra, fades quicker
   const k = GLORY.k, t = clock.elapsedTime, pulse = 1 + Math.sin(t * 1.3) * 0.08 * k;
+  const soft = isMobile ? 0.55 : 0.8;                             // phones have no glow pass to soften it: the additive light stacked up and bleached the mural
   for (const h of GLORY.halos) {
-    h.body.material.color.setScalar(1 + k * 0.9 * pulse);
+    h.body.material.color.setScalar(1 + k * 0.7 * soft * pulse);
     h.head.material.color.setScalar(1 + k * 1.6 * pulse);
     h.rainbow.material.opacity = 0.3 + k * 0.35;                    // the rainbow brightens with the prayer
-    h.rays.visible = k > 0.01; h.rays.material.opacity = Math.min(1, k * 1.0 * pulse);
+    h.rays.visible = k > 0.01; h.rays.material.opacity = Math.min(1, k * soft * pulse);
     h.rays.rotation.z += dt * h.spin; h.rays.scale.setScalar(0.9 + k * 0.15);
   }
-  gloryLight.intensity = k * 140;
+  gloryLight.intensity = k * (isMobile ? 90 : 120);
   beams.visible = k > 0.01;
-  beams.children.forEach((b, i) => { b.material.opacity = k * (0.32 + 0.1 * Math.sin(t * 0.6 + i * 1.7)); });
-  if (GLORY.mural) GLORY.mural.material.emissiveIntensity = 0.14 + k * 0.22;
+  beams.children.forEach((b, i) => { b.material.opacity = k * soft * (0.3 + 0.1 * Math.sin(t * 0.6 + i * 1.7)); });
+  if (GLORY.mural) GLORY.mural.material.emissiveIntensity = 0.14 + k * 0.08;   // the painting brightens a little, never washes out
   motes.visible = k > 0.01; motes.material.opacity = k * 0.9;
   if (motes.visible) {
     for (let i = 0; i < MOTES; i++) {
