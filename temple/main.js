@@ -26,6 +26,8 @@ const store = {
   set(k, v) { try { localStorage.setItem('xjm.' + k, JSON.stringify(v)); } catch {} },
 };
 
+// vivid, fresh green for every tree's leaves (the scans are dark olive under the warm sunrise light)
+const vividLeaves = (m) => { m.color.setRGB(1.0, 1.75, 0.6); if (m.emissive) { m.emissive.set(0x1a3a0c); m.emissiveIntensity = 1; } };
 
 // ---------------- language (中文 / English) ----------------
 // ?lang=en|zh wins, then the visitor's saved choice, then the browser language.
@@ -680,8 +682,7 @@ if (!isMobile) gl.load('/temple/assets/env/broadleaf.glb', (g) => {   // phones 
     o.castShadow = true; o.receiveShadow = true;
     if (/leaves/.test(o.material.name)) {                 // thin leaves: lit from both sides, a little translucent-bright
       o.material.transparent = false; o.material.depthWrite = true; o.material.side = THREE.DoubleSide;
-      o.material.color.setRGB(1.5, 1.6, 1.35); o.material.roughness = 0.75;
-      o.material.emissive = new THREE.Color(0x1c2a12); o.material.emissiveIntensity = 1;
+      vividLeaves(o.material); o.material.roughness = 0.75;
     }
   });
   const box = new THREE.Box3().setFromObject(g.scene), h = box.max.y - box.min.y;
@@ -1137,7 +1138,7 @@ function ring(url, list, sink = 0, split = false, onParts) {
 }
 
 // ---------------- benches on the pond bank: sit and watch the water ----------------
-// Two old painted wooden benches (Poly Haven, CC0) face the pond. Tap one: your monk walks over and sits, and the
+// Heavenly jade benches face the pond and the lake. Tap one: your monk walks over and sits, and the
 // camera settles into a slow view across the water over his shoulder. Moving gets him up again.
 const BENCHES = [
   ...[-1.9, 2.55].map((a) => { const [x, z] = pondAt(a, 1.5); return { x, z, look: POND, far: 2.8, up: 2.35 }; }),
@@ -1152,22 +1153,55 @@ const benchIcons = BENCHES.map((b, i) => {
   return o;
 });
 const benchMeshes = [];
-gl.load('/temple/assets/pond/bench.glb', (g) => {
-  g.scene.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(g.scene), size = box.getSize(new THREE.Vector3());
-  const k = 1.5 / Math.max(size.x, size.z);
+// a heavenly bench: a white-jade seat with a gilded waist, cloud-scroll legs with gold ruyi bosses,
+// a crimson silk cushion with gold tassels, all resting on a little puff of cloud
+{
+  const jade = new THREE.MeshPhysicalMaterial({ color: 0xf4efe2, roughness: 0.22, clearcoat: 0.7, clearcoatRoughness: 0.15, sheen: 0.4, sheenColor: new THREE.Color(0xfff6e0) });
+  const gold = new THREE.MeshStandardMaterial({ color: 0xe6b54e, metalness: 1, roughness: 0.25, envMapIntensity: 2 });
+  const silk = new THREE.MeshPhysicalMaterial({ color: 0x8e1418, roughness: 0.5, sheen: 0.35, sheenColor: new THREE.Color(0xff9a70) });
+  const cloud = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, emissive: 0xfff3dc, emissiveIntensity: 0.12, transparent: true, opacity: 0.7, depthWrite: false });
+  const slab = (w, d, r, h, bev) => {                                      // a rounded rectangle, extruded upward
+    const sh = new THREE.Shape(), x = w / 2 - r, z = d / 2 - r;
+    sh.absarc(x, z, r, 0, Math.PI / 2); sh.absarc(-x, z, r, Math.PI / 2, Math.PI); sh.absarc(-x, -z, r, Math.PI, Math.PI * 1.5); sh.absarc(x, -z, r, Math.PI * 1.5, Math.PI * 2);
+    return new THREE.ExtrudeGeometry(sh, { depth: h, bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 3, curveSegments: 10 }).rotateX(-Math.PI / 2).translate(0, bev, 0);
+  };
+  const leg = new THREE.Shape();                                           // side view: waisted, curling out into scroll feet, an arch between them
+  leg.moveTo(-0.2, 0.31); leg.lineTo(0.2, 0.31);
+  leg.bezierCurveTo(0.2, 0.22, 0.1, 0.2, 0.11, 0.13); leg.bezierCurveTo(0.12, 0.06, 0.27, 0.09, 0.25, 0.02); leg.quadraticCurveTo(0.23, -0.005, 0.17, 0);
+  leg.lineTo(0.09, 0); leg.quadraticCurveTo(0, 0.1, -0.09, 0); leg.lineTo(-0.17, 0);
+  leg.quadraticCurveTo(-0.23, -0.005, -0.25, 0.02); leg.bezierCurveTo(-0.27, 0.09, -0.12, 0.06, -0.11, 0.13); leg.bezierCurveTo(-0.1, 0.2, -0.2, 0.22, -0.2, 0.31);
+  const legGeo = new THREE.ExtrudeGeometry(leg, { depth: 0.07, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 3, curveSegments: 12 }).rotateY(Math.PI / 2).translate(-0.035, 0, 0);
+  const parts = [
+    [slab(1.6, 0.5, 0.09, 0.05, 0.02), jade, 0, 0.31, 0],                // seat slab, top at 0.40
+    [slab(1.5, 0.42, 0.08, 0.02, 0.005), gold, 0, 0.295, 0],             // gilded waist under the seat
+    [slab(1.32, 0.38, 0.12, 0.025, 0.02), silk, 0, 0.40, 0],             // silk cushion
+    [legGeo, jade, -0.6, 0, 0], [legGeo, jade, 0.6, 0, 0],
+    [new THREE.CylinderGeometry(0.018, 0.018, 1.2, 12).rotateZ(Math.PI / 2), gold, 0, 0.1, 0],   // gold foot rail
+  ];
+  for (const sx of [-1, 1]) {
+    parts.push([new THREE.TorusGeometry(0.04, 0.011, 8, 20).rotateY(Math.PI / 2), gold, sx * 0.648, 0.2, 0]);   // ruyi boss on each leg
+    parts.push([new THREE.SphereGeometry(0.018, 10, 8), gold, sx * 0.65, 0.2, 0]);
+    parts.push([new THREE.ConeGeometry(0.022, 0.12, 10).rotateX(Math.PI), gold, sx * 0.62, 0.36, 0.285]);       // tassels hanging at the front corners
+    parts.push([new THREE.SphereGeometry(0.02, 10, 8), gold, sx * 0.62, 0.435, 0.2]);
+  }
+  const puff = new THREE.SphereGeometry(1, 16, 10);
+  const benchModel = () => {
+    const g = new THREE.Group();
+    for (const [geo, mat, x, y, z] of parts) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; g.add(m); }
+    for (const sx of [-1, 1]) for (let i = 0; i < 5; i++) {              // wisps of cloud curling round each foot
+      const a = (i / 5) * Math.PI * 2 + sx, m = new THREE.Mesh(puff, cloud), r = 0.07 + (i % 2) * 0.03;
+      m.position.set(sx * 0.6 + Math.cos(a) * 0.13, 0.02, Math.sin(a) * 0.2); m.scale.set(r * 1.3, r * 0.5, r); g.add(m);
+    }
+    return g;
+  };
   BENCHES.forEach((b, i) => {
-    const m = g.scene.clone(); m.scale.setScalar(k);
-    const c = box.getCenter(new THREE.Vector3());
-    m.position.set(-c.x * k, -box.min.y * k, -c.z * k);
-    const w = new THREE.Group(); w.add(m); w.position.set(b.x, 0, b.z); w.rotation.y = b.yaw + BENCH_YAW;
+    const w = benchModel(); w.position.set(b.x, 0, b.z); w.rotation.y = b.yaw;
     w.userData = { role: 'skip', bench: i };
-    w.traverse((o) => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; benchMeshes.push(o); o.userData.bench = i; } });
+    w.traverse((o) => { if (o.isMesh) { benchMeshes.push(o); o.userData.bench = i; } });
     scene.add(w);
-    b.seatY = size.y * k * SEAT_FRAC;
+    b.seatY = 0.55;                                                       // the kneel-sit pose sinks ~0.1: this lands on the cushion
   });
-}, undefined, () => {});
-const BENCH_YAW = 0, SEAT_FRAC = 0.45;            // model faces +z; its seat is a little under half its height
+}
 let seated = null;                                // the bench you're sitting on, or null
 async function sitBench(i) {
   const b = BENCHES[i];
@@ -2374,7 +2408,7 @@ let bodhiTick = null;
     t.traverse((o) => {
       if (!o.isMesh) return;
       o.castShadow = o.receiveShadow = true;
-      if (o.material.alphaTest || o.material.transparent) { o.material.transparent = false; o.material.alphaTest = 0.5; o.material.side = THREE.DoubleSide; o.castShadow = false; }   // 371k leaves: not worth the shadow pass
+      if (o.material.alphaTest || o.material.transparent) { o.material.transparent = false; o.material.alphaTest = 0.5; o.material.side = THREE.DoubleSide; o.castShadow = false; vividLeaves(o.material); }   // 371k leaves: not worth the shadow pass
     });
     t.userData.role = 'skip'; scene.add(t);
   }, undefined, () => {});
@@ -2666,7 +2700,7 @@ world.lamps = (() => {
     g.scene.updateMatrixWorld(true);
     const puffs = []; g.scene.traverse((o) => { if (o.isMesh && o.geometry.index.count < 3200) puffs.push({ geometry: bakeGeo(o), material: o.material }); });   // the lighter puffs only
     if (!puffs.length) return;
-    const mat = puffs[0].material; mat.alphaTest = 0.5; mat.transparent = false; mat.side = THREE.DoubleSide; mat.color.set(0xd8e6b0);
+    const mat = puffs[0].material; mat.alphaTest = 0.5; mat.transparent = false; mat.side = THREE.DoubleSide; vividLeaves(mat);
     const spots = [];
     for (const s of sprigs) { const k = s.depth ? 2 : 1; for (let n = 0; n < k; n++) spots.push(new THREE.Vector3(s.p.x + (r() - 0.5) * 5, s.p.y + 1 + r() * 3.5, s.p.z + (r() - 0.5) * 5)); }
     for (let n = 0; n < 160; n++) { const a = r() * 6.28, d = Math.sqrt(r()) * 17; spots.push(at(d, a, 23 + r() * 5 - d * 0.25)); }   // the crown's dome

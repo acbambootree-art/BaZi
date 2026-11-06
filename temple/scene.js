@@ -1008,11 +1008,11 @@ function mainHall() {
   // ---- kneeling cushions (拜墊) in the nave ----
   const spots = [];
   for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) spots.push(new THREE.Vector3(-7.5 + c * 2.5, F, -24 + r * 2.6));
-  const cushion = new THREE.InstancedMesh(new THREE.BoxGeometry(1.0, 0.22, 0.7), pbr('red_plaster_weathered', 1, 1, { noDiff: true, color: 0x8a1c15, roughness: 0.95 }), spots.length);
-  const trim = new THREE.InstancedMesh(new THREE.BoxGeometry(1.04, 0.06, 0.74), std(0x9a7430, { metalness: 0.6, roughness: 0.5 }), spots.length);
+  const cushion = new THREE.InstancedMesh(new THREE.BoxGeometry(1.0, 0.08, 0.7), pbr('red_plaster_weathered', 1, 1, { noDiff: true, color: 0x8a1c15, roughness: 0.95 }), spots.length);
+  const trim = new THREE.InstancedMesh(new THREE.BoxGeometry(1.04, 0.04, 0.74), std(0x9a7430, { metalness: 0.6, roughness: 0.5 }), spots.length);
   spots.forEach((p, i) => {
-    cushion.setMatrixAt(i, m4.makeTranslation(p.x, F + 0.11, p.z));
-    trim.setMatrixAt(i, m4.makeTranslation(p.x, F + 0.03, p.z));
+    cushion.setMatrixAt(i, m4.makeTranslation(p.x, F + 0.06, p.z));   // top at F + 0.10: a kneeler (lifted 0.22, sinking 0.13 onto the heels) rests on it
+    trim.setMatrixAt(i, m4.makeTranslation(p.x, F + 0.02, p.z));
   });
   cushion.receiveShadow = true; cushion.name = 'cushions';
   g.add(cushion, trim);
@@ -1059,7 +1059,8 @@ function treeKind(name, h, w, planes) {
   const parts = [];
   for (let i = 0; i < planes; i++) parts.push(new THREE.PlaneGeometry(w, h).translate(0, h / 2, 0).rotateY((i * Math.PI) / planes));
   const geo = mergeGeos(parts);
-  const mat = new THREE.MeshBasicMaterial({ map: tex, alphaTest: 0.45, side: THREE.DoubleSide, color: 0xd8dccf });
+  const mat = new THREE.MeshBasicMaterial({ map: tex, alphaTest: 0.45, side: THREE.DoubleSide });
+  mat.color.setRGB(0.95, 1.4, 0.65);   // fresh, vivid green leaves
   return { geo, mat };
 }
 function mergeGeos(list) {

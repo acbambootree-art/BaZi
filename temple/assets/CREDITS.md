@@ -10,7 +10,6 @@
 - `sfx/bowl.mp3` — "Singing Bowl – Single Strike with Fade-Out" by Fumbananana420, Freesound #697529 (CC0). https://freesound.org/s/697529/
 - `sfx/clack1.mp3`, `sfx/clack2.mp3`, `sfx/sticks.mp3` — cut from "Wooden Blocks falling, close aspect, fast" by rylandbrooks, Freesound #746613 (CC0). https://freesound.org/s/746613/
 - `env/broadleaf.glb` — Poly Haven "Jacaranda Tree" (CC0), leaves and branches reduced in Blender. https://polyhaven.com/a/jacaranda_tree
-- `pond/bench.glb` — Poly Haven "Painted Wooden Bench" (CC0). https://polyhaven.com/a/painted_wooden_bench
 - `env/waternormals.jpg` — from the three.js examples (MIT). https://github.com/mrdoob/three.js
 - `env/*` trees, ferns, rocks, `sky.*` (misty_pines), `tex/leafy_grass_*` — Poly Haven (CC0).
 - `offerings/apple.glb`, `offerings/bananas.glb` — Poly Haven "Apple 01", "Bananas" (CC0).
