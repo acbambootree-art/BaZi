@@ -139,11 +139,11 @@ $('#lang').onclick = () => { store.set('lang', EN ? 'zh' : 'en'); const u = new 
 // ---------------- renderer / scene ----------------
 const app = $('#app');
 const isMobile = matchMedia('(pointer: coarse)').matches;
-if (isMobile) {   // phones: halve big photo textures before they reach the GPU; the full set ran past iOS Safari's memory limit and the tab crashed
+if (isMobile) {   // phones: halve big photo textures (1024 px) before they reach the GPU; the statues' own 2048 phone set stays sharp; the full set ran past iOS Safari's memory limit and the tab crashed
   const d = Object.getOwnPropertyDescriptor(THREE.Texture.prototype, 'needsUpdate'), done = new WeakSet();
   Object.defineProperty(THREE.Texture.prototype, 'needsUpdate', { configurable: true, get: d.get, set(v) {
     const s = this.source, im = s.data;
-    if (v && im && !done.has(s) && (im instanceof ImageBitmap || im instanceof HTMLImageElement) && Math.min(im.width, im.height) >= 1024 && !/paradise|zjj/.test(im.src || '')) {
+    if (v && im && !done.has(s) && (im instanceof ImageBitmap || im instanceof HTMLImageElement) && Math.min(im.width, im.height) >= 1024 && Math.min(im.width, im.height) < 2048 && !/paradise|zjj/.test(im.src || '')) {
       done.add(s); const c = document.createElement('canvas'); c.width = im.width >> 1; c.height = im.height >> 1;
       c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); s.data = c; im.close?.();
     }
@@ -258,7 +258,7 @@ addEventListener('resize', () => {
 
 // ---------------- real statue scan + paintings (swapped in once loaded) ----------------
 const qs = new URLSearchParams(location.search);
-const STATUE = { url: qs.get('statue') || '/temple/assets/statue.glb', yaw: +(qs.get('yaw') || 0) };
+const STATUE = { url: qs.get('statue') || `/temple/assets/statue${isMobile ? '_m' : ''}.glb`, yaw: +(qs.get('yaw') || 0) };
 function placeScan(gltfScene, slot, height, yaw, { onDais = false, dx = 0, depth = 1 } = {}) {
   const m = gltfScene;
   m.rotation.y = yaw;
@@ -282,47 +282,58 @@ function placeScan(gltfScene, slot, height, yaw, { onDais = false, dx = 0, depth
 }
 
 // ---- pure gold: the scan's carving and wear survive as subtle tone in the gilding ----
+const gildCache = new Map();
 function gild(root) {
   root.traverse((o) => {
     if (!o.isMesh) return;
-    const src = o.material.map?.image;
-    let detail = null, ao = null, rough = null;
-    if (src) {
-      // the scan's own shading holds its carving: stretch its contrast, then use it three ways — tone in the gilding,
-      // occlusion in the recesses and polish on the raised parts (worn smooth by hands)
-      const w = Math.min(1024, src.width), h = Math.min(1024, src.height);
-      const rd = document.createElement('canvas'); rd.width = w; rd.height = h;
-      const clean = cleanScanMap(o.material.map).image;                  // the atlas's white padding bled in as white specks (worst on phones)
-      const rg = rd.getContext('2d'); rg.filter = 'blur(2.5px)'; rg.drawImage(clean, 0, 0, w, h);   // blurred: the scan's blocky compression noise read as a crunchy, pitted surface
-      const px = rg.getImageData(0, 0, w, h).data, L = new Float32Array(w * h);
-      for (let i = 0; i < L.length; i++) L[i] = (0.3 * px[i * 4] + 0.59 * px[i * 4 + 1] + 0.11 * px[i * 4 + 2]) / 255;
-      const sorted = L.slice().sort(), lo = sorted[Math.floor(L.length * 0.02)], hi = sorted[Math.floor(L.length * 0.98)];
-      for (let i = 0; i < L.length; i++) L[i] = Math.min(1, Math.max(0, (L[i] - lo) / Math.max(0.01, hi - lo)));
-      const tex = (f, srgb) => {
-        const c = document.createElement('canvas'); c.width = w; c.height = h;
-        const g = c.getContext('2d'), d = g.createImageData(w, h);
-        for (let i = 0; i < L.length; i++) { const v = Math.round(255 * f(L[i])); d.data[i * 4] = d.data[i * 4 + 1] = d.data[i * 4 + 2] = v; d.data[i * 4 + 3] = 255; }
-        g.putImageData(d, 0, 0);
-        const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.flipY = o.material.map.flipY; t.anisotropy = 8; return t;
-      };
-      detail = tex((l) => 0.6 + 0.4 * Math.pow(l, 0.8), true);
-      ao = tex((l) => 0.35 + 0.65 * Math.pow(l, 0.6));                 // shadow in the folds outlines every feature
-      rough = tex((l) => 0.5 + 0.5 * (1 - l));                         // raised parts polished, recesses a little duller
-    }
-    // the decimated scan shades in flat facets: weld its vertices and smooth the normals
-    const g0 = new THREE.BufferGeometry();                             // unpack the quantized, interleaved scan to plain floats first
-    for (const k of ['position', 'uv']) {
-      const at = o.geometry.attributes[k]; if (!at) continue;
-      const n = at.itemSize, arr = new Float32Array(at.count * n);
-      for (let i = 0; i < at.count; i++) for (let j = 0; j < n; j++) arr[i * n + j] = at.getComponent(i, j);
-      g0.setAttribute(k, new THREE.BufferAttribute(arr, n));
-    }
-    if (o.geometry.index) g0.setIndex(o.geometry.index);
-    try { const sm = mergeVertices(g0, 1e-3); sm.computeVertexNormals(); o.geometry = sm; } catch (e) { console.warn('statue smoothing skipped', e); }
-    // polished gilding; the scan's own shading doubles as occlusion, so folds and recesses darken and the form reads in 3D
-    o.material = new THREE.MeshPhysicalMaterial({ color: 0xffc85a, map: detail, aoMap: ao, aoMapIntensity: 1,
-      roughnessMap: rough, metalness: 1, roughness: isMobile ? 0.42 : 0.32, clearcoat: isMobile ? 0 : 0.8, clearcoatRoughness: 0.05, envMapIntensity: 3.6 });   // phones: a touch softer, so tiny highlights don't glitter into single bright pixels
+    const key = o.material.map || o.material, geoKey = o.geometry;
+    if (!gildCache.has(key)) gildCache.set(key, gildMaterial(o.material));
+    if (!gildCache.has(geoKey)) gildCache.set(geoKey, smoothScan(o.geometry));
+    o.material = gildCache.get(key); o.geometry = gildCache.get(geoKey);   // the mirrored twin shares both
   });
+}
+function gildMaterial(src0) {
+  const src = src0.map?.image;
+  let detail = null, ao = null, rough = null;
+  if (src) {
+    // the scan's own shading holds its carving: stretch its contrast, then use it three ways — tone in the gilding,
+    // occlusion in the recesses and polish on the raised parts (worn smooth by hands)
+    const R = isMobile ? 1024 : 2048, w = Math.min(R, src.width), h = Math.min(R, src.height);
+    const rd = document.createElement('canvas'); rd.width = w; rd.height = h;
+    const clean = cleanScanMap(src0.map).image;                       // the atlas's white padding bled in as white specks (worst on phones)
+    const rg = rd.getContext('2d'); rg.filter = `blur(${w / 1400}px)`; rg.drawImage(clean, 0, 0, w, h);   // a touch of blur: raw compression noise read as a pitted surface
+    const px = rg.getImageData(0, 0, w, h).data, L = new Float32Array(w * h), hist = new Uint32Array(256);
+    for (let i = 0; i < L.length; i++) { L[i] = (0.3 * px[i * 4] + 0.59 * px[i * 4 + 1] + 0.11 * px[i * 4 + 2]) / 255; hist[Math.min(255, L[i] * 256 | 0)]++; }
+    const pct = (q) => { let a = 0; for (let b = 0; b < 256; b++) if ((a += hist[b]) >= L.length * q) return b / 255; return 1; };
+    const lo = pct(0.02), hi = pct(0.98);
+    for (let i = 0; i < L.length; i++) L[i] = Math.min(1, Math.max(0, (L[i] - lo) / Math.max(0.01, hi - lo)));
+    const tex = (f, srgb) => {
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const g = c.getContext('2d'), d = g.createImageData(w, h);
+      for (let i = 0; i < L.length; i++) { const v = Math.round(255 * f(L[i])); d.data[i * 4] = d.data[i * 4 + 1] = d.data[i * 4 + 2] = v; d.data[i * 4 + 3] = 255; }
+      g.putImageData(d, 0, 0);
+      const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.flipY = src0.map.flipY; t.anisotropy = 8; return t;
+    };
+    detail = tex((l) => 0.6 + 0.4 * Math.pow(l, 0.8), true);
+    ao = tex((l) => 0.35 + 0.65 * Math.pow(l, 0.6));                   // shadow in the folds outlines every feature
+    rough = tex((l) => 0.5 + 0.5 * (1 - l));                           // raised parts polished, recesses a little duller
+  }
+  // polished gilding; the scan's own shading doubles as occlusion, and its normal map keeps the fine carving (eyes, lips, hair)
+  return new THREE.MeshPhysicalMaterial({ color: 0xffc85a, map: detail, aoMap: ao, aoMapIntensity: 1,
+    normalMap: src0.normalMap || null, normalScale: (src0.normalScale?.clone() || new THREE.Vector2(1, 1)).multiplyScalar(0.5),   // half strength: polished gold, not pitted wood
+    roughnessMap: rough, metalness: 1, roughness: isMobile ? 0.42 : 0.32, clearcoat: isMobile ? 0 : 0.8, clearcoatRoughness: 0.05, envMapIntensity: 3.6 });   // phones: a touch softer, so tiny highlights don't glitter into single bright pixels
+}
+// the scan shades in flat facets: weld its vertices and smooth the normals
+function smoothScan(geo) {
+  const g0 = new THREE.BufferGeometry();                               // unpack the quantized, interleaved scan to plain floats first
+  for (const k of ['position', 'uv']) {
+    const at = geo.attributes[k]; if (!at) continue;
+    const n = at.itemSize, arr = new Float32Array(at.count * n);
+    for (let i = 0; i < at.count; i++) for (let j = 0; j < n; j++) arr[i * n + j] = at.getComponent(i, j);
+    g0.setAttribute(k, new THREE.BufferAttribute(arr, n));
+  }
+  if (geo.index) g0.setIndex(geo.index);
+  try { const sm = mergeVertices(g0, 1e-3); sm.computeVertexNormals(); return sm; } catch (e) { console.warn('statue smoothing skipped', e); return geo; }
 }
 
 // ---- precious stones set on the carved crown, necklace and belt (found by casting rays onto the scan) ----
@@ -516,7 +527,7 @@ buildGate(scene, { gl, isMobile, oldGate: world.occluders[0] });   // the detail
 { const fill = new THREE.PointLight(0xfff1dc, 14, 13, 1.6); fill.position.set(0, 4.6, 25.2); scene.add(fill); }   // soft daylight bounce under the gate porch
 // missing file → keep the procedural statues
 gl.load(STATUE.url, (g) => placeScan(g.scene, world.altar.center, 21.0, STATUE.yaw, { onDais: true, depth: 0.58 }), undefined, () => {});   // colossal: seated on the dais, crown just under the raised ceiling
-gl.load('/temple/assets/statue_side.glb', (g) => {
+gl.load(`/temple/assets/statue_side${isMobile ? '_m' : ''}.glb`, (g) => {   // phones: 2048 px textures, half the faces
   world.altar.sides.forEach((s, i) => {
     const m = i ? g.scene : g.scene.clone(true);
     if (!i) m.scale.x = -1;                           // mirror the left one so both lean toward the centre

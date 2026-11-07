@@ -1,7 +1,7 @@
 # Asset credits
 
-- `statue.glb` — Seated Guanyin, painted wood, late 11th–early 12th c., Minneapolis Institute of Art (CC0). https://sketchfab.com/3d-models/2c865894453743a49f8e82d57e4f0a8d
-- `statue_side.glb` — Water-Moon Guanyin, 12th c. (Jin), painted wood, Minneapolis Institute of Art (CC0). https://sketchfab.com/3d-models/f3316610c8b740c595c22ca1d7df54ca
+- `statue.glb`, `statue_m.glb` (phone version) — Seated Guanyin, painted wood, late 11th–early 12th c., Minneapolis Institute of Art (CC0). https://sketchfab.com/3d-models/2c865894453743a49f8e82d57e4f0a8d
+- `statue_side.glb`, `statue_side_m.glb` (phone version) — Water-Moon Guanyin, 12th c. (Jin), painted wood, Minneapolis Institute of Art (CC0). https://sketchfab.com/3d-models/f3316610c8b740c595c22ca1d7df54ca
 - `paradise.webp`, `paradise_m.webp` — the great mural behind the altar: "西方淨土變" (Western Paradise of Amitabha), Tang dynasty, Mogao Caves, Dunhuang (unknown painters), public domain, via Wikimedia Commons: https://commons.wikimedia.org/wiki/File:%E8%A5%BF%E6%96%B9%E6%B7%A8%E5%9C%9F%E8%AE%8A.jpg (cropped to the wall).
 - `tex/*`, `sky.hdr`, `sky.jpg` — Poly Haven (CC0). https://polyhaven.com
 - `sfx/birds_stream.mp3` — "Birds singing at stream", Freesound #517913 (CC0), looped. https://freesound.org/s/517913/
