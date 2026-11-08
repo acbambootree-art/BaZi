@@ -34,6 +34,7 @@
 - `pond/lily.glb` — "スイレン 睡蓮 Water Lily, Nymphaea cv." by ffish.asia / floraZia.com, CC BY 4.0, decimated. https://sketchfab.com/3d-models/e7830f486a0248b6b894f3e7a63b8c16
 - `pond/koi.glb` — "Koi Fish" by SDPM Esare, CC BY 4.0 (swim wave added in the shader). https://sketchfab.com/3d-models/3e1b80c3653f43349252aab3b4fb1d86
 - `pond/cattails.glb` — "Cattails" by AlkaliDragon, CC BY 4.0. https://sketchfab.com/3d-models/2f35ed566d3d4d74abd6e7c48d82f8eb
+- `env/buffalo.glb` — "Water Buffalo" by kenchoo, CC BY 4.0 (textures reduced; extra head-down grazing added in code). https://sketchfab.com/3d-models/124c4dec50a144489158eda878017f8c
 - `env/bamboo.glb` — "Free Bamboo Set" by JonhGillessen, CC BY 4.0 (some culms tinted purple on the site). https://sketchfab.com/3d-models/e9f9fa5397814f81bf85ad06acf5bf30
 - `env/greattree.glb` — "Island Tree 01", Poly Haven, CC0 (leaves thinned and branches decimated for the web). https://polyhaven.com/a/island_tree_01
 - `env/leafpuffs.glb` — leaf clusters cut from "Island Tree 01" (Poly Haven, CC0) for the blessing banyan's canopy.

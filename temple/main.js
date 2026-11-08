@@ -13,6 +13,7 @@ import { Reflector } from 'three/addons/objects/Reflector.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Water } from 'three/addons/objects/Water.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { connectPresence } from './presence.js';
 import { buildGate } from './gate.js';
@@ -829,6 +830,100 @@ gl.load('/temple/assets/env/bamboo.glb', (g) => {
 // koi that feel alive: each one wanders to spots of its own choosing, turning gradually; it cruises, sometimes darts
 // off with a few strong tail beats and glides, sometimes hangs almost still. The tail beats with its speed (its own
 // shader uniforms), it drifts a little up and down, and it keeps clear of the edge and of the other fish.
+// ---------------- crystal lotus: faceted pink glass petals round a glowing gold heart, sparkles rising over it ----------------
+// The scanned pond flowers are swapped for these (their pads and stems stay). Petals are flat-shaded so each facet
+// catches the sky like cut crystal; they shade from warm gold at the base to pink at the tips.
+const CRYSTAL = (() => {
+  const petal = (len, wid, cup) => {
+    const s = new THREE.Shape(); s.moveTo(0, 0); s.quadraticCurveTo(wid, len * 0.42, 0, len); s.quadraticCurveTo(-wid, len * 0.42, 0, 0);
+    const g = new THREE.ExtrudeGeometry(s, { depth: len * 0.01, bevelEnabled: true, bevelThickness: len * 0.03, bevelSize: len * 0.02, bevelSegments: 1, curveSegments: 4 });
+    const p = g.attributes.position, col = [];
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), t = Math.max(0, y / len);
+      p.setZ(i, p.getZ(i) + cup * t * t * len + Math.abs(x) * 0.55);   // tips flare, the edges fold up: a keel, concave to the centre
+      col.push(1, 0.86 - 0.1 * t, 0.62 + 0.3 * t);                     // warm gold at the base to pink at the tip
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.deleteAttribute('uv');
+    return g;
+  };
+  // one merged mesh per flower shape (a draw call, not thirty): open, half open, bud
+  const RINGS = [[9, 1, 0.4, 1.25, 0.35, 0], [9, 0.88, 0.36, 0.9, 0.25, 0.5], [7, 0.72, 0.3, 0.55, 0.15, 0.2], [5, 0.52, 0.24, 0.25, 0.05, 0.7]];
+  const ringGeo = RINGS.map(([, len, wid, , cup]) => petal(len, wid, cup));
+  const flower = (open) => {
+    const parts = [];
+    RINGS.forEach(([n, , , tilt, , off], k) => {
+      const t = 0.12 + k * 0.03 + (tilt - 0.12 - k * 0.03) * open;
+      for (let i = 0; i < n; i++) parts.push(ringGeo[k].clone().rotateX(t).translate(0, 0, 0.04 * (3 - k)).rotateY((i + off) / n * Math.PI * 2));
+    });
+    const g = mergeGeometries(parts); g.computeVertexNormals(); return g;
+  };
+  const shapes = [flower(1), flower(0.6), flower(0)];
+  const heartParts = [new THREE.CylinderGeometry(0.16, 0.12, 0.1, 16).translate(0, 0.08, 0).toNonIndexed()];
+  for (let i = 0; i < 22; i++) { const a = i * 2.4, rr = 0.12 + (i % 3) * 0.03; heartParts.push(new THREE.ConeGeometry(0.025, 0.16, 4).rotateX(Math.sin(a) * 0.5).rotateZ(-Math.cos(a) * 0.5).translate(Math.cos(a) * rr, 0.18, Math.sin(a) * rr).toNonIndexed()); }
+  heartParts.forEach((g) => g.deleteAttribute('uv'));
+  const heartGeo = mergeGeometries(heartParts);
+  const glass = new THREE.MeshPhysicalMaterial({ color: 0xffd2ec, vertexColors: true, emissive: 0xff7ab8, emissiveIntensity: 0.5, roughness: 0.05, sheen: 1, sheenColor: 0xffd0f0, sheenRoughness: 0.3,
+    clearcoat: 1, clearcoatRoughness: 0.05, iridescence: isMobile ? 0 : 0.7, iridescenceIOR: 1.5, transparent: true, opacity: 0.7, depthWrite: false,
+    flatShading: true, side: THREE.DoubleSide, envMapIntensity: 2.4 });
+  const heart = new THREE.MeshStandardMaterial({ color: 0xffd36a, emissive: 0xffb43c, emissiveIntensity: 1.3, roughness: 0.4 });
+  const glowTex = canvasTex(64, 64, (c, w) => { const g = c.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(255,214,140,0.9)'); g.addColorStop(0.35, 'rgba(255,170,120,0.35)'); g.addColorStop(1, 'rgba(255,140,190,0)'); c.fillStyle = g; c.fillRect(0, 0, w, w); });
+  // sparkles: little four-point stars twinkling and drifting up from each flower (positions are the flowers, the drift is in the shader)
+  const uT = { value: 0 };
+  const spark = new THREE.ShaderMaterial({ uniforms: { uT }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `attribute float ph; attribute float sz; uniform float uT; varying float a;
+      void main() { float k = fract(uT * 0.12 + ph), ang = ph * 40.0, rr = (0.25 + fract(ph * 7.3) * 0.9) * (1.0 + k * 0.4) * sz;
+        vec3 p = position + vec3(cos(ang) * rr, (0.1 + k * 0.9) * sz, sin(ang) * rr);
+        a = pow(0.5 + 0.5 * sin(uT * 2.6 + ph * 37.0), 5.0) * smoothstep(0.0, 0.15, k) * (1.0 - k);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * mv;
+        gl_PointSize = min(56.0, (4.0 + 28.0 * a) * sz * 90.0 / -mv.z); }`,
+    fragmentShader: `varying float a;
+      void main() { vec2 q = gl_PointCoord - 0.5; float d = length(q);
+        float star = max(0.0, 1.0 - abs(q.x) * 14.0) * max(0.0, 1.0 - abs(q.y) * 2.0) + max(0.0, 1.0 - abs(q.y) * 14.0) * max(0.0, 1.0 - abs(q.x) * 2.0);
+        float v = (smoothstep(0.5, 0.0, d) * 0.5 + star) * a; if (v < 0.01) discard;
+        gl_FragColor = vec4(vec3(1.0, 0.86, 0.6) * v, v); }` });
+  const sparkles = (n) => {                                         // a cloud of n sparkles; set its 'position' per sparkle to a flower's heart
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute('ph', new THREE.Float32BufferAttribute(Array.from({ length: n }, () => Math.random()), 1));
+    g.setAttribute('sz', new THREE.BufferAttribute(new Float32Array(n).fill(1), 1));
+    const pts = new THREE.Points(g, spark); pts.frustumCulled = false; pts.userData.role = 'skip';
+    pts.onBeforeRender = () => { uT.value = performance.now() / 1000; };
+    return pts;
+  };
+  const make = (r, bud) => {                                        // r: outer petal length in metres
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(shapes[bud ? 2 : 0], glass));
+    if (!bud) {
+      g.add(new THREE.Mesh(heartGeo, heart));
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.9 }));
+      glow.scale.setScalar(2.2); glow.position.y = 0.3; g.add(glow);
+    }
+    g.scale.setScalar(r); g.userData.role = 'skip';
+    return g;
+  };
+  return { shapes, heartGeo, glass, heart, glowTex, sparkles, make };
+})();
+// swap a placed pond model's flowers (and buds) for crystal ones, each where the scanned bloom stood
+function crystallize(w) {
+  w.updateMatrixWorld(true);
+  const blooms = [];
+  w.traverse((o) => {
+    if (!o.isMesh || !/flower|^material$/i.test(o.material.name)) return;
+    const b = new THREE.Box3().setFromObject(o, true); o.visible = false;
+    const hit = blooms.find((x) => x.box.intersectsBox(b));             // the parts of one flower count as one
+    if (hit) hit.box.union(b); else blooms.push({ box: b, bud: o.material.name === 'material' });
+  });
+  const open = blooms.filter((b) => !b.bud), SP = 8, pts = open.length ? CRYSTAL.sparkles(open.length * SP) : null;
+  blooms.forEach(({ box, bud }) => {
+    const s = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3()), r = Math.max(s.x, s.z) * (bud ? 0.7 : 0.45);
+    const L = CRYSTAL.make(r, bud);
+    L.position.set(c.x, box.min.y, c.z); L.rotation.y = c.x * 7.3;
+    scene.add(L);
+    if (!bud) { const k = open.findIndex((b) => b.box === box); for (let j = 0; j < SP; j++) { pts.geometry.attributes.position.setXYZ(k * SP + j, c.x, box.min.y + r * 0.2, c.z); pts.geometry.attributes.sz.setX(k * SP + j, r); } }
+  });
+  if (pts) scene.add(pts);
+}
+
 function koiSchool(put, ticks, P, n, y0, inside) {
   gl.load('/temple/assets/pond/koi.glb', (g) => {
     let seed = Math.round(P.x * 31 + P.z * 7) | 0; const r = () => ((seed = (seed * 16807 + 11) % 2147483647 + 2147483647) % 2147483647 / 2147483647);
@@ -976,14 +1071,17 @@ const KOI_YAW = Math.PI / 2;    // placed, the koi's head (geometry +z: the roun
     w.scale.setScalar(size / (by === 'h' ? sz.y : Math.max(sz.x, sz.z)));
     w.position.set(x, y, z); w.rotation.y = yaw;
     w.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; } });
+    if (src.userData.crystal) try { crystallize(w); } catch (e) { console.warn("crystal lotus skipped", e); }
     w.userData.role = 'skip'; scene.add(w); return w;
   };
   const at = (u, v, y) => [POND.x + u * POND.rx, y, POND.z + v * POND.rz];   // pond-relative spot, u/v in -1..1
   gl.load(PD + 'lotus.glb', (g) => {
+    g.scene.userData.crystal = true;                                // its blooms become crystal lotuses
     g.scene.traverse((o) => { if (o.isMesh && /glass|transparent/.test(o.material.name)) o.visible = false; });   // the model's display jar
     for (const [u, v, w, yaw] of [[0.5, 0.3, 2.4, 0.4], [-0.55, 0.45, 1.8, 2.2], [0.05, 0.6, 1.5, 4.1], [0.78, -0.2, 1.4, 5.3]]) put(g.scene, w, ...at(u, v, POND.y - 0.25), yaw);
   }, undefined, () => {});
   gl.load(PD + 'lily.glb', (g) => {
+    g.scene.userData.crystal = true;                                // its blooms become crystal lotuses
     for (const [u, v, w, yaw] of [[-0.15, -0.35, 1.0, 1.0], [0.45, -0.45, 0.8, 3.9], [-0.6, -0.05, 0.85, 5.0]]) put(g.scene, w, ...at(u, v, POND.y - 0.3), yaw);
   }, undefined, () => {});
   gl.load(PD + 'cattails.glb', (g) => {
@@ -1048,16 +1146,19 @@ const KOI_YAW = Math.PI / 2;    // placed, the koi's head (geometry +z: the roun
     w.scale.setScalar(size / (by === 'h' ? sz.y : Math.max(sz.x, sz.z)));
     w.position.set(x, y, z); w.rotation.y = yaw;
     w.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    if (src.userData.crystal) try { crystallize(w); } catch (e) { console.warn("crystal lotus skipped", e); }
     w.userData.role = 'skip'; scene.add(w); return w;
   };
   const spot = (u, v) => [LAKE.x + u * LAKE.rx, LAKE.z + v * LAKE.rz];
   gl.load('/temple/assets/pond/lotus.glb', (g) => {
+    g.scene.userData.crystal = true;                                // its blooms become crystal lotuses
     g.scene.traverse((o) => { if (o.isMesh && /glass|transparent/.test(o.material.name)) o.visible = false; });
     for (const [u, v, w, yaw] of [[0.5, -0.6, 2.6, 0.3], [-0.3, -0.35, 2.2, 1.9], [0.25, 0.1, 2.0, 3.3], [-0.5, 0.45, 2.6, 4.4], [0.45, 0.72, 2.2, 5.6], [-0.1, 0.85, 1.8, 0.9], [0.62, 0.32, 1.7, 2.6]]) {
       const [x, z] = spot(u, v); put(g.scene, w, x, LAKE.y - 0.25, z, yaw);
     }
   }, undefined, () => {});
   gl.load('/temple/assets/pond/lily.glb', (g) => {
+    g.scene.userData.crystal = true;                                // its blooms become crystal lotuses
     for (const [u, v, w, yaw] of [[0.1, -0.15, 1.0, 1.0], [-0.45, 0.05, 0.85, 3.9], [0.35, 0.5, 0.9, 5.0], [-0.2, 0.62, 0.8, 2.2], [0.05, -0.8, 0.9, 0.4]]) {
       const [x, z] = spot(u, v); put(g.scene, w, x, LAKE.y - 0.3, z, yaw);
     }
@@ -1068,27 +1169,11 @@ const KOI_YAW = Math.PI / 2;    // placed, the koi's head (geometry +z: the roun
     }
   }, undefined, () => {});
   koiSchool(put, ticks, LAKE, 11, 0.07, inLake);
-  // glowing lotus lanterns (蓮花燈) drifting slowly on the water: two rings of petals, white at the heart and pink at
-  // the tips, a warm candle light inside, a green pad underneath
-  // three shapes: wide open, half open, a tight bud; each lantern also gets its own size, colour and glow
-  const petal = () => new THREE.SphereGeometry(1, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.07, 0.03, 0.15).translate(0, 0, 0.12);
-  const lotusShape = (rings) => {
-    const parts = [];
-    for (const [n, tilt, rad, s, turn] of rings) for (let i = 0; i < n; i++) {
-      const g = petal().scale(s, s, s); g.rotateX(-tilt); g.translate(0, 0.03, rad); g.rotateY((i / n) * Math.PI * 2 + turn);
-      parts.push(g.toNonIndexed());
-    }
-    const geo = mergeGeometries(parts), p2 = geo.attributes.position, cols = [];
-    for (let i = 0; i < p2.count; i++) { const k = THREE.MathUtils.smoothstep(Math.hypot(p2.getX(i), p2.getZ(i)) + p2.getY(i), 0.06, 0.2); cols.push(1, 1 - k * 0.3, 1 - k * 0.2); }   // pale heart, tinted tips
-    geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); geo.computeVertexNormals();
-    return geo;
-  };
-  const SHAPES = [
-    lotusShape([[10, 0.55, 0.06, 1.05, 0], [8, 0.95, 0.03, 0.85, 0.3], [5, 1.3, 0.0, 0.6, 0.6]]),    // wide open
-    lotusShape([[8, 0.95, 0.04, 0.95, 0], [6, 1.25, 0.01, 0.75, 0.4]]),                               // half open
-    lotusShape([[6, 1.35, 0.01, 0.8, 0], [4, 1.5, 0.0, 0.6, 0.5]]),                                   // bud
-  ];
-  const TINTS = [0xffffff, 0xffe4ec, 0xffc2d4, 0xff9db8, 0xfff0cf];                                  // white, blush, pink, deep pink, pale gold
+  // glowing crystal lotuses (蓮花燈) drifting slowly on the water: glass petals round a gold heart, a warm glow
+  // inside, sparkles rising, a gold-rimmed pad underneath
+  // three shapes: wide open, half open, a tight bud; each one also gets its own size, tint and glow
+  const SHAPES = CRYSTAL.shapes.map((g) => g.clone().scale(0.24, 0.24, 0.24));                // crystal: wide open, half open, bud
+  const TINTS = [0xfff4fa, 0xffe0f0, 0xffcce6, 0xffb8dc, 0xfff0d8];                                  // clear, blush, pink, rose, pale gold crystal
   const GLOWS = [0xffe6c0, 0xffd8c8, 0xffc8b8, 0xffbfae, 0xffe8a8];
   const LN = 18, lanterns = [], byShape = [[], [], []];
   const glowTex = canvasTex(64, 64, (c, w) => { const g = c.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(255,240,210,1)'); g.addColorStop(0.35, 'rgba(255,200,160,0.45)'); g.addColorStop(1, 'rgba(255,180,140,0)'); c.fillStyle = g; c.fillRect(0, 0, w, w); });
@@ -1102,13 +1187,17 @@ const KOI_YAW = Math.PI / 2;    // placed, the koi's head (geometry +z: the roun
     byShape[shape].push(L); lanterns.push(L);
   }
   const petals = SHAPES.map((geo, si) => {
-    const m = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, emissive: 0xfff0e6, emissiveIntensity: 0.28, side: THREE.DoubleSide }), Math.max(1, byShape[si].length));
+    const m = new THREE.InstancedMesh(geo, CRYSTAL.glass, Math.max(1, byShape[si].length));
     m.count = byShape[si].length;
     byShape[si].forEach((L) => m.setColorAt(L.k, new THREE.Color(TINTS[L.tint])));
     return m;
   });
-  const pads = new THREE.InstancedMesh(new THREE.CircleGeometry(0.22, 18).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3f6a32, roughness: 0.7 }), LN);
-  for (const m of [...petals, pads]) { m.userData.role = 'skip'; m.frustumCulled = false; scene.add(m); }
+  const pads = new THREE.InstancedMesh(new THREE.CircleGeometry(0.22, 18).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x2f5a3a, roughness: 0.35, metalness: 0.2 }), LN);
+  const rims = new THREE.InstancedMesh(new THREE.TorusGeometry(0.22, 0.008, 4, 36).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xffd27a, emissive: 0xffb84a, emissiveIntensity: 0.9, metalness: 0.8, roughness: 0.3 }), LN);   // a thin gold rim on every pad
+  const hearts = new THREE.InstancedMesh(CRYSTAL.heartGeo.clone().scale(0.24, 0.24, 0.24), CRYSTAL.heart, LN);
+  const glints = CRYSTAL.sparkles(LN * 6);
+  for (const m of [...petals, pads, rims, hearts]) { m.userData.role = 'skip'; m.frustumCulled = false; scene.add(m); }
+  scene.add(glints);
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), v = new THREE.Vector3();
   let T = 0;
   ticks.push((dt) => {
@@ -1119,12 +1208,15 @@ const KOI_YAW = Math.PI / 2;    // placed, the koi's head (geometry +z: the roun
       e.set(Math.sin(T * 0.7 + L.ph) * 0.05, L.yaw + T * 0.03, Math.cos(T * 0.6 + L.ph) * 0.05);
       q.setFromEuler(e); sc.setScalar(L.size);
       petals[L.shape].setMatrixAt(L.k, m4.compose(v.set(x, y + 0.02 * L.size, z), q, sc));
-      pads.setMatrixAt(i, m4.compose(v.set(x, y, z), q, sc));
+      pads.setMatrixAt(i, m4.compose(v.set(x, y, z), q, sc)); rims.setMatrixAt(i, m4);
+      hearts.setMatrixAt(i, L.shape === 2 ? m4.makeScale(0, 0, 0) : m4.compose(v.set(x, y + 0.02 * L.size, z), q, sc));   // buds keep their heart hidden
+      for (let j = 0; j < 6; j++) { glints.geometry.attributes.position.setXYZ(i * 6 + j, x, y + 0.05, z); glints.geometry.attributes.sz.setX(i * 6 + j, L.shape === 2 ? 0 : 0.3 * L.size); }
       L.glow.position.set(x, y + 0.1 * L.size, z);
       L.glow.material.opacity = L.strength * (0.88 + Math.sin(T * 2.3 + L.ph) * 0.08 + Math.sin(T * 5.1 + L.ph * 2) * 0.05);   // candle flicker
     });
     for (const m of petals) m.instanceMatrix.needsUpdate = true;
-    pads.instanceMatrix.needsUpdate = true;
+    pads.instanceMatrix.needsUpdate = true; rims.instanceMatrix.needsUpdate = true; hearts.instanceMatrix.needsUpdate = true;
+    glints.geometry.attributes.position.needsUpdate = true; glints.geometry.attributes.sz.needsUpdate = true;
   });
 }
 
@@ -2699,6 +2791,38 @@ let bodhiTick = null;
 // (same slot system the old lamp walls used, so earlier lamps reappear here); claimed ones glow brighter.
 // Built here from tubes (trunk strands, roots, limbs, aerial roots) with leaf puffs cut from "Island Tree 01" (CC0).
 const BANYAN = { x: 36, z: 4, tiers: 8, r0: 12.5, dr: 0.95, rise: 0.78, arc: 1.95 };   // arc: half-angle of the niche rows round the front
+// ---------------- water buffalo (水牛) grazing in the meadow ----------------
+// "Water Buffalo" by kenchoo, CC BY 4.0. Each one stands in the grass with its head down, cropping, now and then
+// lifts its head to look around and chew, flicks its tail, and every so often ambles a few steps to fresh grass.
+let oxTick = null;
+const OX_Z = new THREE.Vector3(0, 0, 1);
+const OX_SPOTS = [[4.5, 43.5, 2.0], [13, 44.5, -0.9], [9.5, 40.8, 0.6]];       // x, z, facing: in the meadow north of the plaza pond
+OX_SPOTS.forEach(([x, z]) => OBSTACLES.push([x, z, 1.3]));                   // walk round them, not through
+gl.load('/temple/assets/env/buffalo.glb', (g) => {
+  const box = new THREE.Box3().setFromObject(g.scene), len = box.max.z - box.min.z;
+  const herd = OX_SPOTS.map(([x, z, yaw], i) => {
+    const m = cloneSkinned(g.scene); m.scale.setScalar((2.5 + i * 0.15) / len);   // ~2.5 m nose to tail, each a little different
+    m.position.set(x, groundY(x, z), z); m.rotation.y = yaw;
+    m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; } });
+    m.userData.role = 'skip'; scene.add(m);
+    let neck, head; m.traverse((o) => { if (/ox_Neck_22/.test(o.name)) neck = o; if (/ox_Head_18/.test(o.name)) head = o; });
+    // the scan's own clip is a calm idle (looks about, one dip to the grass); on top of it, long spells head-down cropping
+    const mixer = new THREE.AnimationMixer(m), act = mixer.clipAction(g.animations[0]); act.play(); act.time = i * 3.7; act.timeScale = 0.75 + i * 0.1;
+    return { m, mixer, neck, head, qn: new THREE.Quaternion(), qh: new THREE.Quaternion(), w: i === 1 ? 0 : 1, graze: i !== 1, next: 4 + i * 5, t: i * 10 };
+  });
+  oxTick = (dt) => herd.forEach((h) => {
+    h.t += dt;
+    // the mixer only rewrites a bone when its clip value changes, so take off last frame's turn first (else it piles up)
+    if (h.neck) h.neck.quaternion.multiply(h.qn.invert()); if (h.head) h.head.quaternion.multiply(h.qh.invert());
+    h.mixer.update(dt);
+    if ((h.next -= dt) <= 0) { h.graze = !h.graze; h.next = h.graze ? 10 + Math.random() * 14 : 4 + Math.random() * 6; }
+    h.w += ((h.graze ? 1 : 0) - h.w) * Math.min(1, dt * 0.8);                // ease the head down and up
+    // a turn about each bone's own axis, on top of the clip
+    if (h.neck) h.neck.quaternion.multiply(h.qn.setFromAxisAngle(OX_Z, h.w * 0.85));
+    if (h.head) h.head.quaternion.multiply(h.qh.setFromAxisAngle(OX_Z, h.w * Math.sin(h.t * 5.5) * 0.05));   // cropping: small tugs at the grass
+  });
+}, undefined, (e) => console.warn('buffalo unavailable', e));
+
 let banyanTick = null;
 world.lamps = (() => {
   const B = BANYAN, slots = [], m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color(), up = new THREE.Vector3(0, 1, 0), v = new THREE.Vector3(), s3 = new THREE.Vector3();
@@ -3426,6 +3550,7 @@ $('#credits').onclick = () => modal(`
   <p class="muted">${EN ? 'Horizon' : '遠景'}: "Wulingyuan, Zhangjiajie" by chensiyuan — Wikimedia Commons, CC BY-SA 4.0 (contrast lifted, edges faded); ${EN ? 'cliff texture' : '崖壁材質'} — Poly Haven, CC0.</p>
   <p class="muted">${EN ? 'Great tree and banyan leaves' : '古樹與榕樹葉'}: "Island Tree 01"; ${EN ? 'bark and sandstone textures' : '樹皮與砂岩材質'} — Poly Haven, CC0.</p>
   <p class="muted">${EN ? 'Pond' : '放生池'}: "Lilypads" by sligocreatures; "Water Lily, Nymphaea cv." by ffish.asia / floraZia.com; "Koi Fish" by SDPM Esare; "Cattails" by AlkaliDragon — Sketchfab, CC BY 4.0.</p>
+  <p class="muted">${EN ? 'Meadow' : '草地'}: "Water Buffalo" by kenchoo — Sketchfab, CC BY 4.0.</p>
   <div class="row"><button class="btn ghost" data-v="ok">${t('ok')}</button></div>`);
 
 document.querySelector('#bar').addEventListener('click', async (e) => {
@@ -3567,7 +3692,7 @@ function frame() {
   updateSticks();
   updateWisps(dt);
   const t = clock.elapsedTime;
-  pondTick?.(dt); lakeTick?.(dt); bodhiTick?.(dt); banyanTick?.(dt); grassTick?.(dt); scenery.tick(dt);
+  pondTick?.(dt); lakeTick?.(dt); bodhiTick?.(dt); banyanTick?.(dt); oxTick?.(dt); grassTick?.(dt); scenery.tick(dt);
   for (const l of world.lanterns) l.rotation.z = Math.sin(t * 0.8 + l.userData.swing) * 0.04;
   for (const f of flames) {
     const k = 1 + Math.sin(t * 13 + f.seed) * 0.07 + Math.sin(t * 29 + f.seed * 2) * 0.05 + Math.sin(t * 61 + f.seed) * 0.03;
