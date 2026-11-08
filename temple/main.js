@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { buildWorld, canvasTex, HALL, flames, onPlateau, pavedAt, sharedTex } from './scene.js';
+import { buildWorld, canvasTex, HALL, flames, onPlateau, pavedAt, sharedTex, candle } from './scene.js';
 import { buildScenery } from './scenery.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
@@ -602,6 +602,7 @@ gl.load(PROPS + 'drum_stone.glb', (g) => {
   for (const sx of [-1, 1]) placeProp(g.scene, { x: sx * 1.75, z: 22.75, h: 1.25, yaw: sx * Math.PI / 2 });
 }, undefined, () => {});
 gl.load(PROPS + 'censer_ding_cleveland.glb', (g) => {
+  const [cx, cy, cz, ch] = OFFER5.censer; offer(g.scene, ch, cx, cy, cz);   // the altar's own censer: the same ding, small
   world.lu.visible = false;
   const ding = placeProp(g.scene, { x: 0, y: 0, z: 8, h: 2.6 });   // a 天公爐 stands on its own three legs
   const top = new THREE.Box3().setFromObject(ding).max.y;
@@ -626,22 +627,66 @@ function offer(src, h, x, y, z, yaw = 0) {
   world.table.add(w);
   return w;
 }
-const OFF = '/temple/assets/offerings/', TOP = 1.25, PLATE = 1.345;
+const OFF = '/temple/assets/offerings/', TOP = 1.25;
+// The altar follows the classic five offerings (五供): one censer on the centre line, a pair of candles, a pair of
+// vases, all on a raised back step (頂桌); fruit on tall-footed plates and three cups of tea on the front step, and a
+// pair of orchids on tall stands framing the table. Every piece has a mirror twin, nothing rises in front of the deity.
+const RISE = 0.42, BACK = TOP + RISE, BZ = -0.5;                  // back step: its top, and its depth line
+const live = (o, x, y, z) => { o.position.set(x, y, z); o.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); o.userData.role = 'skip'; world.table.add(o); return o; };
+{
+  // the old one-row layout: its candles, bronze pot and gold dishes step aside (the bake follows: hidden twins hide)
+  for (const o of world.table.children) {
+    const pr = o.geometry?.parameters;
+    if ((o.isGroup && o !== world.tube) || (pr && ((pr.radiusTop === 0.5 && pr.radiusBottom === 0.38) || (pr.radiusTop === 0.4 && pr.height === 0.08)))) o.visible = false;
+  }
+  world.tube.position.set(-3.85, 1.55, 0.35);                      // the fortune sticks wait at the end of the table
+  const lacquer = new THREE.MeshPhysicalMaterial({ color: 0x6e1a12, roughness: 0.45, clearcoat: 0.6, clearcoatRoughness: 0.2 });
+  const ebony = new THREE.MeshStandardMaterial({ color: 0x2e1a12, roughness: 0.55 });
+  const gilt = new THREE.MeshStandardMaterial({ color: 0xd6a548, metalness: 0.9, roughness: 0.3 });
+  live(new THREE.Mesh(new THREE.BoxGeometry(7.4, RISE - 0.05, 0.75), lacquer), 0, TOP + (RISE - 0.05) / 2, BZ);
+  live(new THREE.Mesh(new THREE.BoxGeometry(7.6, 0.05, 0.85), ebony), 0, BACK - 0.025, BZ);
+  for (const y of [TOP + 0.06, TOP + RISE - 0.1]) live(new THREE.Mesh(new THREE.BoxGeometry(7.42, 0.03, 0.02), gilt), 0, y, BZ + 0.376);
+  for (const x of [-1.15, 1.15]) live(candle(1.0, x * 7.1), x, BACK, BZ);   // the candle pair, either side of the censer
+  world.tableBurnerPos.set(0, HALL.floor + BACK + 0.8, world.table.position.z + BZ);   // the altar censer's smoke
+  // tall-footed offering plates (高腳盤), gilt
+  const footed = new THREE.LatheGeometry([[0, 0], [0.13, 0], [0.13, 0.015], [0.05, 0.04], [0.035, 0.06], [0.035, 0.16], [0.06, 0.19], [0.27, 0.215], [0.3, 0.235], [0.285, 0.24], [0.06, 0.215], [0, 0.215]].map(([x, y]) => new THREE.Vector2(x, y)), 36);
+  for (const x of [-1.95, -0.85, 0.85, 1.95]) live(new THREE.Mesh(footed, gilt), x, TOP, 0.3);
+  // three cups of tea, centred at the front
+  const porcelain = new THREE.MeshPhysicalMaterial({ color: 0xf4f0e6, roughness: 0.2, clearcoat: 1 });
+  const cupG = new THREE.LatheGeometry([[0, 0], [0.03, 0], [0.032, 0.008], [0.05, 0.06], [0.046, 0.062], [0.028, 0.012], [0, 0.012]].map(([x, y]) => new THREE.Vector2(x, y)), 24);
+  const tea = new THREE.MeshStandardMaterial({ color: 0x8a5a1c, roughness: 0.15 });
+  for (const x of [-0.26, 0, 0.26]) {
+    live(new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.07, 0.012, 24), porcelain), x, TOP + 0.006, 0.62);
+    live(new THREE.Mesh(cupG, porcelain), x, TOP + 0.012, 0.62);
+    const t = live(new THREE.Mesh(new THREE.CircleGeometry(0.044, 20), tea), x, TOP + 0.062, 0.62); t.rotation.x = -Math.PI / 2;
+  }
+  // tall lacquered flower stands (花几) beside each end of the table
+  for (const sx of [-1, 1]) {
+    const x = sx * 5.35, z = -0.1;
+    live(new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.06, 0.66), ebony), x, 1.0, z);
+    live(new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.1, 0.58), lacquer), x, 0.92, z);
+    for (const lx of [-1, 1]) for (const lz of [-1, 1]) live(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.9, 0.05), lacquer), x + lx * 0.26, 0.45, z + lz * 0.26);
+    live(new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.03, 0.56), lacquer), x, 0.12, z);
+    live(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.02, 0.02), gilt), x, 0.86, z + 0.3);
+  }
+}
+const OFFER5 = { censer: [0, BACK, BZ + 0.02, 0.9], stands: [-5.35, 5.35].map((x) => [x, 1.03, -0.1]) };
 const rnd = (i) => ((Math.sin(i * 91.7) * 43758.5) % 1 + 1) % 1;   // stable per-piece jitter
 // a pyramid of fruit on a plate: ring of n, then a smaller ring, then one on top
-function pile(models, cx, cz, d, seed) {
+function pile(models, cx, cz, d, seed, base) {
   let k = 0;
   const put = (x, y, z) => { const m = models[k % models.length]; offer(m, d * (0.92 + rnd(seed + k) * 0.16), cx + x, y, cz + z, rnd(seed + k++) * 6.28); };
-  for (let i = 0; i < 6; i++) put(Math.cos(i * 1.047) * d * 1.25, PLATE, Math.sin(i * 1.047) * d * 1.25);
-  for (let i = 0; i < 3; i++) put(Math.cos(i * 2.09 + 0.5) * d * 0.62, PLATE + d * 0.62, Math.sin(i * 2.09 + 0.5) * d * 0.62);
-  put(0, PLATE + d * 1.25, 0);
+  for (let i = 0; i < 6; i++) put(Math.cos(i * 1.047) * d * 1.05, base, Math.sin(i * 1.047) * d * 1.05);
+  for (let i = 0; i < 3; i++) put(Math.cos(i * 2.09 + 0.5) * d * 0.55, base + d * 0.62, Math.sin(i * 2.09 + 0.5) * d * 0.55);
+  put(0, base + d * 1.22, 0);
 }
-Promise.all(['mandarin', 'apple', 'pineapple', 'bananas', 'vase', 'mum', 'orchid'].map((n) => gl.loadAsync(OFF + n + '.glb').then((g) => g.scene)))
-  .then(([mandarin, apple, pineapple, bananas, vase, mum, orchid]) => {
-    pile([mandarin], -1.6, -0.4, 0.2, 1);                       // 柑橘: luck (吉)
-    pile([apple], 1.6, -0.4, 0.21, 7);                           // 蘋果: peace (平安)
-    offer(pineapple, 0.95, 1.0, TOP, 0.35, 0.6);                   // 鳳梨 旺來: prosperity
-    offer(bananas, 0.27, -1.95, TOP + 0.05, 0.45, 2.9);
+Promise.all(['mandarin', 'apple', 'pineapple', 'vase', 'mum', 'orchid'].map((n) => gl.loadAsync(OFF + n + '.glb').then((g) => g.scene)))
+  .then(([mandarin, apple, pineapple, vase, mum, orchid]) => {
+    const PL = TOP + 0.22;                                          // the footed plates' dish
+    pile([mandarin], -1.95, 0.3, 0.17, 1, PL);                      // 柑橘: luck (吉)
+    pile([apple], 1.95, 0.3, 0.18, 7, PL);                          // 蘋果: peace (平安)
+    offer(pineapple, 0.8, -0.85, PL, 0.3, 0.6);                    // 鳳梨 旺來: prosperity, a matched pair
+    offer(pineapple, 0.8, 0.85, PL, 0.3, -0.6);
 
     // chrysanthemums: the scan is a pink single bloom; recolour its petals to the temple's gold and white
     const tint = (hue, white) => {
@@ -664,33 +709,33 @@ Promise.all(['mandarin', 'apple', 'pineapple', 'bananas', 'vase', 'mum', 'orchid
     };
     const mums = [tint(0.12, false), tint(0, true)];
     const stemMat = new THREE.MeshStandardMaterial({ color: 0x3f5a2a, roughness: 0.8 });
-    for (const sx of [-1, 1]) {
-      const vx = sx * 3.1, vz = -0.75, vh = 0.85;
-      offer(vase, vh, vx, TOP, vz, sx > 0 ? Math.PI : 0);
-      // a domed bouquet: heads on a half-sphere above the neck, stems converging into it
-      for (let i = 0; i < 19; i++) {
-        const a = i * 2.4 + sx, r = i ? 0.12 + 0.26 * Math.sqrt(i / 19) : 0;
-        const hx = Math.cos(a) * r, hz = Math.sin(a) * r * 0.8, hy = TOP + vh + 0.5 - r * 0.9;
-        const head = offer(mums[i % 3 === 2 ? 1 : 0], 0.21, vx + hx, hy, vz + hz, rnd(i + sx * 5) * 6.28);
-        head.rotation.x = hz * 1.6; head.rotation.z = -hx * 1.6;
-        head.traverse((o) => (o.castShadow = false));                     // tiny: shadows cost more than they show          // tilt outward like a real bunch
-        const from = new THREE.Vector3(vx, TOP + vh - 0.05, vz), to = new THREE.Vector3(vx + hx, hy, vz + hz);
+    const N = isMobile ? 17 : 25;
+    for (const sx of [-1, 1]) {                                     // the vase pair on the back step, full domed bouquets
+      const vx = sx * 2.55, vz = BZ, vh = 1.0;
+      offer(vase, vh, vx, BACK, vz, sx > 0 ? Math.PI : 0);
+      for (let i = 0; i < N; i++) {
+        const a = i * 2.4 + sx, r = i ? 0.14 + 0.3 * Math.sqrt(i / N) : 0;
+        const hx = Math.cos(a) * r, hz = Math.sin(a) * r * 0.8, hy = BACK + vh + 0.55 - r * 0.9;
+        const head = offer(mums[i % 3 === 2 ? 1 : 0], 0.22, vx + hx, hy, vz + hz, rnd(i + sx * 5) * 6.28);
+        head.rotation.x = hz * 1.6; head.rotation.z = -hx * 1.6;      // tilt outward like a real bunch
+        head.traverse((o) => (o.castShadow = false));                 // tiny: shadows cost more than they show
+        const from = new THREE.Vector3(vx, BACK + vh - 0.05, vz), to = new THREE.Vector3(vx + hx, hy, vz + hz);
         const st = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.008, from.distanceTo(to), 5), stemMat);
         st.position.copy(from).lerp(to, 0.5); st.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), to.clone().sub(from).normalize());
         st.userData.role = 'skip'; world.table.add(st);
       }
     }
 
-    // white moth orchids (蝴蝶蘭) in glazed pots either side of the censer, sprays arching outward
+    // white moth orchids (蝴蝶蘭) in glazed pots on the tall stands, sprays arching outward
     orchid.traverse((o) => { if (o.isMesh && o.material.name === 'phong1SG') o.visible = false; });   // the scan's lime display base
     const pot = new THREE.LatheGeometry([[0, 0], [0.13, 0], [0.16, 0.03], [0.19, 0.17], [0.2, 0.2], [0.185, 0.2], [0.17, 0.05], [0, 0.05]].map(([x, y]) => new THREE.Vector2(x * 1.5, y * 1.5)), 32);
     const glaze = new THREE.MeshPhysicalMaterial({ color: 0x1d3f6e, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.1 });
     const moss = new THREE.MeshStandardMaterial({ color: 0x4a3a28, roughness: 1 });
-    for (const sx of [-1, 1]) {
-      const ox = sx * 0.92, oz = -0.7;
-      const p = new THREE.Mesh(pot, glaze); p.position.set(ox, TOP, oz); p.castShadow = p.receiveShadow = true; p.userData.role = 'skip'; world.table.add(p);
-      const soil = new THREE.Mesh(new THREE.CircleGeometry(0.27, 24), moss); soil.rotation.x = -Math.PI / 2; soil.position.set(ox, TOP + 0.27, oz); soil.userData.role = 'skip'; world.table.add(soil);
-      offer(orchid, 1.7, ox + sx * 0.19, TOP - 0.07, oz, sx < 0 ? 0 : Math.PI);   // spray leans to -x in the scan; offsets put its roots in the pot
+    for (const [ox, oy, oz] of OFFER5.stands) {
+      const sx = Math.sign(ox);
+      live(new THREE.Mesh(pot, glaze), ox, oy, oz);
+      const soil = live(new THREE.Mesh(new THREE.CircleGeometry(0.27, 24), moss), ox, oy + 0.27, oz); soil.rotation.x = -Math.PI / 2;
+      offer(orchid, 1.7, ox + sx * 0.19, oy - 0.07, oz, sx < 0 ? 0 : Math.PI);   // spray leans to -x in the scan; offsets put its roots in the pot
     }
   })
   .catch((e) => console.warn('offerings unavailable', e));
@@ -1764,6 +1809,7 @@ const OBSTACLES = [
   [13.5, -2, 0.8],
   [3.0, -25.6, 0.5],                                                   // 木魚
   [-3.0, -25.6, 0.5],                                                  // 功德箱 (donation box)
+  [-5.35, -27.4, 0.45], [5.35, -27.4, 0.45],                           // the orchid stands by the altar
   [-3.1, 26.2, 1.1], [3.1, 26.2, 1.1],                                  // stone lions
   ...[28, 33].flatMap((z) => [[-6, z, 0.3], [6, z, 0.3]]),
 ];

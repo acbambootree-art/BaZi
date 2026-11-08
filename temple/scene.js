@@ -478,7 +478,7 @@ const flameGlow = canvasTex(64, 64, (c, w) => {
   const g = c.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
   g.addColorStop(0, 'rgba(255,190,90,0.55)'); g.addColorStop(1, 'rgba(255,120,30,0)'); c.fillStyle = g; c.fillRect(0, 0, w, w);
 });
-function candle(h, seed) {
+export function candle(h, seed) {
   let s = Math.abs(seed * 9301 + 49297) % 233280; const rnd = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
   const g = new THREE.Group();
   const brass = std(0xb8862f, { metalness: 0.9, roughness: 0.3 });
