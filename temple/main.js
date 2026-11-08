@@ -51,7 +51,7 @@ const TX = {
   muyuHint: ['再點「木魚」或按空白鍵，敲一聲', 'Tap Muyu again (or press Space) to strike'],
   kneel: ['跪在拜墊上，靜靜待一會兒', 'Kneeling on the cushion. Stay as long as you like.'],
   bench: ['坐在水邊，看看水、看看魚。想走時動一下就好', 'Sitting by the water. Watch the lotus and the koi. Move whenever you like to get up.'],
-  watch: ['坐下看水', 'Sit & watch'],
+  watch: ['坐下', 'Sit'],
   toBurner: ['走到天公爐前…', 'Walking to the Heaven burner…'],
   incenseDone: [(n) => `香已插上，心意神明收到了（第 ${n} 炷）`, (n) => `Your incense is offered. The gods received it (stick no. ${n}).`],
   copied: ['已複製，貼給朋友吧', 'Link copied. Paste it to a friend.'],
